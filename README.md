@@ -13,10 +13,10 @@ Android/iOS 直播观看组件，封装腾讯 AtomicX 的账号操作、列表�
 
 ```kotlin
 // settings.gradle.kts
-maven { url = uri("https://gycrosskit.github.io/live-sdk/maven") }
+maven { url = uri("https://jitpack.io") }
 
 // KMP 模块的 commonMain.dependencies
-api("io.github.gycrosskit:live-sdk:0.1.0")
+api("com.github.gycrosskit.live-sdk:live-sdk:0.1.0")
 ```
 
 Android 接入方通过 `AtomicXSession` 准备 SDK 账号；两端在账号准备成功后分别调用 `AndroidLiveSdkRuntime.updateSessionReady(true)`、`IosLiveSdkRuntime.updateSessionReady(true)`，注销前先置为 `false` 并停止预览。`LivePreview` 与 `LiveCoreView` 只负责底层画面，应用负责完整的直播间 UI 和账号清理顺序。
@@ -33,7 +33,7 @@ Android 接入方通过 `AtomicXSession` 准备 SDK 账号；两端在账号准�
 bash gradlew testDebugUnitTest compileKotlinIosSimulatorArm64
 ```
 
-发布版本使用 `GROUP=io.github.gycrosskit VERSION=<version> bash gradlew publishToMavenLocal`，将对应 Maven 产物复制到 `docs/maven` 后由 GitHub Pages 提供。
+JitPack 按 Git 标签使用 JDK 17 执行 `publishToMavenLocal`，发布 Android AAR 与 iOS KLIB。请使用上面的 KMP 模块坐标，而非仓库聚合坐标。
 
 ## License
 
