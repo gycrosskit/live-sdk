@@ -1,4 +1,4 @@
-# Live SDK for Compose Multiplatform
+# Compose Multiplatform 直播 SDK
 
 Android/iOS 直播观看组件，封装腾讯 AtomicX 的账号操作、列表预览、观看会话、原生视频 View 与互动命令。业务账号、UserSig、SDK AppId、房间路由和页面 UI 由接入方管理。
 
@@ -35,6 +35,6 @@ bash gradlew testDebugUnitTest compileKotlinIosSimulatorArm64
 
 JitPack 按 Git 标签使用 JDK 17 执行 `publishToMavenLocal`，发布 Android AAR 与 iOS KLIB。请使用上面的 KMP 模块坐标，而非仓库聚合坐标。
 
-## License
+## 许可证
 
 Apache-2.0，见 [LICENSE](LICENSE)。腾讯 SDK 由接入方通过原厂依赖单独取得和使用。
