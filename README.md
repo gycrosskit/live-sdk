@@ -16,7 +16,7 @@ Android/iOS 直播观看组件，封装腾讯 AtomicX 的账号操作、列表�
 maven { url = uri("https://jitpack.io") }
 
 // KMP 模块的 commonMain.dependencies
-api("com.github.gycrosskit.live-sdk:live-sdk:0.1.0")
+api("com.github.gycrosskit.live-sdk:live-sdk:0.1.1")
 ```
 
 Android 接入方通过 `AtomicXSession` 准备 SDK 账号；两端在账号准备成功后分别调用 `AndroidLiveSdkRuntime.updateSessionReady(true)`、`IosLiveSdkRuntime.updateSessionReady(true)`，注销前先置为 `false` 并停止预览。`LivePreview` 与 `LiveCoreView` 只负责底层画面，应用负责完整的直播间 UI 和账号清理顺序。
