@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="atomic_audience_no_introduction">No room introduction</string>
+    <string name="atomic_audience_like_failed">Failed to send like</string>
+    <string name="atomic_audience_follow_failed">Follow operation failed: %1$s</string>
+    <string name="atomic_audience_not_ready">Live interaction is not ready</string>
+    <string name="atomic_audience_join_timeout">Timed out while joining the live room. Please try again.</string>
+    <string name="atomic_audience_session_queue_timeout">Timed out while switching live rooms. Please try again.</string>
+    <string name="atomic_audience_join_failed">Failed to join the live room. Please try again.</string>
+</resources>

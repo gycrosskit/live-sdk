@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="zh">
+    <string name="atomic_audience_no_introduction">暂无房间介绍</string>
+    <string name="atomic_audience_like_failed">点赞发送失败</string>
+    <string name="atomic_audience_follow_failed">关注操作失败：%1$s</string>
+    <string name="atomic_audience_not_ready">直播互动尚未准备完成</string>
+    <string name="atomic_audience_join_timeout">进入直播间超时，请稍后重试</string>
+    <string name="atomic_audience_session_queue_timeout">切换直播间超时，请稍后重试</string>
+    <string name="atomic_audience_join_failed">进入直播间失败，请稍后重试</string>
+</resources>

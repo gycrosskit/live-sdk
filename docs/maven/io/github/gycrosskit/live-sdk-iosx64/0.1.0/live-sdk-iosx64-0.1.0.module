@@ -1,0 +1,220 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../live-sdk/0.1.0/live-sdk-0.1.0.module",
+    "group": "io.github.gycrosskit",
+    "module": "live-sdk",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.11.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "iosX64ApiElements-published",
+      "attributes": {
+        "artifactType": "org.jetbrains.kotlin.klib",
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_x64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.2.21"
+          }
+        },
+        {
+          "group": "org.jetbrains.compose.runtime",
+          "module": "runtime",
+          "version": {
+            "requires": "1.10.3"
+          }
+        },
+        {
+          "group": "org.jetbrains.compose.ui",
+          "module": "ui",
+          "version": {
+            "requires": "1.10.3"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.10.2"
+          }
+        },
+        {
+          "group": "androidx.lifecycle",
+          "module": "lifecycle-runtime-compose",
+          "version": {
+            "requires": "2.10.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "live-sdk-iosX64Main-0.1.0.klib",
+          "url": "live-sdk-iosx64-0.1.0.klib",
+          "size": 175912,
+          "sha512": "420557620c194d2be25e44a88fe0ea9a796ef468ab5f883a642a903aee287e6e121fe656074f8da4460dd248421eafee08300db9f7503d9cb22775ce0df5b0a1",
+          "sha256": "b5584383731eabf1a77d7c084aea072809750b5a41c5db8ff6bea265675cc976",
+          "sha1": "211c5ea7162def58b5ae664d0772fcf1748c31cd",
+          "md5": "a78ad6ac07c8f40f66388fca53c6e2b6"
+        }
+      ]
+    },
+    {
+      "name": "iosX64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_x64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "files": [
+        {
+          "name": "live-sdk-iosx64-0.1.0-sources.jar",
+          "url": "live-sdk-iosx64-0.1.0-sources.jar",
+          "size": 30899,
+          "sha512": "e854d0080fbdb9535deb7495b36d07362b1aecaa96682c9db349865b0dce92aa253ed2aba2492b7462874aeccbe8f18ea23419f9fa618174603f15fe797ed758",
+          "sha256": "a9d22fa63e7c25d9387d3990c96ec791ec90bd9bbb44bcf528f04a0cdc8e4a14",
+          "sha1": "2c43db3d06b873b6f511d0d80355850939a3ee07",
+          "md5": "3db80e80603d920329bfcaf01f78a10f"
+        }
+      ]
+    },
+    {
+      "name": "iosX64ResourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.libraryelements": "kotlin-multiplatformresources",
+        "org.gradle.usage": "kotlin-multiplatformresources",
+        "org.jetbrains.kotlin.native.target": "ios_x64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.2.21"
+          }
+        },
+        {
+          "group": "org.jetbrains.compose.runtime",
+          "module": "runtime",
+          "version": {
+            "requires": "1.10.3"
+          }
+        },
+        {
+          "group": "org.jetbrains.compose.ui",
+          "module": "ui",
+          "version": {
+            "requires": "1.10.3"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.10.2"
+          }
+        },
+        {
+          "group": "androidx.lifecycle",
+          "module": "lifecycle-runtime-compose",
+          "version": {
+            "requires": "2.10.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "live-sdk-0.1.0.kotlin_resources.zip",
+          "url": "live-sdk-iosx64-0.1.0-kotlin_resources.kotlin_resources.zip",
+          "size": 346,
+          "sha512": "043783d262b18b31ac0c8ddba2285ab5717b606407ad9da1fe9b2b709f55b155a25541c7330b43bc080bd674c9b8fa24ddece83a84274100602796178d2fd024",
+          "sha256": "70881ff525b79e573199e646e987202256817bf1de757205b4403b892462c77b",
+          "sha1": "70da734ad49b169aa3461382db9eaad78bb817c4",
+          "md5": "b841ab9047e9940d17912abe13aeb9a3"
+        }
+      ]
+    },
+    {
+      "name": "iosX64MetadataElements-published",
+      "attributes": {
+        "artifactType": "org.jetbrains.kotlin.klib",
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_x64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.2.21"
+          }
+        },
+        {
+          "group": "org.jetbrains.compose.runtime",
+          "module": "runtime",
+          "version": {
+            "requires": "1.10.3"
+          }
+        },
+        {
+          "group": "org.jetbrains.compose.ui",
+          "module": "ui",
+          "version": {
+            "requires": "1.10.3"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.10.2"
+          }
+        },
+        {
+          "group": "androidx.lifecycle",
+          "module": "lifecycle-runtime-compose",
+          "version": {
+            "requires": "2.10.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "live-sdk-iosx64-0.1.0-metadata.jar",
+          "url": "live-sdk-iosx64-0.1.0-metadata.jar",
+          "size": 8175,
+          "sha512": "8ae836c4d54256d6363ea4cdd717f03a45d1c5667c8bca70315e733ff6ae5eea7b9866c04a01235655124e0feb2d645cb318be5cda8a08b24b7ad09e4d2a658c",
+          "sha256": "232a8a6ea4435bb7be1beda3f5bc876459e517e259e76d69a7cefb59f5c7530b",
+          "sha1": "dfbc0fca228c4b64fd23f7596611d44181bec209",
+          "md5": "331748d75e5449723d39d7489d5b9280"
+        }
+      ]
+    }
+  ]
+}
