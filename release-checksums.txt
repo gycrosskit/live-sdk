@@ -1,2 +1,3 @@
 # immutable-tag sha256-of-live-sdk-maven.tar.gz
 0.2.0-rc.1 fdc3d6d8e13bd1c6977d75f1fc78a35966e0aaaaad30a19499541c40641dd006
+0.2.0-rc.2 6702bdbd39739b127582d8a0fa12c1af5525b5339a218dcf804bb61bfb543c20
