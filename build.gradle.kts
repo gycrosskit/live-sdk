@@ -5,9 +5,10 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     `maven-publish`
 }
+publishing { repositories.maven { name = "staging"; url = uri(layout.buildDirectory.dir("maven")) } }
 
-group = providers.environmentVariable("GROUP").orElse("io.github.gycrosskit").get()
-version = providers.environmentVariable("VERSION").orElse("0.1.0-SNAPSHOT").get()
+group = providers.environmentVariable("GROUP").orElse("com.github.gycrosskit.live-sdk").get()
+version = providers.environmentVariable("VERSION").orElse("0.2.0-rc.1").get()
 
 kotlin {
     androidTarget {
@@ -22,17 +23,11 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            api(project(":live-core"))
             implementation(libs.cmp.runtime)
             implementation(libs.cmp.ui)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.lifecycle.runtime.compose)
-        }
-        androidMain.dependencies {
-            // AtomicX Android 二进制只进入 Android Source Set，不能污染 iOS 和 commonMain。
-            implementation(libs.atomicx.core)
-            implementation(libs.tencent.imsdk.plus)
-            implementation(libs.kotlinx.coroutines.android)
-            implementation(libs.activity)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -42,7 +37,7 @@ kotlin {
 }
 
 android {
-    namespace = "io.github.gycrosskit.livesdk"
+    namespace = "io.github.gycrosskit.livesdk.compose"
     compileSdk = 36
 
     defaultConfig {

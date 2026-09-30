@@ -1,0 +1,87 @@
+import UIKit
+import OpenKuiklyIOSRender
+import LiveKuikly
+
+/// Kuikly Native DSL 视频节点，SDK 账号由现有 IosLiveSdkRuntime 提供。
+@objc(GycLiveView)
+public final class GycLiveView: UIView, KuiklyRenderViewExportProtocol {
+    private var event: KuiklyRenderCallback?
+    private var pendingEvents: [String] = []
+    private var controller: IosKuiklyLiveController?
+    private var notifications: [NSObjectProtocol] = []
+    public var likeReporter: LiveLikeReporter? {
+        didSet { if let value = likeReporter { controller?.likeReporter = value } }
+    }
+
+    public func hrv_setProp(withKey propKey: String, propValue: Any) {
+        if css_setProp(withKey: propKey, value: propValue) { return }
+        if propKey == "liveEvent" {
+            event = propValue as? KuiklyRenderCallback
+            let pending = pendingEvents
+            pendingEvents.removeAll()
+            pending.forEach(emit)
+        }
+        else if propKey == "room", let room = propValue as? String {
+            if controller == nil {
+                let next = IosKuiklyLiveController { [weak self] json in
+                    self?.emit(json)
+                }
+                controller = next
+                if let reporter = likeReporter { next.likeReporter = reporter }
+                next.view.frame = bounds
+                next.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                addSubview(next.view)
+                notifications = [
+                    NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                        self?.controller?.setVisible(value: self?.window != nil)
+                    },
+                    NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                        self?.controller?.setVisible(value: false)
+                    }
+                ]
+            }
+            controller?.configure(value: room)
+            controller?.setVisible(value: window != nil && UIApplication.shared.applicationState == .active)
+        }
+    }
+
+    public func hrv_call(withMethod method: String, params: String?, callback: KuiklyRenderCallback?) {
+        controller?.command(method: method, params: params ?? "{}") { json in
+            callback?(Self.dictionary(json))
+        }
+    }
+
+    public override func didMoveToWindow() {
+        super.didMoveToWindow()
+        controller?.setVisible(value: window != nil && UIApplication.shared.applicationState == .active)
+    }
+
+    public override func hrv_removeFromSuperview() {
+        controller?.release()
+        controller = nil
+        event = nil
+        pendingEvents.removeAll()
+        notifications.forEach(NotificationCenter.default.removeObserver)
+        notifications = []
+        super.hrv_removeFromSuperview()
+    }
+
+    deinit {
+        notifications.forEach(NotificationCenter.default.removeObserver)
+        controller?.release()
+    }
+
+    private static func dictionary(_ json: String) -> [String: Any] {
+        guard let data = json.data(using: .utf8),
+              let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
+        return result
+    }
+
+    private func emit(_ json: String) {
+        if let callback = event { callback(Self.dictionary(json)) }
+        else {
+            if pendingEvents.count == 16 { pendingEvents.removeFirst() }
+            pendingEvents.append(json)
+        }
+    }
+}
