@@ -2,7 +2,7 @@
 
 Android/iOS 观看组件，复用腾讯 AtomicX 账号、列表静音预览、观看会话、原生视频 View 与互动命令。宿主提供 SDKAppId、服务端 UserSig、业务账号、页面 UI、房间路由、点赞业务上报及业务策略。
 
-本轮预发布版本为 `0.2.0-rc.1`；生产接入前仍需真实账号与设备验收。原 CMP `0.1.1` 坐标继续可用。HarmonyOS 尚不能等价支持现有 AtomicX `liveId` 协议，详见 [官方 SDK 调研](docs/腾讯鸿蒙直播SDK调研.md)。当前没有 OHOS target/HAR，也不返回假的进房或播放成功。
+本轮预发布版本为 `0.2.0-rc.2`；生产接入前仍需真实账号与设备验收。原 CMP `0.1.1` 坐标继续可用。HarmonyOS 尚不能等价支持现有 AtomicX `liveId` 协议，详见 [官方 SDK 调研](docs/腾讯鸿蒙直播SDK调研.md)。当前没有 OHOS target/HAR，也不返回假的进房或播放成功。
 
 鸿蒙直播实现已暂停：用户转述腾讯人员计划节后发布 SDK，当前等待正式版本，再核对 API 和三端互通；TRTC 替代方案仅保留为调研记录。
 
@@ -25,8 +25,8 @@ Kuikly Compose DSL 不在本轮验证范围。Kuikly 视频层与 CMP 可在同�
 maven { url = uri("https://jitpack.io") }
 
 // CMP / Kuikly 使用同一预发布版本，避免混用 core。
-api("com.github.gycrosskit.live-sdk:live-sdk:0.2.0-rc.1")
-api("com.github.gycrosskit.live-sdk:live-kuikly:0.2.0-rc.1")
+api("com.github.gycrosskit.live-sdk:live-sdk:0.2.0-rc.2")
+api("com.github.gycrosskit.live-sdk:live-kuikly:0.2.0-rc.2")
 ```
 
 本地独立消费工程从 `build/maven` 读取候选，使用 `com.github.gycrosskit.live-sdk` group。iOS Maven 产物是 KLIB，不是独立 Swift Package。导出 Swift Framework 时须 `export(live-core)`，供现有 Swift `IosLiveSdkBridge` 实现使用；Kuikly 工程还需导出 `live-kuikly`。
@@ -81,7 +81,7 @@ LIVE_KUIKLY_IOS_FRAMEWORK_DIR=/path/to/parent/of/OpenKuiklyIOSRender.framework b
 
 脚本执行受影响 Android/iOS 编译、状态机/协议测试、staging Maven 消费、Android APK/D8、依赖无 Compose 检查与同时消费 CMP/Kuikly 的单 SDK 检查。[验证记录](docs/验证记录.md)区分源码、编译、产物消费、最终链接和设备验收。
 
-`archive-prebuilt.sh` 为 macOS 生成 Maven 归档，腾讯 SDK 仍使用原厂依赖；JitPack 在发布后校验 `release-checksums.txt` 中 immutable tag 的归档哈希，不在 Linux 临时编译 UIKit KLIB。预发布归档的校验值记录在 `release-checksums.txt`；远程消费验证使用 `-PremoteOnly -PliveVersion=0.2.0-rc.1`，该模式仅从 JitPack 读取本组件，排除 staging 与 mavenLocal。
+`archive-prebuilt.sh` 为 macOS 生成 Maven 归档，腾讯 SDK 仍使用原厂依赖；JitPack 在发布后校验 `release-checksums.txt` 中 immutable tag 的归档哈希，不在 Linux 临时编译 UIKit KLIB。预发布归档的校验值记录在 `release-checksums.txt`；远程消费验证使用 `-PremoteOnly -PliveVersion=0.2.0-rc.2`，该模式仅从 JitPack 读取本组件，排除 staging 与 mavenLocal。
 
 ## 许可证
 
