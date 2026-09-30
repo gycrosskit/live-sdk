@@ -20,7 +20,10 @@ dependencyResolutionManagement {
         mavenCentral()
         maven { url = uri("https://mirrors.tencent.com/nexus/repository/maven-public/") }
         maven { url = uri("https://mirrors.tencent.com/repository/maven/thirdparty/") }
+        maven { url = uri("https://mirrors.tencent.com/nexus/repository/maven-tencent/") }
     }
 }
 
 rootProject.name = "live-sdk"
+
+include(":live-core", ":live-kuikly")

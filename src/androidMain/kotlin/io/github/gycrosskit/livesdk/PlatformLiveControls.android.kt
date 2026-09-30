@@ -1,28 +1,14 @@
 package io.github.gycrosskit.livesdk
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-
-/** shared 账号准备流程只同步可播放门禁，不参与具体 View 创建。 */
-object AndroidLiveSdkRuntime {
-    internal var sessionReady by mutableStateOf(false)
-        private set
-
-    /** 同步 AtomicX 账号是否已准备完成，未准备时列表预览不得启动。 */
-    fun updateSessionReady(ready: Boolean) {
-        sessionReady = ready
-    }
-
-    /** 在完整进房或账号重置前幂等停止当前列表预览。 */
-    fun stopActivePreview() = AtomicLivePreviewRuntime.stopActivePreview()
-}
 
 @Composable
 internal actual fun PlatformLiveCoreView(
@@ -42,7 +28,7 @@ private fun PreviewContent(
 ) {
     AtomicLivePreview(
         liveId = request.liveId,
-        active = request.active && AndroidLiveSdkRuntime.sessionReady,
+        active = request.active && AndroidLiveSdkRuntime.sessionReadyFlow.collectAsState().value,
         modifier = modifier,
         onStateChanged = request.onStateChanged,
     )
@@ -70,5 +56,8 @@ private fun PlaybackContent(
             view.release()
         }
     }
-    view.Player(modifier)
+    // factory 只在节点创建时执行；换房后需要重新挂载对应的原生 View。
+    key(view) {
+        androidx.compose.ui.viewinterop.AndroidView(factory = { view.nativeView }, modifier = modifier)
+    }
 }
