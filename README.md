@@ -2,7 +2,7 @@
 
 基于腾讯 AtomicX 的 Android/iOS 直播观看组件，支持列表静音预览、完整观看、原生视频画面和互动命令。CMP 与 Kuikly Native DSL 共用账号门禁、会话与状态；应用提供 SDKAppId、服务端 UserSig、业务账号、房间路由和操作 UI。
 
-当前版本 **0.2.0-rc.2（预发布）**，见 [Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.0-rc.2)。远程 Maven 与原生源码消费已有验证，生产账号/设备业务尚需验收。
+Maven 当前版本 **0.2.0-rc.2（预发布）**，见 [Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.0-rc.2)。远程 Maven 与原生源码消费已有验证，生产账号/设备业务尚需验收。
 
 ## 平台与模块
 
@@ -11,6 +11,7 @@
 | `live-sdk` | Android、iOS | CMP `LivePreview` / `LiveCoreView` |
 | `live-core` | Android、iOS | SDK 账号门禁、观看会话、状态、互动和 iOS Bridge |
 | `live-kuikly` | Android、iOS | Kuikly Native DSL 与薄原生视频 View，无 CMP UI/runtime |
+| `GycLiveNative` | iOS | 独立 Swift CocoaPod，AtomicX 账号/视频/互动/IM/RoomEngine 系统 PiP；本地候选 `0.2.1-rc.1`，尚未发布 |
 
 Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，应用同时遵循所选腾讯 SDK 的部署要求。已验证工具链为 Kotlin `2.2.21`、AGP `8.10.1`、CMP `1.10.3`、Kuikly `2.28.0-2.0.21-ohos` / Render `2.28.0`。
 
@@ -43,7 +44,17 @@ implementation("com.github.gycrosskit.live-sdk:live-sdk:0.2.0-rc.2")
 implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.2.0-rc.2")
 ```
 
-Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 需要应用实现 `IosLiveSdkBridge` 并链接真实腾讯 SDK；Kuikly 另外加入同标签 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/0.2.0-rc.2/live-kuikly/ios/GycLiveView.swift) 与 `OpenKuiklyIOSRender`。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
+Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应用保留 `IosLiveSdkBridge` 的薄协议映射。新原生候选 `GycLiveNative` 承接 SDK 实现，独立于 `Shared.framework`，厂商版本固定为 AtomicXCore `4.3.9`、RTCRoomEngine/Professional `4.3.9` 和 IM `9.1.7818`；Kuikly 另外加入同标签 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/0.2.0-rc.2/live-kuikly/ios/GycLiveView.swift) 与 `OpenKuiklyIOSRender`。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
+
+## iOS 原生候选接入
+
+`GycLiveNative` 当前仅供源码消费验证，未创建新标签或 CocoaPods Specs 发布：
+
+```ruby
+pod 'GycLiveNative', :path => '/path/to/live-sdk'
+```
+
+纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。本地 native 验证与 Maven 远程版本验证分别记录。
 
 ## 快速使用
 
