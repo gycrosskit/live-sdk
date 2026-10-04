@@ -3,10 +3,11 @@ plugins {
  kotlin("plugin.compose") version "2.2.21" apply false
  id("com.android.application") version "8.10.1"
 }
-val liveVersion = providers.gradleProperty("liveVersion").orElse("0.2.1-rc.2").get()
+val liveVersion = providers.gradleProperty("liveVersion").orElse("0.2.1-rc.3").get()
 if (providers.gradleProperty("verifyCmp").isPresent) pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 kotlin {
  androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
+ iosX64()
  iosSimulatorArm64 {
   binaries.framework {
    baseName = "LiveKuikly"
@@ -52,6 +53,9 @@ tasks.register("verifyNoCompose") {
 tasks.register("verifySingleSdk") {
  doLast {
   val deps = configurations.getByName("debugRuntimeClasspath").resolvedConfiguration.resolvedArtifacts
+  val liveArtifacts = deps.filter { it.moduleVersion.id.group == "com.github.gycrosskit.live-sdk" }
+  check(liveArtifacts.isNotEmpty() && liveArtifacts.all { it.moduleVersion.id.version == liveVersion })
+  println("Exact Live artifacts: " + liveArtifacts.joinToString { it.moduleVersion.id.toString() })
   check(deps.count { it.moduleVersion.id.name == "live-core-android" } == 1)
   check(deps.count { it.moduleVersion.id.name == "atomicx-core" } == 1)
  }
