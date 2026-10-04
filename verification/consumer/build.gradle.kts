@@ -3,7 +3,7 @@ plugins {
  kotlin("plugin.compose") version "2.2.21" apply false
  id("com.android.application") version "8.10.1"
 }
-val liveVersion = providers.gradleProperty("liveVersion").orElse("0.2.0-rc.2").get()
+val liveVersion = providers.gradleProperty("liveVersion").orElse("0.2.1-rc.2").get()
 if (providers.gradleProperty("verifyCmp").isPresent) pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 kotlin {
  androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }

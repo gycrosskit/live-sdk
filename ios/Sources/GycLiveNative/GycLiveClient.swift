@@ -14,6 +14,10 @@ public final class GycLiveClient: NSObject {
     /// AtomicX Store 与 IM 账号是进程级对象，宿主共用同一个原生实例。
     public static let shared = GycLiveClient()
 
+    var preparedLiveIdentity: LiveSdkIdentity?
+    var ownsTencentRuntime = false
+    var accountOperationSerial = 0
+
     private override init() {
         super.init()
     }
