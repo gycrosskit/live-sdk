@@ -112,3 +112,11 @@ fun PreviewItem(liveId: String, visible: Boolean) {
 | Maven / Git Pod | `0.2.1-rc.4` / `0.2.1-rc.3` |
 
 Android AtomicX 4.3.3.29 + IM 9.1.7818；iOS AtomicX/RoomEngine 4.3.9 + IM 9.1.7818；Kuikly Render 2.28.0。候选尚待新版本远程验收，设备行为不由编译/链接推断。
+
+## 0.2.1-rc.4 本地发布制品校验
+
+Fresh macOS staging 与归档解包复验均通过，全部 15 个 publication 的声明文件四类哈希、四类 sidecar、Apache-2.0 POM 及同名 available-at 目标身份均已校验。Maven 归档 SHA-256：`7ab65c2249f8284f57ae59bba03b40e600dcf76c735033cf34e4377a665a67b3`。
+
+Maven `0.2.1-rc.4`；未变 GycLiveNative Git Pod 保留 `0.2.1-rc.3`。
+
+新版本标签 / Release / JitPack 全变体下载与真实远程消费者仍待完成；本地验证不代替发布或设备验收。
