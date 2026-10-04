@@ -2,7 +2,7 @@
 
 基于腾讯 AtomicX 的 Android/iOS 直播观看组件，支持列表静音预览、完整观看、原生视频画面和互动命令。CMP 与 Kuikly Native DSL 共用账号门禁、会话与状态；应用提供 SDKAppId、服务端 UserSig、业务账号、房间路由和操作 UI。
 
-当前 Maven 候选 **0.2.1-rc.4** 精简观众快照为单一 StateFlow，保留弹幕队列、去重、序号和主线程语义。原生 Swift 源码未变，继续使用已验 Git Pod `0.2.1-rc.3`；新 Maven 完整归档与远程消费正在执行。`0.2.1-rc.2` 真实远程检查发现空资源 ZIP 引用 404 和 source 变体哈希失配，请使用后继候选，详情见 [M19 记录](docs/M19验证记录.md)。
+当前 Maven 候选 **0.2.1-rc.4** 精简观众快照为单一 StateFlow，保留弹幕队列、去重、序号和主线程语义。原生 Swift 源码未变，继续使用已验 Git Pod `0.2.1-rc.3`；新 Maven 完整归档、全变体 HTTP 与真实远程消费已通过。`0.2.1-rc.2` 真实远程检查发现空资源 ZIP 引用 404 和 source 变体哈希失配，请使用后继候选，详情见 [M19 记录](docs/M19验证记录.md)。
 
 ## 平台与模块
 
@@ -111,12 +111,16 @@ fun PreviewItem(liveId: String, visible: Boolean) {
 | --- | --- |
 | Maven / Git Pod | `0.2.1-rc.4` / `0.2.1-rc.3` |
 
-Android AtomicX 4.3.3.29 + IM 9.1.7818；iOS AtomicX/RoomEngine 4.3.9 + IM 9.1.7818；Kuikly Render 2.28.0。候选尚待新版本远程验收，设备行为不由编译/链接推断。
+Android AtomicX 4.3.3.29 + IM 9.1.7818；iOS AtomicX/RoomEngine 4.3.9 + IM 9.1.7818；Kuikly Render 2.28.0。候选已完成发布与新版本远程消费；设备行为不由编译/链接推断。
 
-## 0.2.1-rc.4 本地发布制品校验
+## 0.2.1-rc.4 发布与远程验收
 
 Fresh macOS staging 与归档解包复验均通过，全部 15 个 publication 的声明文件四类哈希、四类 sidecar、Apache-2.0 POM 及同名 available-at 目标身份均已校验。Maven 归档 SHA-256：`7ab65c2249f8284f57ae59bba03b40e600dcf76c735033cf34e4377a665a67b3`。
 
 Maven `0.2.1-rc.4`；未变 GycLiveNative Git Pod 保留 `0.2.1-rc.3`。
 
-新版本标签 / Release / JitPack 全变体下载与真实远程消费者仍待完成；本地验证不代替发布或设备验收。
+不可变标签与 prerelease 已发布，所有 Release 附件重下载 SHA 与清单匹配。JitPack 新版本最终 ok/isTag/public 且 commit 匹配 tag，全部 15 module、18 个文件引用、15 个 available-at 的 HTTP/四类声明 hash/身份验证通过。新版真实远程 consumer 已通过；设备与业务 SDK 动作未验。
+
+精确 JitPack rc.4 新目录消费者：Kuikly 43 tasks / 43s，APK/D8、verifyNoCompose、verifySingleSdk（core/AtomicX 唯一依赖）、iOS 三架构编译和 device/simulator arm64 static Framework；CMP 19 tasks / 19s，Android 与 iOS 三架构编译。未变 Git Pod rc.3 沿用既有真实 UIKit 链接证据，本轮不重复发布或编译旧 Pod。
+
+实际日志与 JSON 账单位于 `build/remote-library-review/`。真实设备、业务账号登录/聊天/直播/PiP、权限 UI、真实 Bug/通知发送未执行。
