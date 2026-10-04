@@ -48,7 +48,7 @@ Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应
 
 ## iOS 原生接入
 
-`GycLiveNative` 通过不可变 Git 标签安装。候选 `0.2.1-rc.3` 的本地验证见 [M19 记录](docs/M19验证记录.md)；上个[原生预发布](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.1)有远程下载与 UIKit 最终链接记录。本仓库没有 Swift Package 或 CocoaPods Specs 发布：
+`GycLiveNative` 通过不可变 Git 标签安装。候选 `0.2.1-rc.3` 的 JitPack 全变体下载、远程 Gradle 消费与 Git Pod UIKit 最终链接已通过，见 [M19 记录](docs/M19验证记录.md) 和[同版本预发布](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.3)。本仓库没有 Swift Package 或 CocoaPods Specs 发布：
 
 ```ruby
 pod 'GycLiveNative', :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => '0.2.1-rc.3'
