@@ -1,0 +1,17 @@
+platform :ios, '15.0'
+source 'https://cdn.cocoapods.org/'
+use_frameworks! :linkage => :static
+
+target 'LiveNativeConsumer' do
+  # 源码消费验证；候选尚未发布，不使用虚构的 Git tag。
+  pod 'GycLiveNative', :path => File.expand_path('../..', __dir__)
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+    end
+  end
+end
