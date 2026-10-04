@@ -12,5 +12,8 @@ python3 jitpack-metadata.py "$repository"
 python3 scripts/check-maven.py build/maven com.github.gycrosskit.live-sdk "$VERSION" live-sdk,live-core,live-kuikly ios_arm64,ios_x64,ios_simulator_arm64
 mkdir -p build/prebuilt
 COPYFILE_DISABLE=1 tar --no-xattrs -czf build/prebuilt/live-sdk-maven.tar.gz -C build/maven com/github/gycrosskit/live-sdk
-shasum -a 256 build/prebuilt/live-sdk-maven.tar.gz > build/prebuilt/live-sdk-maven.tar.gz.sha256
-cat build/prebuilt/live-sdk-maven.tar.gz.sha256
+(
+  cd build/prebuilt
+  shasum -a 256 live-sdk-maven.tar.gz > live-sdk-maven.tar.gz.sha256
+  cat live-sdk-maven.tar.gz.sha256
+)
