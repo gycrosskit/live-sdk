@@ -112,6 +112,35 @@ class LiveAudienceSnapshotStoreTest {
         assertNotSame(messages, store.snapshot().messages)
     }
 
+    @Test
+    fun `interleaved callbacks preserve the other snapshot fields`() {
+        val store = LiveAudienceSnapshotStore("live-1", "initial")
+        val owner = LiveAudienceUserSnapshot("host", "Host", "avatar")
+        store.updateHost(store.snapshot().host.copy(owner = owner))
+        store.updateFollowState(true, true, false, 12)
+        store.appendMemberMessage(owner, joined = true, timestampSeconds = 2.0)
+        val previous = store.snapshot()
+        store.updateIntroduction("notice")
+        store.updateAudience(listOf(owner), count = 4)
+        store.updateLoading(false)
+        store.updateInteractionReady(true)
+        store.updatePictureInPicture(true)
+        store.emitLikeEffect()
+        store.emitLikeEffect()
+        store.appendMemberMessage(owner, joined = false, timestampSeconds = 3.0)
+
+        val current = store.snapshot()
+        assertEquals(previous.host, current.host)
+        assertEquals("notice", current.introduction)
+        assertEquals(4, current.audienceCount)
+        assertFalse(current.loading)
+        assertTrue(current.interactionReady && current.pictureInPicture)
+        assertEquals(2L, current.likeEffectSequence)
+        assertEquals(listOf(-1L, -2L), current.messages.map { it.sequence })
+        assertEquals("initial", previous.introduction)
+        assertEquals(1, previous.messages.size)
+    }
+
     private fun message(
         sequence: Long = 1,
         content: String = "content",
