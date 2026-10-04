@@ -21,7 +21,7 @@ extension GycLiveClient {
     public func disconnectLiveIm() { onMainSync { [self] in detachLiveImListeners() } }
 
     public func currentUserId() -> String {
-        onMainSync { LoginStore.shared.state.value.loginUserInfo?.userID ?? "" }
+        onMainSync { self.actualTencentUser() ?? "" }
     }
 
     @MainActor
@@ -59,7 +59,7 @@ final class LiveImListener: NSObject, V2TIMGroupListener, V2TIMSDKListener {
     func onMemberKicked(groupID: String?, opUser: V2TIMGroupMemberInfo, memberList: [V2TIMGroupMemberInfo]) {
         guard let groupID else { return }
         deliver(groupID: groupID) { observer in
-            let currentUserID = LoginStore.shared.state.value.loginUserInfo?.userID ?? ""
+            let currentUserID = self.client?.actualTencentUser() ?? ""
             guard !currentUserID.isEmpty, memberList.contains(where: { $0.userID == currentUserID }) else { return }
             observer.onCurrentUserRemoved(groupId: groupID, operatorUserId: opUser.userID ?? "")
         }
@@ -70,6 +70,14 @@ final class LiveImListener: NSObject, V2TIMGroupListener, V2TIMSDKListener {
         deliver(groupID: groupID) { $0.onGroupDismissed(groupId: groupID) }
     }
 
-    func onKickedOffline() { deliver { $0.onKickedOffline() } }
-    func onUserSigExpired() { deliver { $0.onUserSigExpired() } }
+    private func terminal(_ event: @escaping @MainActor (GycLiveImObserver) -> Void) {
+        LiveMainThread.run { [weak self] in
+            guard let self, let client = self.client, client.liveImListener === self,
+                  let observer = client.liveImObserver else { return }
+            client.detachLiveImListeners()
+            event(observer)
+        }
+    }
+    func onKickedOffline() { terminal { $0.onKickedOffline() } }
+    func onUserSigExpired() { terminal { $0.onUserSigExpired() } }
 }

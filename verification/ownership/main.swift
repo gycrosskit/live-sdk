@@ -1,0 +1,13 @@
+import Foundation
+let target = LiveSdkIdentity(sdkAppId: 100, userId: "member")
+assert(liveAccountPreparationAction(prepared: nil, ownsRuntime: false, actualUser: "member", target: target, sdkReady: false) == .initialize)
+assert(!liveOwnsActualIdentity(prepared: target, ownsRuntime: false, actualUser: "member"))
+assert(liveAccountPreparationAction(prepared: target, ownsRuntime: false, actualUser: "member", target: target, sdkReady: true) == .reuse)
+let next = LiveSdkIdentity(sdkAppId: 100, userId: "next")
+assert(liveAccountPreparationAction(prepared: target, ownsRuntime: true, actualUser: "member", target: next, sdkReady: true) == .reset)
+assert(liveAccountPreparationAction(prepared: target, ownsRuntime: false, actualUser: "member", target: next, sdkReady: true) == .reject)
+assert(liveAccountPreparationAction(prepared: nil, ownsRuntime: false, actualUser: "foreign-during-reset", target: next, sdkReady: false) == .reject)
+assert(!liveOwnsActualIdentity(prepared: target, ownsRuntime: true, actualUser: "foreign-during-reset"))
+assert(liveAccountPreparationAction(prepared: nil, ownsRuntime: false, actualUser: "member", target: target, sdkReady: false, configuredSdkAppId: 101) == .reject)
+assert(liveAccountPreparationAction(prepared: LiveSdkIdentity(sdkAppId: 101, userId: "previous"), ownsRuntime: true, actualUser: "member", target: target, sdkReady: false, configuredSdkAppId: 101) == .reject)
+print("Live Swift ownership: own, borrow, foreign, reset recheck and SDK app-id guards passed")
