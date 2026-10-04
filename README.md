@@ -99,3 +99,10 @@ fun PreviewItem(liveId: String, visible: Boolean) {
 ## 许可证
 
 [Apache-2.0](LICENSE)。腾讯 SDK 与 Kuikly Render 遵循各自原厂许可，组件不重新分发 proprietary SDK。
+
+## 当前工作树的未发布精简
+
+观众快照只由现有 `StateFlow` 保存，`snapshot()` 与订阅者读取同一份状态，回调通过 `copy` 保留其他字段。
+弹幕队列、去重 key、有界容量与合成序号继续独立维护；平台回调原有主线程串行语义保持。
+
+本轮 core Android 35 项、Simulator 32 项测试和 core/CMP/Kuikly Android、iOS arm64/Simulator 编译通过；未执行真实直播业务。

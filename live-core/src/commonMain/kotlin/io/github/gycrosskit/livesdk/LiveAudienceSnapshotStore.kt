@@ -13,62 +13,43 @@ internal class LiveAudienceSnapshotStore(
 ) {
     // 内部去重队列不直接暴露给 UI，只发布不可变快照。
     private val messages = ArrayDeque<LiveAudienceMessageSnapshot>()
-    /** 只在消息真正变化时生成不可变副本，其他直播状态更新不再重复复制整条弹幕列表。 */
-    private var messageSnapshot = emptyList<LiveAudienceMessageSnapshot>()
     private val knownMessageKeys = linkedSetOf<LiveAudienceMessageIdentity>()
     private var syntheticMessageSequence = -1L
-    private var introduction = initialIntroduction
-    private var interactionReady = false
-    private var loading = true
-    private var pictureInPicture = false
-    private var likeEffectSequence = 0L
-    private var host = emptyLiveAudienceHost(liveId)
-    private var audience = emptyList<LiveAudienceUserSnapshot>()
-    private var audienceCount = 0
 
-    val snapshots = kotlinx.coroutines.flow.MutableStateFlow(snapshot())
-
-    /** 每次返回当前状态的不可变副本，避免旧快照随后续 SDK 回调被原地改写。 */
-    fun snapshot() = LiveAudienceContentSnapshot(
-        messages = messageSnapshot,
-        introduction = introduction,
-        interactionReady = interactionReady,
-        loading = loading,
-        pictureInPicture = pictureInPicture,
-        likeEffectSequence = likeEffectSequence,
-        host = host,
-        audience = audience,
-        audienceCount = audienceCount,
+    // 两端 SDK 回调统一在主线程更新；快照只由这个 StateFlow 持有。
+    val snapshots = kotlinx.coroutines.flow.MutableStateFlow(
+        LiveAudienceContentSnapshot.Empty.copy(
+            introduction = initialIntroduction,
+            host = emptyLiveAudienceHost(liveId),
+        ),
     )
 
+    /** 读取已发布快照；后续回调通过 copy 更新，不会原地改写旧快照。 */
+    fun snapshot() = snapshots.value
+
     fun updateIntroduction(value: String) {
-        introduction = value
-        snapshots.value = snapshot()
+        snapshots.value = snapshot().copy(introduction = value)
     }
 
     fun updateInteractionReady(ready: Boolean) {
-        interactionReady = ready
-        snapshots.value = snapshot()
+        snapshots.value = snapshot().copy(interactionReady = ready)
     }
 
     fun updateLoading(visible: Boolean) {
-        loading = visible
-        snapshots.value = snapshot()
+        snapshots.value = snapshot().copy(loading = visible)
     }
 
     fun updatePictureInPicture(enabled: Boolean) {
-        pictureInPicture = enabled
-        snapshots.value = snapshot()
+        snapshots.value = snapshot().copy(pictureInPicture = enabled)
     }
 
     fun emitLikeEffect() {
-        likeEffectSequence++
-        snapshots.value = snapshot()
+        val current = snapshot()
+        snapshots.value = current.copy(likeEffectSequence = current.likeEffectSequence + 1)
     }
 
     fun updateHost(value: LiveAudienceHostSnapshot) {
-        host = value
-        snapshots.value = snapshot()
+        snapshots.value = snapshot().copy(host = value)
     }
 
     fun updateFollowState(
@@ -77,19 +58,17 @@ internal class LiveAudienceSnapshotStore(
         requestRunning: Boolean,
         fansCount: Long,
     ) {
-        host = host.copy(
+        val current = snapshot()
+        snapshots.value = current.copy(host = current.host.copy(
             followVisible = visible,
             followed = followed,
             followRequestRunning = requestRunning,
             fansCount = fansCount,
-        )
-        snapshots.value = snapshot()
+        ))
     }
 
     fun updateAudience(users: List<LiveAudienceUserSnapshot>, count: Int) {
-        audience = users.toList()
-        audienceCount = maxOf(count, users.size)
-        snapshots.value = snapshot()
+        snapshots.value = snapshot().copy(audience = users.toList(), audienceCount = maxOf(count, users.size))
     }
 
     /**
@@ -108,8 +87,7 @@ internal class LiveAudienceSnapshotStore(
         while (messages.size > MAX_MESSAGE_COUNT) {
             knownMessageKeys.remove(messages.removeFirst().identityKey)
         }
-        messageSnapshot = messages.toList()
-        snapshots.value = snapshot()
+        snapshots.value = snapshot().copy(messages = messages.toList())
         return appended
     }
 
