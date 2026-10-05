@@ -9,10 +9,12 @@ public final class GycLiveView: UIView, KuiklyRenderViewExportProtocol {
     private var pendingEvents: [String] = []
     private var controller: IosKuiklyLiveController?
     private var notifications: [NSObjectProtocol] = []
+    /// 复用宿主业务点赞上报；新会话创建前注入，成功批次才上报。
     public var likeReporter: LiveLikeReporter? {
         didSet { if let value = likeReporter { controller?.likeReporter = value } }
     }
 
+    /// Main 应用房间/事件属性，事件注册前最多保留 16 条当前会话事件。
     public func hrv_setProp(withKey propKey: String, propValue: Any) {
         if css_setProp(withKey: propKey, value: propValue) { return }
         if propKey == "liveEvent" {
@@ -45,6 +47,7 @@ public final class GycLiveView: UIView, KuiklyRenderViewExportProtocol {
         }
     }
 
+    /// Main 将 Kuikly 原生命令交给共用 Kotlin 会话，弹幕回执转为字典。
     public func hrv_call(withMethod method: String, params: String?, callback: KuiklyRenderCallback?) {
         controller?.command(method: method, params: params ?? "{}") { json in
             callback?(Self.dictionary(json))

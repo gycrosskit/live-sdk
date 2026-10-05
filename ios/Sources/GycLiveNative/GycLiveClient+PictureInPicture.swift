@@ -3,7 +3,8 @@ import UIKit
 
 /** RoomEngine 系统 PiP 接线；前台应用内小窗仍由 `AudiencePresentationBridge` 管理。 */
 extension GycLiveClient {
-    /// 返回值只代表请求已提交；实际启用结果通过 audienceObserver 异步通知 shared。
+    /// 返回值只代表请求已提交；audienceObserver 异步交付实验接口回执，不能证明系统浮窗已开始或可见。
+    /// - Parameter wideContent: true 使用横向画布，false 使用竖向画布。
     public func enterPictureInPicture(wideContent: Bool) -> Bool {
         onMainSync { [self] in
             guard let liveID = activeLiveID,
@@ -21,6 +22,8 @@ extension GycLiveClient {
     }
 
     /// 后台准备由 UIKit 容器接收结果，避免把准备阶段误报为 shared 已进入系统 PiP。
+    /// - Parameter wideContent: true 使用横向画布，false 使用竖向画布。
+    /// - Parameter completion: Main 回报实验接口成功标记，不能证明系统浮窗可见。
     public func enableBackgroundPictureInPicture(
         wideContent: Bool,
         completion: @escaping (Bool) -> Void
@@ -41,6 +44,7 @@ extension GycLiveClient {
         }
     }
 
+    /// Main 关闭本组件提交的系统 PiP，退出观看前须清理。
     public func disableBackgroundPictureInPicture() {
         onMain { [weak self] in
             self?.releasePictureInPicture(notify: false)

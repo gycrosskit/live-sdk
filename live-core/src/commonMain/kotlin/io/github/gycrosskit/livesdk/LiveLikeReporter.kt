@@ -5,7 +5,9 @@ fun interface LiveLikeReporter {
     /**
      * 上报已被原生 SDK 接受的点赞批次。
      *
-     * [liveId] 是腾讯直播间 ID，[userId] 是当前直播账号，[count] 是本批点赞数。
+     * @param liveId 本批点赞归属的腾讯直播间 ID。
+     * @param userId 本批提交时的腾讯直播账号 ID。
+     * @param count 本批点赞数，单位为次，应大于 0。
      */
     fun report(liveId: String, userId: String, count: Int)
 

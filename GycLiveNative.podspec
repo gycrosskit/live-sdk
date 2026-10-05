@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = 'GycLiveNative'
-  s.version = '0.2.1-rc.3'
+  s.version = '0.2.1-rc.6'
   s.summary = '腾讯 AtomicX iOS 原生直播观看、IM 与系统 PiP 适配'
   s.homepage = 'https://github.com/gycrosskit/live-sdk'
   s.license = { :type => 'Apache-2.0', :file => 'LICENSE' }

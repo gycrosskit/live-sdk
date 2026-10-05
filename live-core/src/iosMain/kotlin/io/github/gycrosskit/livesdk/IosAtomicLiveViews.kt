@@ -2,14 +2,18 @@
 
 package io.github.gycrosskit.livesdk
 
-import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import platform.UIKit.UIView
 
-/** iOS 只实现 UIView 的创建/释放，预览状态机和生命周期门禁复用 commonMain。 */
+/**
+ * iOS 只实现 UIView 的创建/释放，预览状态机和生命周期门禁复用 commonMain。
+ *
+ * @param bridge 已安装的 Swift 原生桥，不归本实例注销。
+ * @param onViewChanged Main 上交付当前原生 View；停止或释放时传 null。
+ */
 class IosAtomicLivePreviewPlayback(
     private val bridge: IosLiveSdkBridge,
     private val onViewChanged: (UIView?) -> Unit,
@@ -37,6 +41,11 @@ class IosAtomicLivePreviewPlayback(
         view?.let(::releaseView)
     }
 
+    /**
+     * 仅释放仍属于当前预览的 View，旧 UIKit dispose 不得停掉新实例。
+     *
+     * @param releasedView 待释放的 View，只有与当前实例身份一致时才生效。
+     */
     fun releaseView(releasedView: UIView) {
         if (view !== releasedView) return
         view = null
@@ -50,6 +59,11 @@ class IosAtomicLivePreviewPlayback(
  * iOS AtomicX 观看会话和原生播放 View。
  *
  * SDK 回调只更新模块内的中立快照；弹幕列表、资料面板和按钮等可见 UI 由宿主绘制。
+ *
+ * @param bridge 已安装的 Swift 原生桥，不归本实例注销。
+ * @param liveId 当前实例的腾讯直播间 ID，实例不可跨房间复用。
+ * @param listener Main 上交付观看事件的监听器，释放后不再交付有效会话事件。
+ * @param likeReporter SDK 成功的点赞批次上报，不执行阻塞任务。
  */
 class IosAtomicAudienceView(
     private val bridge: IosLiveSdkBridge,
@@ -266,7 +280,11 @@ class IosAtomicAudienceView(
     override val snapshot: LiveAudienceContentSnapshot
         get() = snapshotStore.snapshot()
 
-    /** Kuikly 与 CMP 共用观看会话；只有取得会话令牌后才创建 SDK View。 */
+    /**
+     * Kuikly 与 CMP 共用观看会话；只有取得会话令牌后才创建 SDK View。
+     *
+     * @param host 宿主拥有的 UIView 容器，仅 Main 挂载和移除子 View。
+     */
     fun mount(host: UIView) {
         nativeHost = host
         if (!sessionGranted || nativeView != null) return

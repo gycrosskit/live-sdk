@@ -11,9 +11,15 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import platform.UIKit.UIView
 
-/** Swift KuiklyView 的薄控制器；观看会话仍由 live-core 和宿主 IosLiveSdkBridge 持有。 */
+/**
+ * Swift KuiklyView 的薄控制器；观看会话仍由 live-core 和宿主 IosLiveSdkBridge 持有。
+ *
+ * @param onEvent Main 输出原生事件 JSON，由宿主转交 Renderer。
+ */
 class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
+    /** Swift Main 上挂载的容器，与本控制器生命周期一致。 */
     val view = UIView()
+    /** 成功点赞批次的宿主上报；创建观看会话前设置。 */
     var likeReporter: LiveLikeReporter = LiveLikeReporter.None
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var room: KuiklyLiveRoom? = null
@@ -26,6 +32,11 @@ class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
 
     init { scope.launch { IosLiveSdkRuntime.sessionReadyFlow.collect { reconcile() } } }
 
+    /**
+     * Main 接收完整房间 JSON；换房或切模式先停止旧会话，无效输入发送 joinFailed。
+     *
+     * @param value 完整房间 JSON，包含 liveId、preview、active。
+     */
     fun configure(value: String) {
         if (released) return
         try {
@@ -36,11 +47,23 @@ class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
         } catch (_: Exception) { onEvent(liveEventJson("joinFailed", -1, "Invalid room configuration")) }
     }
 
+    /**
+     * Main 同步窗口/应用可见性，失活时停止预览。
+     *
+     * @param value 宿主窗口或应用可见性。
+     */
     fun setVisible(value: Boolean) {
         visible = value
         reconcile()
     }
 
+    /**
+     * Main 执行原生观看命令；弹幕迟到结果不允许跨代次报成功。
+     *
+     * @param method 命令名称：like、toggleFollow、refreshAudience、release 或 sendBarrage。
+     * @param params 命令 JSON，sendBarrage 读取 message 字段。
+     * @param callback 仅 sendBarrage 返回 JSON 回执，其余命令不调用此回调。
+     */
     fun command(method: String, params: String, callback: (String) -> Unit) {
         when (method) {
             "like" -> audience?.like()
@@ -62,6 +85,7 @@ class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
         }
     }
 
+    /** Main 幂等销毁；撤销状态订阅和当前观看/预览实例。 */
     fun release() {
         if (released) return
         released = true

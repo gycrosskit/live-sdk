@@ -8,10 +8,19 @@ interface AtomicAudienceListener {
     /** 腾讯确认进房成功，App 此后才可请求直播业务接口。 */
     fun onJoinSucceeded()
 
-    /** 进房调用失败或超时。 */
+    /**
+     * 进房调用失败或超时。
+     *
+     * @param code 平台错误码，组件自身失败可使用负值。
+     * @param message 原始事件文本，展示与脱敏策略由宿主决定。
+     */
     fun onJoinFailed(code: Int, message: String)
 
-    /** 直播不存在或已经结束，宿主应提示并退出。 */
+    /**
+     * 直播不存在或已经结束，宿主应提示并退出。
+     *
+     * @param message 原始事件文本，展示与脱敏策略由宿主决定。
+     */
     fun onLiveUnavailable(message: String = "")
 
     /** 观看期间被主播或管理员移出当前直播间。 */
@@ -20,10 +29,18 @@ interface AtomicAudienceListener {
     /** 观看期间收到关播或解散事件。 */
     fun onLiveEnded()
 
-    /** 当前登录观众的弹幕权限变化。 */
+    /**
+     * 当前登录观众的弹幕权限变化。
+     *
+     * @param disabled true 表示该账号禁止发送弹幕。
+     */
     fun onCurrentUserMessageDisabled(disabled: Boolean)
 
-    /** 系统画中画实际状态变化；默认实现兼容不提供原生 PiP 回调的平台。 */
+    /**
+     * 平台 PiP 标记变化：Android 包含请求准备值与 Activity 实际回报；iOS 为实验接口回执，不能证明浮窗可见。默认实现兼容未提供回执的平台。
+     *
+     * @param enabled 平台 PiP 标记，不能单独证明浮窗可见。
+     */
     fun onPictureInPictureChanged(enabled: Boolean) = Unit
 }
 
@@ -54,8 +71,11 @@ data class LiveAudienceMessageSnapshot(
 
 /** 平台成员回调只携带语义类型，最终展示文案由 shared UI 按当前语言解析。 */
 enum class LiveAudienceMessageKind {
+    /** 真实文本弹幕。 */
     TEXT,
+    /** 成员加入，展示文案由宿主生成。 */
     MEMBER_JOINED,
+    /** 成员离开，展示文案由宿主生成。 */
     MEMBER_LEFT,
 }
 
@@ -100,7 +120,7 @@ data class LiveAudienceHostSnapshot(
  * @property introduction 直播简介或公告。
  * @property interactionReady 弹幕等互动 Store 是否已可用。
  * @property loading 原生观看会话是否仍在进房。
- * @property pictureInPicture 系统画中画的实际状态。
+ * @property pictureInPicture 平台 PiP 标记；Android 包含请求准备值与 Activity 回报，iOS 为实验接口回执，不能单独证明浮窗可见。
  * @property likeEffectSequence 点赞动效事件序号，每次收到有效点赞时递增。
  * @property host 当前直播间和主播快照。
  * @property audience 当前已获得资料的在线观众。
@@ -143,8 +163,12 @@ data class LiveAudienceContentSnapshot(
 
 /** 直播列表预览状态不包含平台 View 或厂商错误对象。 */
 enum class LivePreviewState {
+    /** 未激活、未就绪或停止后显示封面。 */
     COVER,
+    /** 已请求播放，正在准备或缓冲。 */
     LOADING,
+    /** SDK 确认预览流播放。 */
     PLAYING,
+    /** 预览失败；后续生命周期重新激活可重试。 */
     FAILED,
 }

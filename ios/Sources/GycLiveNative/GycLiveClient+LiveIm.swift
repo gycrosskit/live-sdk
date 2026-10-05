@@ -4,6 +4,8 @@ import ImSDK_Plus
 
 extension GycLiveClient {
     /// 每次绑定创建独占 Listener；旧 Listener 即使被 SDK 暂时保留，也不能访问新观察者。
+    /// - Parameter groupIds: 监听群组列表，去除空白和重复项。
+    /// - Parameter observer: 当前会话事件观察者，回执调度到 Main；换会话后旧绑定失效。
     public func connectLiveIm(groupIds: [String], observer: GycLiveImObserver) {
         onMainSync { [self] in
             detachLiveImListeners()
@@ -18,8 +20,10 @@ extension GycLiveClient {
         }
     }
 
+    /// 同步撤回群和账号 listener；旧绑定回调失效，不注销 SDK。
     public func disconnectLiveIm() { onMainSync { [self] in detachLiveImListeners() } }
 
+    /// 同步读取 SDK 真实登录账号，未登录为空字符串。
     public func currentUserId() -> String {
         onMainSync { self.actualTencentUser() ?? "" }
     }

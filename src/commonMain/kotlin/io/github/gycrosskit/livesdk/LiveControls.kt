@@ -9,7 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 
-/** commonMain 持有中立命令转发，不公开原生播放器、AtomicX Store 或 Swift Bridge。 */
+/** 当前 Composition 的中立命令状态，不跨页面复用；命令在 Main 调用，不公开 SDK 或 View。 */
 @Stable
 class LivePlaybackState internal constructor() {
     private var commands: LiveAudienceCommands by mutableStateOf(EmptyLiveAudienceCommands)
@@ -21,7 +21,12 @@ class LivePlaybackState internal constructor() {
     val snapshot: LiveAudienceContentSnapshot
         get() = latestSnapshot
 
-    /** 发送文本弹幕；[onFinished] 回报成功状态与平台错误描述。 */
+    /**
+     * 发送文本弹幕；[onFinished] 回报成功状态与平台错误描述。
+     *
+     * @param message 原始弹幕文本，编码与文案由宿主决定。
+     * @param onFinished Main 上返回 SDK 成功标记和错误描述。
+     */
     fun sendBarrage(message: String, onFinished: (Boolean, String) -> Unit) =
         commands.sendBarrage(message, onFinished)
 
@@ -34,11 +39,19 @@ class LivePlaybackState internal constructor() {
     /** 请求平台刷新在线观众快照。 */
     fun refreshAudience() = commands.refreshAudience()
 
-    /** 返回值只表示平台接受了请求；真实进入/退出结果由 [LivePlaybackCallbacks.onPictureInPictureChanged] 回报。 */
+    /**
+     * 返回值只表示平台接受请求；回调 PiP 标记按平台解释，iOS 实验回执不能证明系统浮窗可见。
+     *
+     * @param wideContent true 使用横向画布，false 使用竖向画布。
+     */
     fun enterPictureInPicture(wideContent: Boolean): Boolean =
         commands.enterPictureInPicture(wideContent)
 
-    /** 同步宿主 Activity/UIViewController 回报的系统画中画状态。 */
+    /**
+     * 同步宿主 Activity/UIViewController 回报的系统画中画状态。
+     *
+     * @param enabled 平台 PiP 标记，不能单独证明浮窗可见。
+     */
     fun updatePictureInPicture(enabled: Boolean) = commands.updatePictureInPicture(enabled)
 
     /** 幂等释放当前观看会话。 */
@@ -87,7 +100,14 @@ private object EmptyLiveAudienceCommands : LiveAudienceCommands {
 @Composable
 fun rememberLivePlaybackState(): LivePlaybackState = remember { LivePlaybackState() }
 
-/** 列表静音预览控件；Android/iOS 原生差异完全收口到 [PlatformLiveCoreView]。 */
+/**
+ * 列表静音预览控件；仅 active 且页面至少 STARTED 且账号已准备时播放。离开 Composition 幂等停止。
+ *
+ * @param liveId 当前实例的腾讯房间 ID，不跨房间复用。
+ * @param active 业务激活标记，false 停止播放。
+ * @param modifier 视频容器布局与样式，默认 Modifier。
+ * @param onStateChanged Main 交付预览状态变化，缺省为空操作。
+ */
 @Composable
 fun LivePreview(
     liveId: String,
@@ -106,6 +126,12 @@ fun LivePreview(
  *
  * 本控件不是“直播间 UI”；弹幕、主播资料、观众、输入、点赞和 PiP 入口由 shared CMP
  * 围绕该画面统一组合。
+ *
+ * @param liveId 当前实例的腾讯房间 ID，不跨房间复用。
+ * @param modifier 视频容器布局与样式，默认 Modifier。
+ * @param state 当前组合位置命令状态，默认 rememberLivePlaybackState 创建。
+ * @param callbacks 观看事件回调，缺省事件为空操作，重组后使用最新实例。
+ * @param likeReporter SDK 成功的点赞批次上报，缺省 None；回调不执行阻塞任务。
  */
 @Composable
 fun LiveCoreView(

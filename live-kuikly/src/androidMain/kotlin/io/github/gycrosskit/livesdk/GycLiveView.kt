@@ -15,7 +15,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-/** Native 视频层直接复用 CMP 的会话和 Store，不创建 ComposeView 或独立登录。 */
+/**
+ * Native 视频层直接复用 CMP 的会话和 Store，不创建 ComposeView 或独立登录。
+ *
+ * @param context 当前页面 Context，在实例存活期间持有。
+ */
 class GycLiveView(context: Context) : FrameLayout(context), IKuiklyRenderViewExport {
     private var room: KuiklyLiveRoom? = null
     private var event: KuiklyRenderCallback? = null

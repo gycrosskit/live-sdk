@@ -58,6 +58,8 @@ public final class GycLiveClient: NSObject {
     var audienceGeneration = 0
     private var logger: ((GycLiveLogLevel, String) -> Void)?
 
+    /// Main 替换日志出口，回调内不执行阻塞任务或记录凭据。
+    /// - Parameter logger: 宿主日志出口，Main 调用；勿阻塞或输出账号凭据。
     public func setLogger(_ logger: @escaping (GycLiveLogLevel, String) -> Void) {
         onMain { [weak self] in self?.logger = logger }
     }
@@ -68,6 +70,8 @@ public final class GycLiveClient: NSObject {
     // MARK: - 列表静音预览
 
     /// 创建当前唯一静音预览 View；新预览会先释放旧预览，但不会调用 joinLive。
+    /// - Parameter liveId: 当前实例的腾讯直播间 ID。
+    /// - Parameter observer: 当前会话事件观察者，回执调度到 Main；换会话后旧绑定失效。
     public func makePreviewView(liveId: String, observer: GycLivePreviewObserver) -> UIView {
         onMainSync {
             self.previewSession.makeView(liveID: liveId, observer: observer)
@@ -75,6 +79,7 @@ public final class GycLiveClient: NSObject {
     }
 
     /// 只在传入 View 仍是当前预览时释放，避免迟到的 Compose dispose 停掉新卡片。
+    /// - Parameter view: 待释放 UIView，以对象身份核验当前实例归属。
     public func releasePreviewView(view: UIView) {
         onMain { [weak self, weak view] in
             guard let self, let view else { return }
@@ -92,6 +97,8 @@ public final class GycLiveClient: NSObject {
     // MARK: - 直播互动命令
 
     /// 通过当前 BarrageStore 发送原始文本；表情 Token 编码由 shared 完成。
+    /// - Parameter message: 原始弹幕文本，组件不改写业务编码。
+    /// - Parameter callback: Main 交付当前操作结果或平台错误。
     public func sendBarrage(message: String, callback: GycLiveOperationCallback) {
         onMain { [weak self] in
             self?.interactionSession.sendBarrage(message: message, callback: callback)
@@ -99,6 +106,8 @@ public final class GycLiveClient: NSObject {
     }
 
     /// 通过当前 LikeStore 发送已由 common 合并后的点赞计数。
+    /// - Parameter count: SDK 计数，单位为次。
+    /// - Parameter callback: Main 交付当前操作结果或平台错误。
     public func sendLike(count: Int32, callback: GycLiveOperationCallback) {
         onMain { [weak self] in
             self?.interactionSession.sendLike(count: count, callback: callback)
@@ -108,6 +117,8 @@ public final class GycLiveClient: NSObject {
     // MARK: - 完整直播 View
 
     /// 创建唯一完整直播 View 并加入观看会话；进房成功后才绑定互动 Store。
+    /// - Parameter liveId: 当前实例的腾讯直播间 ID。
+    /// - Parameter observer: 当前会话事件观察者，回执调度到 Main；换会话后旧绑定失效。
     public func makeAudienceView(liveId: String, observer: GycAudiencePlayerObserver) -> UIView {
         onMainSync {
             self.previewSession.stop()
@@ -156,6 +167,8 @@ public final class GycLiveClient: NSObject {
     }
 
     /// 只释放仍为当前实例的播放 View，并在真实 leaveLive 完成后回调。
+    /// - Parameter view: 待释放 UIView，以对象身份核验当前实例归属。
+    /// - Parameter callback: Main 交付当前操作结果或平台错误。
     public func releaseAudienceView(view: UIView, callback: GycLiveOperationCallback) {
         onMain { [weak self, weak view] in
             guard let self, let view, self.activeAudienceView === view else {
@@ -202,12 +215,9 @@ public final class GycLiveClient: NSObject {
         }
     }
 
-    /**
-     * 查询主播关注状态。
-     *
-     * 关注状态机位于 live-sdk/commonMain；组件只转换 V2TIM 单用户结果，
-     * 并统一回主线程修改 Compose 状态。
-     */
+    /// 查询主播关注状态；共用状态机负责重试和过期回执过滤，此处只转换 IM 单用户结果。
+    /// - Parameter userId: 主播腾讯账号 ID。
+    /// - Parameter callback: Main 返回已确认关注状态或平台错误。
     public func checkFollowed(userId: String, callback: GycLiveBooleanCallback) {
         onMain { [weak self] in
             V2TIMManager.sharedInstance().checkFollowType(userIDList: [userId]) { [weak self] results in
@@ -233,6 +243,9 @@ public final class GycLiveClient: NSObject {
     }
 
     /// 根据 shared 的目标状态调用关注或取消关注，并转换单用户操作结果。
+    /// - Parameter userId: 腾讯账号 ID，按原值匹配。
+    /// - Parameter followed: 明确关注目标，true 关注，false 取消。
+    /// - Parameter callback: Main 交付当前操作结果或平台错误。
     public func updateFollow(
         userId: String,
         followed: Bool,
@@ -270,6 +283,8 @@ public final class GycLiveClient: NSObject {
     }
 
     /// 查询主播粉丝数并收敛为不含 V2TIM 类型的 Long 结果。
+    /// - Parameter userId: 腾讯账号 ID，按原值匹配。
+    /// - Parameter callback: Main 交付当前操作结果或平台错误。
     public func fetchFans(userId: String, callback: GycLiveLongCallback) {
         onMain { [weak self] in
             V2TIMManager.sharedInstance().getUserFollowInfo(userIDList: [userId]) { [weak self] values in

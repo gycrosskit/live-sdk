@@ -12,6 +12,12 @@ class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
     override fun createAttr() = KuiklyLiveAttr()
     override fun createEvent() = KuiklyLiveEvent()
 
+    /**
+     * 待原生节点就绪后发送弹幕，callback 返回已确认的 SDK 结果。
+     *
+     * @param message 原始弹幕文本，编码与文案由宿主决定。
+     * @param callback Renderer 回报成功标记与描述；节点未加载时任务等待渲染。
+     */
     fun sendBarrage(message: String, callback: (Boolean, String) -> Unit) {
         performTaskWhenRenderViewDidLoad {
             renderView?.callMethod("sendBarrage", JSONObject().put("message", message).toString()) {
@@ -21,33 +27,57 @@ class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
         }
     }
 
+    /** 原生节点就绪后记录一次当前观看会话点赞。 */
     fun like() = command("like")
+    /** 切换主播关注目标，采用原生共用状态机的在途门禁。 */
     fun toggleFollow() = command("toggleFollow")
+    /** 请求刷新当前观看会话的在线观众快照。 */
     fun refreshAudience() = command("refreshAudience")
+    /** 显式退出当前会话，原生节点销毁时还会幂等清理。 */
     fun release() = command("release")
 
     private fun command(name: String) {
         performTaskWhenRenderViewDidLoad { renderView?.callMethod(name, null) }
     }
 
-    companion object { const val VIEW_NAME = "GycLiveView" }
+    companion object {
+        /** Native View 注册名称，双端宿主必须使用相同名称。 */
+        const val VIEW_NAME = "GycLiveView"
+    }
 }
 
+/** 一次下发房间、预览模式及活动标记的原生属性。 */
 class KuiklyLiveAttr : Attr() {
-    /** 一次提交完整配置，避免 native 因属性更新顺序创建错误模式的会话。 */
+    /**
+     * 一次提交完整配置，避免 native 因属性更新顺序创建错误模式的会话。
+     *
+     * @param liveId 当前实例的腾讯房间 ID，不跨房间复用。
+     * @param preview true 静音预览，默认 false 完整观看。
+     * @param active 业务激活标记，false 停止播放。
+     */
     fun room(liveId: String, preview: Boolean = false, active: Boolean = true): KuiklyLiveAttr {
         "room" with JSONObject().put("liveId", liveId).put("preview", preview).put("active", active).toString()
         return this
     }
 }
 
+/** 原生 SDK 确认后的会话事件与中立快照，不代替宿主业务路由。 */
 class KuiklyLiveEvent : Event() {
-    /** type 对应 SDK 已确认的事件；snapshot 携带现有中立快照的 JSON。 */
+    /**
+     * type 对应 SDK 已确认的事件；snapshot 携带现有中立快照的 JSON。
+     *
+     * @param handler Renderer 接收原生事件 JSON 的处理器。
+     */
     fun liveEvent(handler: (JSONObject) -> Unit) {
         register("liveEvent") { handler(it as? JSONObject ?: JSONObject()) }
     }
 }
 
+/**
+ * 在 Kuikly 容器中添加视频节点；尺寸与业务操作层由宿主声明。
+ *
+ * @param init 视频节点属性、事件和尺寸配置。
+ */
 fun ViewContainer<*, *>.LiveVideo(init: KuiklyLiveView.() -> Unit) = addChild(KuiklyLiveView(), init)
 
 /** Native 两端共用事件编码，不引入第二份观看状态。 */

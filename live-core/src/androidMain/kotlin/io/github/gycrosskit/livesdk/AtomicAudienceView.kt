@@ -35,6 +35,11 @@ import kotlinx.coroutines.launch
  *
  * 本类只管理腾讯会话、Store 和 `LiveCoreView` 生命周期；所有直播间操作层 UI 均由 shared CMP 绘制。
  * 类本身不继承 Android View，也不创建 `ComposeView`，确保直播页面只有一个 Compose 根节点。
+ *
+ * @param context 当前页面 Context，在实例存活期间持有。
+ * @param liveId 当前实例的腾讯房间 ID，不跨房间复用。
+ * @param listener Main 观看事件监听，释放后不再交付有效会话事件。
+ * @param likeReporter SDK 成功的点赞批次上报，回调不执行阻塞任务。
  */
 class AtomicAudienceView(
     private val context: Context,
@@ -171,6 +176,7 @@ class AtomicAudienceView(
     override val snapshot: LiveAudienceContentSnapshot
         get() = snapshotStore.snapshot()
 
+    /** 当前实例 SDK 视频 View，只用于 Main 上挂载，不承载业务 UI。 */
     val nativeView: android.view.View get() = liveCoreView
 
     override fun like() = likeController.like()
