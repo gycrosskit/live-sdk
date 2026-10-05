@@ -48,4 +48,8 @@ jobs:
           java-version: '17'
       - run: bash verification/ownership/verify-callbacks.sh
       - run: bash verification/picture-in-picture/verify.sh
-      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-core:iosSimulatorArm64Test compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinIosX64 :live-kuikly:compileKotlinIosArm64 :live-kuikly:compileKotlinIosSimulatorArm64 :live-kuikly:compileKotlinIosX64 --no-daemon --max-workers=1 --stacktrace
+      - run: |
+          ios_test_target=iosSimulatorArm64Test
+          if [[ "$(uname -m)" != arm64 ]]; then ios_test_target=iosX64Test; fi
+          bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-core:"$ios_test_target" compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinIosX64 :live-kuikly:compileKotlinIosArm64 :live-kuikly:compileKotlinIosSimulatorArm64 :live-kuikly:compileKotlinIosX64 --no-daemon --max-workers=1 --stacktrace
+          python3 -c 'import pathlib, sys, xml.etree.ElementTree as ET; files=pathlib.Path(".").glob("**/build/test-results/"+sys.argv[1]+"/*.xml"); cases=[case for path in files for case in ET.parse(path).iter("testcase")]; assert any(case.find("skipped") is None for case in cases), "No executed iOS test cases"' "$ios_test_target"

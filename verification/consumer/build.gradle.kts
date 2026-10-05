@@ -8,7 +8,14 @@ val verifyCmp = providers.gradleProperty("verifyCmp").isPresent
 if (verifyCmp) pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 kotlin {
  androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
- iosX64()
+ iosX64 {
+  binaries.framework {
+   baseName = "LiveKuikly"
+   isStatic = true
+   if (!verifyCmp) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
+  }
+ }
  iosSimulatorArm64 {
   binaries.framework {
    baseName = "LiveKuikly"

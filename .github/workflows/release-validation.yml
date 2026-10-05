@@ -1,5 +1,6 @@
 name: Release validation
 on:
+  pull_request:
   release:
     types: [published]
   workflow_dispatch:
@@ -8,10 +9,13 @@ on:
         description: Immutable Maven release tag
         required: true
         type: string
+concurrency:
+  group: release-validation-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 env:
-  VERSION: ${{ github.event.release.tag_name || inputs.version }}
+  VERSION: ${{ github.event.release.tag_name || inputs.version || '0.2.1-rc.7' }}
 jobs:
   release-android:
     runs-on: ubuntu-24.04
@@ -40,4 +44,7 @@ jobs:
           java-version: '17'
       - run: bash scripts/verify-release.sh
       - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinIosX64 --refresh-dependencies --no-daemon --max-workers=1 --stacktrace
-      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyCmp linkDebugFrameworkIosSimulatorArm64 compileKotlinIosArm64 compileKotlinIosX64 --refresh-dependencies --no-daemon --max-workers=1 --stacktrace
+      - run: |
+          ios_framework_target=IosSimulatorArm64
+          if [[ "$(uname -m)" != arm64 ]]; then ios_framework_target=IosX64; fi
+          bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyCmp "linkDebugFramework$ios_framework_target" compileKotlinIosArm64 compileKotlinIosX64 --refresh-dependencies --no-daemon --max-workers=1 --stacktrace
