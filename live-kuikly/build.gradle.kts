@@ -29,6 +29,7 @@ kotlin {
             implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
         }
         commonTest.dependencies { implementation(kotlin("test")) }
+        androidUnitTest.dependencies { implementation("org.robolectric:robolectric:4.16.1") }
     }
 }
 publishing { repositories.maven { name = "staging"; url = uri(rootProject.layout.buildDirectory.dir("maven")) } }

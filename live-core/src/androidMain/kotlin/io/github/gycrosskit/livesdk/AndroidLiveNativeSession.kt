@@ -36,6 +36,10 @@ class AndroidLiveAudienceSession(
     fun toggleFollow() = player.toggleFollow()
     /** 刷新在线观众，结果通过 snapshots 发布。 */
     fun refreshAudience() = player.refreshAudience()
+    /** 返回值仅表示系统接受请求；真实状态由 Activity 回报。 */
+    fun enterPictureInPicture(wideContent: Boolean): Boolean = player.enterPictureInPicture(wideContent)
+    /** 仅透传宿主 Activity 的真实 PiP 状态，不以请求成功替代浮窗状态。 */
+    fun updatePictureInPicture(enabled: Boolean) = player.updatePictureInPicture(enabled)
     /** Main 幂等释放当前会话；此实例不能重新使用。 */
     fun release() = player.release()
 }

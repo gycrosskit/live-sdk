@@ -7,6 +7,7 @@ import LiveKuikly
 public final class GycLiveView: UIView, KuiklyRenderViewExportProtocol {
     private var event: KuiklyRenderCallback?
     private var pendingEvents: [String] = []
+    private var roomIdentity: String?
     private var controller: IosKuiklyLiveController?
     private var notifications: [NSObjectProtocol] = []
     /// 复用宿主业务点赞上报；新会话创建前注入，成功批次才上报。
@@ -24,6 +25,13 @@ public final class GycLiveView: UIView, KuiklyRenderViewExportProtocol {
             pending.forEach(emit)
         }
         else if propKey == "room", let room = propValue as? String {
+            let config = Self.dictionary(room)
+            if let id = config["liveId"] as? String, !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let preview = config["preview"] as? Bool ?? false
+                let identity = "\(id.utf8.count):\(id):\(preview)"
+                // 事件注册可能晚于换房；旧房间缓存不能随后回放到新页面。
+                if roomIdentity != identity { pendingEvents.removeAll(); roomIdentity = identity }
+            }
             if controller == nil {
                 let next = IosKuiklyLiveController { [weak self] json in
                     self?.emit(json)
@@ -49,7 +57,12 @@ public final class GycLiveView: UIView, KuiklyRenderViewExportProtocol {
 
     /// Main 将 Kuikly 原生命令交给共用 Kotlin 会话，弹幕回执转为字典。
     public func hrv_call(withMethod method: String, params: String?, callback: KuiklyRenderCallback?) {
-        controller?.command(method: method, params: params ?? "{}") { json in
+        guard let controller else {
+            if method == "enterPictureInPicture" { callback?(["accepted": false]) }
+            else if method == "sendBarrage" { callback?(["success": false, "message": "Not ready"]) }
+            return
+        }
+        controller.command(method: method, params: params ?? "{}") { json in
             callback?(Self.dictionary(json))
         }
     }
@@ -64,6 +77,7 @@ public final class GycLiveView: UIView, KuiklyRenderViewExportProtocol {
         controller = nil
         event = nil
         pendingEvents.removeAll()
+        roomIdentity = nil
         notifications.forEach(NotificationCenter.default.removeObserver)
         notifications = []
         super.hrv_removeFromSuperview()

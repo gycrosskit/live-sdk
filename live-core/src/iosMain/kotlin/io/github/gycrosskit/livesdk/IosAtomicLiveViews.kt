@@ -316,10 +316,12 @@ class IosAtomicAudienceView(
     override fun refreshAudience() = bridge.refreshAudience()
 
     override fun enterPictureInPicture(wideContent: Boolean): Boolean =
-        bridge.enterPictureInPicture(wideContent)
+        !resourcesReleased && session.isJoined && bridge.enterPictureInPicture(wideContent)
 
     override fun updatePictureInPicture(enabled: Boolean) {
+        if (resourcesReleased || snapshot.pictureInPicture == enabled) return
         snapshotStore.updatePictureInPicture(enabled)
+        listener.onPictureInPictureChanged(enabled)
     }
 
     override fun release() {

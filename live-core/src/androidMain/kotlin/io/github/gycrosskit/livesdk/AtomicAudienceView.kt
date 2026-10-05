@@ -187,23 +187,26 @@ class AtomicAudienceView(
      * 发起系统画中画请求。这里只在平台 View 层解析 Activity，不把 Android 宿主类型泄漏到 common。
      */
     override fun enterPictureInPicture(wideContent: Boolean): Boolean {
+        if (interactionStoresReleased || !session.isJoined) return false
         val activity = context.findActivity() ?: return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
         if (!activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
             return false
         }
-        updatePictureInPicture(true)
         val ratio = if (wideContent) Rational(16, 9) else Rational(9, 16)
-        val accepted = activity.enterPictureInPictureMode(
-            PictureInPictureParams.Builder().setAspectRatio(ratio).build(),
-        )
-        if (!accepted) updatePictureInPicture(false)
+        val accepted = try {
+            activity.enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(ratio).build())
+        } catch (_: IllegalStateException) { false } catch (_: IllegalArgumentException) { false }
+        // 请求受理与浮窗状态不同；Activity 的实际回报才决定快照，避免准备阶段误报已进入。
+        updatePictureInPicture(activity.isInPictureInPictureMode)
         return accepted
     }
 
     /** 同步宿主 Activity 回报的系统画中画实际状态。 */
     override fun updatePictureInPicture(enabled: Boolean) {
+        if (interactionStoresReleased || snapshot.pictureInPicture == enabled) return
         snapshotStore.updatePictureInPicture(enabled)
+        listener.onPictureInPictureChanged(enabled)
     }
 
     /**

@@ -5,5 +5,7 @@ fun ViewContainer<*, *>.consume() {
  LiveVideo {
   attr { room("demo-room", preview = true, active = false); size(200f, 100f) }
   event { liveEvent { } }
+  enterPictureInPicture(wideContent = true) { accepted -> if (accepted) Unit }
+  updatePictureInPicture(false)
  }
 }

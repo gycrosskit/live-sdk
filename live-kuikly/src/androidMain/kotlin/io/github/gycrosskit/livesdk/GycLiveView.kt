@@ -61,6 +61,14 @@ class GycLiveView(context: Context) : FrameLayout(context), IKuiklyRenderViewExp
             "like" -> audience?.like()
             "toggleFollow" -> audience?.toggleFollow()
             "refreshAudience" -> audience?.refreshAudience()
+            "enterPictureInPicture" -> {
+                val wide = try { JSONObject(params ?: "{}").opt("wideContent") as? Boolean } catch (_: Exception) { null }
+                callback?.invoke(mapOf("accepted" to (wide != null && audience?.enterPictureInPicture(wide) == true)))
+            }
+            "updatePictureInPicture" -> {
+                val enabled = try { JSONObject(params ?: "{}").opt("enabled") as? Boolean } catch (_: Exception) { null }
+                if (enabled != null) audience?.updatePictureInPicture(enabled)
+            }
             "sendBarrage" -> {
                 val message = try { JSONObject(params ?: "{}").optString("message") } catch (_: Exception) { "" }
                 val player = audience
