@@ -12,6 +12,12 @@ object AndroidLiveSdkRuntime {
         this.ready.value = ready
     }
 
-    /** 在完整进房或账号重置前幂等停止当前列表预览。 */
-    fun stopActivePreview() = AtomicLivePreviewRuntime.stopActivePreview()
+    /** Main 同步停止；返回时 SDK 预览已停止且 View 已移除。 */
+    fun stopActivePreview() {
+        AtomicMainThread.checkMainThread()
+        AtomicLivePreviewRuntime.stopActivePreview()
+    }
+
+    /** Renderer/后台可等待停止完成，再执行后续登录或进房。 */
+    suspend fun stopActivePreviewAndAwait() = AtomicLivePreviewRuntime.stopActivePreviewAndAwait()
 }

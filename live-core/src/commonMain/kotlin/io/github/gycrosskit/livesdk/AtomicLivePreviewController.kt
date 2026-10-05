@@ -1,5 +1,7 @@
 package io.github.gycrosskit.livesdk
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * 隔离预览播放实现，使 active、页面可见性和迟到回调规则可以在 JVM 单测中验证。
@@ -205,10 +207,14 @@ internal object AtomicLivePreviewSessionCoordinator {
     }
 }
 
-/** 完整直播间或账号重置在启动前用于同步停止当前双端列表预览。 */
+/** 同步入口仅供 Main 使用；Renderer/后台调用须等待 [stopActivePreviewAndAwait] 完成后再操作 SDK。 */
 object AtomicLivePreviewRuntime {
     fun stopActivePreview() {
         AtomicLivePreviewSessionCoordinator.stopActivePreview()
+    }
+
+    suspend fun stopActivePreviewAndAwait() = withContext(Dispatchers.Main.immediate) {
+        stopActivePreview()
     }
 }
 

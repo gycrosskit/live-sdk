@@ -1,4 +1,10 @@
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
 package io.github.gycrosskit.livesdk
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import platform.Foundation.NSThread
 
 /** iOS actual 创建原生 View 所需的唯一桥接安装点。 */
 object IosLiveSdkRuntime {
@@ -20,10 +26,16 @@ object IosLiveSdkRuntime {
         this.ready.value = ready
     }
 
-    /** 在完整进房或账号重置前停止 Kotlin 预览状态机并让 Swift 幂等清理。 */
+    /** Main 同步停止 Kotlin 预览状态机并让 Swift 幂等清理。 */
     fun stopActivePreview() {
+        check(NSThread.isMainThread) { "Live SDK synchronous UI operation requires Main" }
         AtomicLivePreviewRuntime.stopActivePreview()
         // Swift 侧再做一次幂等兜底，覆盖 UIKit 在异常销毁路径中未及时触发 onRelease 的情况。
         bridge?.stopPreview()
+    }
+
+    /** Renderer/后台挂起等待 Main 完成，不能阻塞 Main 与 Kuikly ContextQueue 的互调。 */
+    suspend fun stopActivePreviewAndAwait() = withContext(Dispatchers.Main.immediate) {
+        stopActivePreview()
     }
 }

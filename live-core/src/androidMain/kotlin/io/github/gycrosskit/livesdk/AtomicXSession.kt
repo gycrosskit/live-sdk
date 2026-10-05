@@ -19,16 +19,17 @@ object AtomicXSession {
         fun onFailure(code: Int, message: String)
     }
 
-    /** 当前 AtomicX 账号必须与业务账号完全一致，不能只依据 LOGINED 状态复用旧会话。 */
+    /** Main 同步查询；当前账号必须与业务账号完全一致，不能只依据 LOGINED 状态复用旧会话。 */
     fun isLoggedInAs(userId: String): Boolean {
+        AtomicMainThread.checkMainThread()
         val state = LoginStore.shared.loginState
         return state.loginStatus.value == LoginStatus.LOGINED &&
             state.loginUserInfo.value?.userID == userId && actualUserId() == userId &&
             V2TIMManager.getInstance().loginStatus == V2TIMManager.V2TIM_STATUS_LOGINED
     }
 
-    /** 更新直播侧资料；空昵称回退 userId，保证弹幕与在线成员始终有可展示名称。 */
-    fun updateProfile(userId: String, nickname: String, avatarUrl: String) {
+    /** 切到 Main 更新当前账号资料；后台调用返回不代表写入完成，空昵称回退 userId。 */
+    fun updateProfile(userId: String, nickname: String, avatarUrl: String) = AtomicMainThread.run {
         if (actualUserId() == userId) updateProfile(LoginStore.shared, userId, nickname, avatarUrl)
     }
 

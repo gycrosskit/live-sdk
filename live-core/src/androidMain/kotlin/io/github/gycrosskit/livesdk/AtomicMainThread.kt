@@ -17,6 +17,10 @@ internal object AtomicMainThread {
         if (Looper.myLooper() == Looper.getMainLooper()) block() else handler.post(block)
     }
 
+    fun checkMainThread() {
+        check(Looper.myLooper() == Looper.getMainLooper()) { "Live SDK synchronous UI operation requires Main" }
+    }
+
     fun post(block: () -> Unit) {
         handler.post(block)
     }
