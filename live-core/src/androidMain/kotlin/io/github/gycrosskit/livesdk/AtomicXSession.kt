@@ -56,7 +56,7 @@ object AtomicXSession {
     /**
      * 使用服务端签发的 UserSig 登录；同账号已登录时只同步资料，不重复触发 SDK 登录。
      *
-     * @param context 当前页面 Context，在实例存活期间持有。
+     * @param context 用于 SDK 登录的 Context；跨线程派发和账号切换等待期间可能被回调持有。
      * @param sdkAppId 腾讯 SDK 应用 ID，必须大于 0。
      * @param userId 腾讯账号 ID，按原值匹配，不替换其他账号。
      * @param userSig 服务端签发的 UserSig，必须非空白，按原值交给 SDK。
