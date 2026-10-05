@@ -2,7 +2,7 @@
 
 基于腾讯 AtomicX 的 Android/iOS 直播观看组件，支持列表静音预览、完整观看、原生视频画面和互动命令。CMP 与 Kuikly Native DSL 共用账号门禁、会话与状态；应用提供 SDKAppId、服务端 UserSig、业务账号、房间路由和操作 UI。
 
-当前 Maven / Git Pod 候选 **0.2.1-rc.6**：Android 登录在 Main 派发前同步拒绝非法输入，Swift 拒绝纯空白凭据且保留原文；补充真实登录入口、点赞批次重试及释放后的迟到回调回归，完善 Kotlin / Swift 公共 API 注释。**发布准备中，完成远程验收后更新**。Maven 与 `GycLiveNative` Git Pod 使用同一候选标签 `0.2.1-rc.6`；本库无 OHOS / HAR 实现。
+当前 Maven / Git Pod **0.2.1-rc.6**：Android 登录在 Main 派发前同步拒绝非法输入，Swift 拒绝纯空白凭据且保留原文；补充真实登录入口、点赞批次重试及释放后的迟到回调回归，完善 Kotlin / Swift 公共 API 注释。**已发布；JitPack、公开产物校验与干净远程消费通过**。Maven 与 `GycLiveNative` Git Pod 使用同一发布标签 `0.2.1-rc.6`；本库无 OHOS / HAR 实现。
 
 上一轮 Maven 预发行 **0.2.1-rc.5** 已发布，修复 Renderer 停止预览的线程边界和退出后的 SDK 回调隔离：Renderer 使用 `stopActivePreviewAndAwait()`，同步 `stopActivePreview()` 仅供 Main 调用。Android 38 项、iOS Simulator 35 项测试与 iOS arm64 编译、完整归档、公开 Release 下载 SHA 和 JitPack 制品审计均通过，见 [rc.5 验收记录](docs/0.2.1-rc.5远程发布验收.md)。该轮原生 Swift 源码未变，配套已验 Git Pod `0.2.1-rc.3`；独立消费者与设备验收单独记录，历史结果见 [M19 记录](docs/M19验证记录.md)。
 
@@ -153,13 +153,13 @@ Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应
 
 ## iOS 原生接入
 
-`GycLiveNative` 通过不可变 Git 标签安装。`0.2.1-rc.3` 的 JitPack 全变体下载、远程 Gradle 消费与 Git Pod UIKit 最终链接已通过，见 [M19 记录](docs/M19验证记录.md) 和[同版本预发布](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.3)。本仓库没有 Swift Package 或 CocoaPods Specs 发布。以下为 `0.2.1-rc.6` 候选安装方式，发布准备中，完成远程验收后更新：
+`GycLiveNative` 通过不可变 Git 标签安装。`0.2.1-rc.3` 的 JitPack 全变体下载、远程 Gradle 消费与 Git Pod UIKit 最终链接已通过，见 [M19 记录](docs/M19验证记录.md) 和[同版本预发布](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.3)。本仓库没有 Swift Package 或 CocoaPods Specs 发布。以下为 `0.2.1-rc.6` 候选安装方式，已发布，干净远程消费通过：
 
 ```ruby
 pod 'GycLiveNative', :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => '0.2.1-rc.6'
 ```
 
-纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前候选组合为 Maven `0.2.1-rc.6` + Native Pod `0.2.1-rc.6`；发布准备中，完成远程验收后更新各渠道状态。
+纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前候选组合为 Maven `0.2.1-rc.6` + Native Pod `0.2.1-rc.6`；已发布，干净远程消费通过各渠道状态。
 
 ## 快速使用
 
@@ -231,3 +231,11 @@ Maven `0.2.1-rc.4`；未变 GycLiveNative Git Pod 保留 `0.2.1-rc.3`。
 精确 JitPack rc.4 新目录消费者：Kuikly 43 tasks / 43s，APK/D8、verifyNoCompose、verifySingleSdk（core/AtomicX 唯一依赖）、iOS 三架构编译和 device/simulator arm64 static Framework；CMP 19 tasks / 19s，Android 与 iOS 三架构编译。未变 Git Pod rc.3 沿用既有真实 UIKit 链接证据，本轮不重复发布或编译旧 Pod。
 
 实际日志与 JSON 账单位于 `build/remote-library-review/`。真实设备、业务账号登录/聊天/直播/PiP、权限 UI、真实 Bug/通知发送未执行。
+
+## 0.2.1-rc.6 本轮测试与远程验收
+
+2026-10-05：本轮自有源码和公开 API 审查、关键回归与受影响平台编译通过；真实 JitPack `0.2.1-rc.6` 的最终标签提交、15 个 publications 的 POM/Module、所有变体文件大小与四种声明哈希、内部精确版本及 available-at 均通过。Release Maven 归档重新下载 SHA-256 为 `6dc24dfab7b3309a58591b14c1ed3cb97605cbaf048ca3236c0410eb69ac35bb`。公开 MD5/SHA-1 sidecar 通过；SHA-256/SHA-512 sidecar 的 HTTP 404 记录为渠道缺失。
+
+干净消费工程使用固定远程版本，没有本地 Maven、includeBuild 或其他组件源码替代；通过现有入口的 Android/iOS 编译和相应最终链接。 Kuikly 与 CMP 分别验证。 新 Git Pod 从远程标签安装，实际编译 Swift 与标签逐字节匹配，纯 UIKit iphoneos arm64 App 链接通过。
+
+完整回归范围、精简原则、注释契约与仍需设备/业务验收的边界见 [14 个功能组件测试与 API 审查](https://github.com/gycrosskit/.github/blob/main/docs/组件测试与API审查.md)。源码测试与远程消费不代替真机和厂商业务验收。
