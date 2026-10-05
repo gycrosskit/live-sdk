@@ -2,7 +2,102 @@
 
 基于腾讯 AtomicX 的 Android/iOS 直播观看组件，支持列表静音预览、完整观看、原生视频画面和互动命令。CMP 与 Kuikly Native DSL 共用账号门禁、会话与状态；应用提供 SDKAppId、服务端 UserSig、业务账号、房间路由和操作 UI。
 
-当前 Maven 候选 **0.2.1-rc.4** 精简观众快照为单一 StateFlow，保留弹幕队列、去重、序号和主线程语义。原生 Swift 源码未变，继续使用已验 Git Pod `0.2.1-rc.3`；新 Maven 完整归档、全变体 HTTP 与真实远程消费已通过。`0.2.1-rc.2` 真实远程检查发现空资源 ZIP 引用 404 和 source 变体哈希失配，请使用后继候选，详情见 [M19 记录](docs/M19验证记录.md)。
+当前 Maven 候选 **0.2.1-rc.5** 修复 Renderer 停止预览的线程边界和退出后的 SDK 回调隔离：Renderer 使用 `stopActivePreviewAndAwait()`，同步 `stopActivePreview()` 仅供 Main 调用。Android 38 项、iOS Simulator 35 项测试与 iOS arm64 编译已通过；归档、发布和新版本远程消费待门禁，见 [rc.5 验收记录](docs/0.2.1-rc.5远程发布验收.md)。原生 Swift 源码未变，继续使用已验 Git Pod `0.2.1-rc.3`；历史候选结果见 [M19 记录](docs/M19验证记录.md)。
+
+## 架构与调用流程
+
+宿主先完成真实 SDK 登录，再更新组件账号门禁；iOS KMP 还需安装宿主桥。CMP 与 Kuikly Native DSL 复用 `live-core`，共享观看会话规则和唯一 StateFlow 快照，不各自维护一套 SDK 状态。
+
+```mermaid
+flowchart TB
+    H["宿主<br/>登录 / UserSig / 房间 / UI"] --> G["账号门禁<br/>Android / iOS Runtime"]
+    H --> C["CMP<br/>LivePreview / LiveCoreView"]
+    H --> K["Kuikly<br/>LiveVideo / GycLiveView"]
+    G --> C
+    G --> K
+    C --> P["live-core<br/>原生会话 / 预览控制器"]
+    K --> P
+    P --> A["Android AtomicX"]
+    P --> I["宿主 IosLiveSdkBridge<br/>GycLiveNative"]
+    P --> S["LiveAudienceSnapshotStore<br/>StateFlow"]
+    S -.-> H
+```
+
+下面是 `AtomicAudienceSession` 的完整观看流程。会话排队、join 与 leave 分别有 15 / 20 / 8 秒期限；退出后仍须等离房结算再放行下一场，避免共享 Store 被旧房间回调误伤。
+
+```mermaid
+sequenceDiagram
+    participant H as 原生 View
+    participant S as Session
+    participant G as Coordinator
+    participant P as 预览
+    participant X as AtomicX SDK
+    H->>S: 创建完整观看会话
+    S->>G: acquire(token, liveId)
+    G-->>S: 轮到本会话：startJoin
+    S->>P: Main 同步 stopActivePreview
+    S->>X: joinLive
+    X-->>S: joined 或 joinFailed
+    S-->>H: joined 后 joinSucceeded
+    H->>S: release()
+    opt join 尚在途
+        Note over S,X: 等 join 回调或超时<br/>随后清理
+    end
+    S->>X: leaveLive / 原生资源清理
+    X-->>S: 离房成功或失败回调
+    Note over S,G: 离房回调、异常或 8 秒超时<br/>结算令牌
+    S->>G: release(token)<br/>取消会话 scope
+    alt 还有排队会话
+        G-->>S: 下一排队 Session 的 start 回调
+    else 无等待会话
+        G-->>P: 最新等待预览的 start 回调
+    end
+```
+
+类型图聚焦 Android 完整观看链路（内部状态机和快照累加器同样被 iOS KMP 平台层复用）。列表预览另由 `AtomicLivePreviewController` 管理，只有 active、页面 STARTED 和平台账号门禁满足时播放；失活或释放取消等待预览并用 generation 拒绝迟回调。注销前宿主先关闭账号门禁、停止预览，再清理账号。
+
+```mermaid
+classDiagram
+    class AndroidLiveAudienceSession {
+        +view
+        +snapshots
+        +release()
+    }
+    class AtomicAudienceView {
+        +snapshot
+        +snapshots
+        +release()
+    }
+    class AtomicAudienceSession {
+        <<internal>>
+        +joined()
+        +joinFailed(code, message)
+        +release()
+    }
+    class AtomicAudienceSessionGate {
+        <<interface>>
+        +acquire(token, liveId, onTimeout, start)
+        +release(token)
+    }
+    class AtomicAudienceSessionCoordinator {
+        <<internal>>
+        +acquirePreview(token, start)
+        +cancelPreview(token)
+    }
+    class LiveAudienceSnapshotStore {
+        <<internal>>
+        +snapshots
+        +snapshot()
+        +appendMessages(incoming)
+    }
+    AndroidLiveAudienceSession *-- AtomicAudienceView
+    AtomicAudienceView *-- AtomicAudienceSession
+    AtomicAudienceView *-- LiveAudienceSnapshotStore
+    AtomicAudienceSession --> AtomicAudienceSessionGate
+    AtomicAudienceSessionGate <|.. AtomicAudienceSessionCoordinator
+```
+
+源码入口：[Android 原生会话](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveNativeSession.kt)、[AtomicAudienceView](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt)、[共用会话状态机](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt)、[会话排队与预览门禁](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSessionCoordinator.kt)、[预览生命周期](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt)、[唯一快照](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt)、[Android 账号门禁](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveSdkRuntime.kt)、[iOS 桥安装](live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveSdkRuntime.kt)。OHOS 没有发布实现；图中的 iOS 原生入口不表示 Kuikly 已支持 PiP 指令。
 
 ## 平台与模块
 
@@ -39,9 +134,9 @@ dependencyResolutionManagement {
 
 ```kotlin
 // CMP
-implementation("com.github.gycrosskit.live-sdk:live-sdk:0.2.1-rc.4")
+implementation("com.github.gycrosskit.live-sdk:live-sdk:0.2.1-rc.5")
 // Kuikly Native DSL
-implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.2.1-rc.4")
+implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.2.1-rc.5")
 ```
 
 Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应用保留 `IosLiveSdkBridge` 的薄协议映射。原生 Pod `GycLiveNative` 承接 SDK 实现，独立于 `Shared.framework`，厂商版本固定为 AtomicXCore `4.3.9`、RTCRoomEngine/Professional `4.3.9` 和 IM `9.1.7818`；Kuikly 另外加入同标签 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/0.2.1-rc.3/live-kuikly/ios/GycLiveView.swift) 与 `OpenKuiklyIOSRender`。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
@@ -54,11 +149,13 @@ Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应
 pod 'GycLiveNative', :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => '0.2.1-rc.3'
 ```
 
-纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前兼容组合为 Maven `0.2.1-rc.4` + Native Pod `0.2.1-rc.3`，两种发布产物分别验证并记录。
+纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前候选组合为 Maven `0.2.1-rc.5` + Native Pod `0.2.1-rc.3`；新 Maven 的发布与远程消费状态单独记录。
 
 ## 快速使用
 
 先完成真实 SDK 登录，再设置账号门禁：Android 调用 `AndroidLiveSdkRuntime.updateSessionReady(true)`；iOS 先 `IosLiveSdkRuntime.install(bridge)`，登录成功后调用 `updateSessionReady(true)`。组件不生成 UserSig，也不主动替应用登录。
+
+Renderer/后台协程在后续登录、重置或完整进房前，调用平台 Runtime 的 `stopActivePreviewAndAwait()`，挂起等待 Main 停止 SDK 预览并移除 View。原有同步 `stopActivePreview()` 保留 Main 即时语义，后台调用会立即拒绝；不要用阻塞等待连接 Renderer 与 Main。具体账号和回调合同见 [线程与停止顺序](docs/接入指南.md#线程与停止顺序)。
 
 ```kotlin
 import androidx.compose.runtime.Composable
@@ -100,14 +197,14 @@ fun PreviewItem(liveId: String, visible: Boolean) {
 
 [Apache-2.0](LICENSE)。腾讯 SDK 与 Kuikly Render 遵循各自原厂许可，组件不重新分发 proprietary SDK。
 
-## 0.2.1-rc.4 发布候选
+## 0.2.1-rc.4 历史候选
 
 观众快照只由现有 `StateFlow` 保存，`snapshot()` 与订阅者读取同一份状态，回调通过 `copy` 保留其他字段。
 弹幕队列、去重 key、有界容量与合成序号继续独立维护；平台回调原有主线程串行语义保持。
 
 本轮 core Android 35 项、Simulator 32 项测试和 core/CMP/Kuikly Android、iOS arm64/Simulator 编译通过；未执行真实直播业务。
 
-| 当前候选渠道 | 配套版本 |
+| rc.4 渠道 | 配套版本 |
 | --- | --- |
 | Maven / Git Pod | `0.2.1-rc.4` / `0.2.1-rc.3` |
 

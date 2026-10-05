@@ -152,6 +152,7 @@ class IosAtomicAudienceView(
             ownerName: String,
             ownerAvatarUrl: String,
         ) {
+            if (resourcesReleased) return
             snapshotStore.updateIntroduction(notice.ifBlank { liveName })
             snapshotStore.updateHost(
                 LiveAudienceHostSnapshot(
@@ -175,11 +176,15 @@ class IosAtomicAudienceView(
         override fun onLiveUnavailable(message: String) = session.liveUnavailable(message)
 
         override fun onKickedOut() {
+            if (resourcesReleased) return
             AtomicAudienceRuntimeRegistry.warning("iOS AtomicX 当前观众被移出直播间，liveId=$liveId")
+            releaseResources()
+            session.release()
             listener.onKickedOut()
         }
 
         override fun onInteractionReady() {
+            if (resourcesReleased) return
             snapshotStore.updateInteractionReady(true)
         }
 
@@ -191,6 +196,7 @@ class IosAtomicAudienceView(
             senderAvatarUrl: String,
             content: String,
         ) {
+            if (resourcesReleased) return
             snapshotStore.appendMessage(
                 LiveAudienceMessageSnapshot(
                     sequence = sequence,
@@ -204,6 +210,7 @@ class IosAtomicAudienceView(
         }
 
         override fun onLikesReceived(count: Int) {
+            if (resourcesReleased) return
             if (count > 0) snapshotStore.emitLikeEffect()
         }
 
@@ -213,6 +220,7 @@ class IosAtomicAudienceView(
             userAvatarUrls: List<String>,
             count: Int,
         ) {
+            if (resourcesReleased) return
             val users = userIds.indices.map { index ->
                 LiveAudienceUserSnapshot(
                     id = userIds[index],
@@ -230,6 +238,7 @@ class IosAtomicAudienceView(
             userAvatarUrl: String,
             timestampSeconds: Double,
         ) {
+            if (resourcesReleased) return
             snapshotStore.appendMemberMessage(
                 user = LiveAudienceUserSnapshot(userId, userName, userAvatarUrl),
                 joined = joined,
@@ -238,12 +247,14 @@ class IosAtomicAudienceView(
         }
 
         override fun onAudienceMessageDisabled(userId: String, disabled: Boolean) {
+            if (resourcesReleased) return
             if (userId == bridge.currentUserId()) {
                 listener.onCurrentUserMessageDisabled(disabled)
             }
         }
 
         override fun onPictureInPictureChanged(enabled: Boolean) {
+            if (resourcesReleased) return
             snapshotStore.updatePictureInPicture(enabled)
             listener.onPictureInPictureChanged(enabled)
         }

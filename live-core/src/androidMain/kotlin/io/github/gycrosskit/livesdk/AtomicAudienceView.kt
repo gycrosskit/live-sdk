@@ -74,9 +74,11 @@ class AtomicAudienceView(
 
     private val liveListListener = object : LiveListListener() {
         override fun onLiveEnded(liveID: String, reason: LiveEndedReason, message: String) {
-            if (liveID == liveId) {
-                releaseInteractionStores()
-                session.liveEnded(message)
+            post {
+                if (!interactionStoresReleased && liveID == liveId) {
+                    releaseInteractionStores()
+                    session.liveEnded(message)
+                }
             }
         }
 
@@ -85,12 +87,15 @@ class AtomicAudienceView(
             reason: LiveKickedOutReason,
             message: String,
         ) {
-            if (liveID == liveId) {
-                AtomicAudienceRuntimeRegistry.warning(
-                    "AtomicX 当前观众被移出直播间，liveId=$liveId, reason=$reason, message=$message",
-                )
-                releaseInteractionStores()
-                listener.onKickedOut()
+            post {
+                if (!interactionStoresReleased && liveID == liveId) {
+                    AtomicAudienceRuntimeRegistry.warning(
+                        "AtomicX 当前观众被移出直播间，liveId=$liveId, reason=$reason, message=$message",
+                    )
+                    releaseRoomResources()
+                    session.release()
+                    listener.onKickedOut()
+                }
             }
         }
     }
@@ -109,8 +114,10 @@ class AtomicAudienceView(
         override fun onAudienceLeft(audience: LiveUserInfo) = appendMemberMessage(audience, joined = false)
 
         override fun onAudienceMessageDisabled(audience: LiveUserInfo, isDisable: Boolean) {
-            if (audience.userID == AtomicXSession.currentUserId()) {
-                listener.onCurrentUserMessageDisabled(isDisable)
+            post {
+                if (!interactionStoresReleased && session.isJoined && audience.userID == AtomicXSession.currentUserId()) {
+                    listener.onCurrentUserMessageDisabled(isDisable)
+                }
             }
         }
     }
@@ -209,9 +216,11 @@ class AtomicAudienceView(
             object : LiveInfoCompletionHandler {
                 override fun onSuccess(liveInfo: LiveInfo) {
                     post {
-                        updateLiveInfo(liveInfo)
-                        bindInteractionStores()
-                        session.joined()
+                        // 状态机先接纳回执；退出/超时后的成功只清理 SDK，不能先复活旧房间快照。
+                        session.joined {
+                            updateLiveInfo(liveInfo)
+                            bindInteractionStores()
+                        }
                     }
                 }
 
@@ -345,10 +354,10 @@ class AtomicAudienceView(
     private fun leaveLive(onFinished: (Boolean, Int, String) -> Unit) {
         liveListStore.leaveLive(
             object : CompletionHandler {
-                override fun onSuccess() = onFinished(true, 0, "")
+                override fun onSuccess() = post { onFinished(true, 0, "") }
 
                 override fun onFailure(code: Int, desc: String) =
-                    onFinished(false, code, desc)
+                    post { onFinished(false, code, desc) }
             },
         )
     }
@@ -388,7 +397,7 @@ class AtomicAudienceView(
      */
     private fun appendMemberMessage(userInfo: LiveUserInfo, joined: Boolean) {
         post {
-            if (!session.isJoined) return@post
+            if (interactionStoresReleased || !session.isJoined) return@post
             snapshotStore.appendMemberMessage(
                 user = LiveAudienceUserSnapshot(
                     id = userInfo.userID,

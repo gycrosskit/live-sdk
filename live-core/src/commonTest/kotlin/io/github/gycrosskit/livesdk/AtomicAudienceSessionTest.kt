@@ -60,12 +60,56 @@ class AtomicAudienceSessionTest {
         session.release()
         assertEquals(0, leaveCount)
 
-        session.joined()
+        var hostUpdates = 0
+        session.joined { hostUpdates++ }
         assertEquals(1, leaveCount)
         assertEquals(0, events.joinSucceeded)
+        assertEquals(0, hostUpdates)
 
         leaveFinished?.invoke(true, 0, "")
         assertEquals(1, gate.releaseCount)
+    }
+
+    @Test
+    fun `accepted join prepares host before delivering success`() {
+        val events = RecordingEvents()
+        val session = session(ImmediateGate(), events, leave = { it(true, 0, "") })
+        var hostUpdates = 0
+
+        session.joined {
+            assertEquals(0, events.joinSucceeded)
+            hostUpdates++
+        }
+        session.joined { hostUpdates++ }
+
+        assertEquals(1, hostUpdates)
+        assertEquals(1, events.joinSucceeded)
+        session.release()
+    }
+
+    @Test
+    fun `terminal callbacks after release do not notify or start another leave`() {
+        for (joined in listOf(false, true)) {
+            val gate = ImmediateGate()
+            val events = RecordingEvents()
+            var leaveCount = 0
+            var leaveFinished: ((Boolean, Int, String) -> Unit)? = null
+            val session = session(gate, events, leave = { callback ->
+                leaveCount++
+                leaveFinished = callback
+            })
+            if (joined) session.joined()
+            session.release()
+            session.liveEnded("late")
+            session.liveUnavailable("late")
+            if (!joined) session.joined { error("Released join cannot update host") }
+
+            assertEquals(0, events.liveEnded)
+            assertEquals(0, events.liveUnavailable)
+            assertEquals(1, leaveCount)
+            leaveFinished?.invoke(true, 0, "")
+            assertEquals(1, gate.releaseCount)
+        }
     }
 
     @Test
@@ -144,6 +188,7 @@ class AtomicAudienceSessionTest {
         var joinSucceeded = 0
         var joinFailed = 0
         var liveEnded = 0
+        var liveUnavailable = 0
 
         override fun onJoinStarted() = Unit
         override fun onJoinSucceeded() {
@@ -154,7 +199,9 @@ class AtomicAudienceSessionTest {
             joinFailed += 1
         }
 
-        override fun onLiveUnavailable(message: String) = Unit
+        override fun onLiveUnavailable(message: String) {
+            liveUnavailable++
+        }
         override fun onLiveEnded() {
             liveEnded += 1
         }

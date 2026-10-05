@@ -60,11 +60,13 @@ internal class AtomicLikeController(
                     count,
                     object : CompletionHandler {
                         override fun onSuccess() {
-                            likeReporter.report(liveId, reportingUserId, count)
-                            onFinished(true)
+                            AtomicMainThread.run {
+                                likeReporter.report(liveId, reportingUserId, count)
+                                onFinished(true)
+                            }
                         }
 
-                        override fun onFailure(code: Int, desc: String) = onFinished(false)
+                        override fun onFailure(code: Int, desc: String) = AtomicMainThread.run { onFinished(false) }
                     },
                 )
             },

@@ -1,9 +1,50 @@
 package io.github.gycrosskit.livesdk
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AtomicLivePreviewControllerTest {
+    @Test
+    fun `background awaited stop detaches before the next sdk operation`() {
+        val mainScheduler = TestCoroutineScheduler()
+        Dispatchers.setMain(StandardTestDispatcher(mainScheduler))
+        val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val playback = FakePlayback()
+        val controller = AtomicLivePreviewController("live-await", playback, onStateChanged = {})
+        try {
+            controller.setActive(true)
+            controller.setLifecycleStarted(true)
+            val stop = backgroundScope.async {
+                AtomicLivePreviewRuntime.stopActivePreviewAndAwait()
+                // 模拟紧接着的登录/进房；未 detach 不能放行后续 SDK 操作。
+                assertEquals(1, playback.detachCount)
+            }
+            assertFalse(stop.isCompleted)
+            assertEquals(0, playback.detachCount)
+
+            mainScheduler.runCurrent()
+            assertTrue(stop.isCompleted)
+            stop.getCompleted()
+        } finally {
+            controller.release()
+            backgroundScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test
     fun `full session detaches preview once before late lifecycle disposal`() {
         val playback = FakePlayback()
@@ -12,7 +53,8 @@ class AtomicLivePreviewControllerTest {
 
         controller.setLifecycleStarted(true)
         controller.setActive(true)
-        AtomicLivePreviewSessionCoordinator.stopActivePreview()
+        AtomicLivePreviewRuntime.stopActivePreview()
+        assertEquals(1, playback.detachCount)
         controller.setLifecycleStarted(false)
         controller.release()
 

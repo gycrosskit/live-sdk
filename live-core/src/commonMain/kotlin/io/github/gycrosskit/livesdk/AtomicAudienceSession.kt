@@ -63,7 +63,7 @@ internal class AtomicAudienceSession(
         )
     }
 
-    fun joined() {
+    fun joined(onReady: () -> Unit = {}) {
         if (state == State.RELEASED || state == State.LEAVING || joinCompleted) return
         joinCompleted = true
         joinedOnce = true
@@ -73,6 +73,7 @@ internal class AtomicAudienceSession(
             return
         }
         state = State.JOINED
+        onReady()
         AtomicAudienceRuntimeRegistry.info("AtomicX 进房成功，liveId=$liveId")
         events.onJoinSucceeded()
     }
@@ -98,7 +99,7 @@ internal class AtomicAudienceSession(
     }
 
     fun liveEnded(message: String = "") {
-        if (state == State.RELEASED || terminalEventDelivered) return
+        if (releaseRequested || state == State.LEAVING || state == State.RELEASED || terminalEventDelivered) return
         terminalEventDelivered = true
         state = State.ENDED
         if (joinCompleted && joinedOnce) {
@@ -113,7 +114,7 @@ internal class AtomicAudienceSession(
     }
 
     fun liveUnavailable(message: String) {
-        if (state == State.RELEASED || terminalEventDelivered) return
+        if (releaseRequested || state == State.LEAVING || state == State.RELEASED || terminalEventDelivered) return
         terminalEventDelivered = true
         state = State.ENDED
         AtomicAudienceRuntimeRegistry.warning(
