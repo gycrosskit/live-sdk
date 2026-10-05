@@ -4,7 +4,8 @@ plugins {
  id("com.android.application") version "8.10.1"
 }
 val liveVersion = providers.gradleProperty("liveVersion").orElse("0.2.1-rc.7").get()
-if (providers.gradleProperty("verifyCmp").isPresent) pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
+val verifyCmp = providers.gradleProperty("verifyCmp").isPresent
+if (verifyCmp) pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 kotlin {
  androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
  iosX64()
@@ -12,7 +13,7 @@ kotlin {
   binaries.framework {
    baseName = "LiveKuikly"
    isStatic = true
-   export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   if (!verifyCmp) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
@@ -20,20 +21,21 @@ kotlin {
   binaries.framework {
    baseName = "LiveKuikly"
    isStatic = true
-   export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   if (!verifyCmp) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
- if (providers.gradleProperty("verifyCmp").isPresent) {
-  sourceSets.commonMain.get().kotlin.srcDir("src/cmpConsumerMain/kotlin")
+ if (verifyCmp) {
   sourceSets.commonMain.dependencies {
    implementation("com.github.gycrosskit.live-sdk:live-sdk:$liveVersion")
    implementation("org.jetbrains.compose.runtime:runtime:1.10.3")
    implementation("org.jetbrains.compose.ui:ui:1.10.3")
   }
  }
+ sourceSets.commonMain.get().kotlin.srcDir(if (verifyCmp) "src/cmpConsumerMain/kotlin" else "src/kuiklyMain/kotlin")
+ sourceSets.androidMain.get().kotlin.srcDir(if (verifyCmp) "src/cmpConsumerAndroidMain/kotlin" else "src/kuiklyAndroidMain/kotlin")
  sourceSets.commonMain.dependencies {
-  api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+  if (!verifyCmp) api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
   api("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
  }
 }
@@ -59,4 +61,12 @@ tasks.register("verifySingleSdk") {
   check(deps.count { it.moduleVersion.id.name == "live-core-android" } == 1)
   check(deps.count { it.moduleVersion.id.name == "atomicx-core" } == 1)
  }
+}
+
+tasks.register("verifyNoKuikly") {
+    doLast {
+        check(verifyCmp) { "Run this check in CMP mode" }
+        val artifacts = configurations.getByName("debugRuntimeClasspath").resolvedConfiguration.resolvedArtifacts
+        check(artifacts.none { it.moduleVersion.id.group == "com.tencent.kuikly-open" || it.moduleVersion.id.name.endsWith("-kuikly-android") }) { "CMP-only consumer unexpectedly pulls Kuikly runtime" }
+    }
 }
