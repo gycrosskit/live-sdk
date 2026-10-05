@@ -2,7 +2,7 @@
 
 基于腾讯 AtomicX 的 Android/iOS 直播观看组件，支持列表静音预览、完整观看、原生视频画面和互动命令。CMP 与 Kuikly Native DSL 共用账号门禁、会话与状态；应用提供 SDKAppId、服务端 UserSig、业务账号、房间路由和操作 UI。
 
-当前 Maven 候选 **0.2.1-rc.5** 修复 Renderer 停止预览的线程边界和退出后的 SDK 回调隔离：Renderer 使用 `stopActivePreviewAndAwait()`，同步 `stopActivePreview()` 仅供 Main 调用。Android 38 项、iOS Simulator 35 项测试与 iOS arm64 编译已通过；归档、发布和新版本远程消费待门禁，见 [rc.5 验收记录](docs/0.2.1-rc.5远程发布验收.md)。原生 Swift 源码未变，继续使用已验 Git Pod `0.2.1-rc.3`；历史候选结果见 [M19 记录](docs/M19验证记录.md)。
+当前 Maven 预发行 **0.2.1-rc.5** 已发布，修复 Renderer 停止预览的线程边界和退出后的 SDK 回调隔离：Renderer 使用 `stopActivePreviewAndAwait()`，同步 `stopActivePreview()` 仅供 Main 调用。Android 38 项、iOS Simulator 35 项测试与 iOS arm64 编译、完整归档、公开 Release 下载 SHA 和 JitPack 制品审计均通过，见 [rc.5 验收记录](docs/0.2.1-rc.5远程发布验收.md)。原生 Swift 源码未变，继续使用已验 Git Pod `0.2.1-rc.3`；独立消费者与设备验收单独记录，历史结果见 [M19 记录](docs/M19验证记录.md)。
 
 ## 架构与调用流程
 
@@ -106,7 +106,7 @@ classDiagram
 | `live-sdk` | Android、iOS | CMP `LivePreview` / `LiveCoreView` |
 | `live-core` | Android、iOS | SDK 账号门禁、观看会话、状态、互动和 iOS Bridge |
 | `live-kuikly` | Android、iOS | Kuikly Native DSL 与薄原生视频 View，无 CMP UI/runtime |
-| `GycLiveNative` | iOS | 独立 Swift CocoaPod，AtomicX 账号/视频/互动/IM/RoomEngine 系统 PiP；Git Pod 候选 `0.2.1-rc.3` |
+| `GycLiveNative` | iOS | 独立 Swift CocoaPod，AtomicX 账号/视频/互动/IM/RoomEngine 系统 PiP；已验 Git Pod `0.2.1-rc.3` |
 
 Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，应用同时遵循所选腾讯 SDK 的部署要求。已验证工具链为 Kotlin `2.2.21`、AGP `8.10.1`、CMP `1.10.3`、Kuikly `2.28.0-2.0.21-ohos` / Render `2.28.0`。
 
@@ -119,6 +119,12 @@ Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，�
 ```kotlin
 dependencyResolutionManagement {
     repositories {
+        exclusiveContent {
+            forRepository {
+                maven("https://mirrors.tencent.com/nexus/repository/maven-tencent/")
+            }
+            filter { includeGroup("com.tencent.kuikly-open") }
+        }
         google()
         mavenCentral()
         maven("https://jitpack.io") {
@@ -129,6 +135,8 @@ dependencyResolutionManagement {
     }
 }
 ```
+
+Kuikly group 固定从腾讯 Maven 读取 metadata 和实际产物，避免其他镜像先返回 metadata、随后 AAR 缺失时 Gradle 无法切源。此规则只匹配 `com.tencent.kuikly-open`，保留其他 SDK 的仓库选择；本轮响应与边界见 [rc.5 验收记录](docs/0.2.1-rc.5远程发布验收.md)。
 
 在 KMP 的 `commonMain.dependencies` 按 UI 引擎选择，同一应用全部模块固定同版本：
 
@@ -143,13 +151,13 @@ Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应
 
 ## iOS 原生接入
 
-`GycLiveNative` 通过不可变 Git 标签安装。候选 `0.2.1-rc.3` 的 JitPack 全变体下载、远程 Gradle 消费与 Git Pod UIKit 最终链接已通过，见 [M19 记录](docs/M19验证记录.md) 和[同版本预发布](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.3)。本仓库没有 Swift Package 或 CocoaPods Specs 发布：
+`GycLiveNative` 通过不可变 Git 标签安装。`0.2.1-rc.3` 的 JitPack 全变体下载、远程 Gradle 消费与 Git Pod UIKit 最终链接已通过，见 [M19 记录](docs/M19验证记录.md) 和[同版本预发布](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.3)。本仓库没有 Swift Package 或 CocoaPods Specs 发布：
 
 ```ruby
 pod 'GycLiveNative', :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => '0.2.1-rc.3'
 ```
 
-纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前候选组合为 Maven `0.2.1-rc.5` + Native Pod `0.2.1-rc.3`；新 Maven 的发布与远程消费状态单独记录。
+纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前组合为 Maven `0.2.1-rc.5` + Native Pod `0.2.1-rc.3`；新 Maven 的发布与独立远程消费状态分别记录。
 
 ## 快速使用
 
