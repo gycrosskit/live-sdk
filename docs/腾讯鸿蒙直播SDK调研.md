@@ -1,8 +1,19 @@
 # 腾讯鸿蒙直播 SDK 调研
 
-核对日期：2026-09-30。结论：Android/iOS 可通过 Kuikly Native DSL 复用已有 AtomicX 观看组件；当前已核对的 HarmonyOS 官方 SDK 不能直接等价实现此组件的 `liveId` 观看协议。不能将 TRTC 房间号或播放 URL 当作 AtomicX `joinLive` 的替代。
+最新核对日期：2026-10-05。结论：Android/iOS 可通过 Kuikly Native DSL 复用已有 AtomicX 观看组件；当前已核对的 HarmonyOS 官方 SDK 不能直接等价实现此组件的 `liveId` 观看协议。不能将 TRTC 房间号或播放 URL 当作 AtomicX `joinLive` 的替代。
 
-## 当前决策：暂停鸿蒙直播实现
+## 2026-10-05 当前公开 SDK 实证
+
+本轮按完整适配授权重新联网核查，未沿用“节后发布”的厂商转述作结论。
+
+- OHPM [atomicxcore registry](https://ohpm.openharmony.cn/ohpm/@tencentcloud/atomicxcore) 的 `dist-tags.latest` 仍为 `5.1.0`。重新下载官方 HAR 并解包检查 `Index.d.ets`、全部 API 类型和 `RoomStore.d.ets`；SHA-256 为 `f191e85359da4012d8c4dc4587eb38fa8c0801280ec67f1302bcb1700b9f89ab`。入口导出 Login/Device/Call/Room/Chat Store，未导出 `LiveListStore`、`LiveCoreView`、`BarrageStore`、`LikeStore` 或 `LiveAudienceStore`。
+- 本轮直接读取 [TUIKit_Harmony main 递归树](https://api.github.com/repos/Tencent-RTC/TUIKit_Harmony/git/trees/main?recursive=1)，1075 个节点中有 application/chat/call/room；`application/.../main_live.png` 是图片，不是直播 API 实现。没有取得本组件所需的直播 Native View/Store。
+- 当前 [Harmony RoomKit 接入](https://cloud.tencent.com/document/product/647/131427) 仍属于“视频会议 SDK”，标准/研讨会房间不是已有 `joinLive(liveId)` 的可替代协议。本轮解包的 `RoomType` 只有 standard/webinar，`joinRoom(roomID, roomType, password)` 未提供 LIVE 类型。
+- [TRTC Harmony 接入](https://cloud.tencent.com/document/product/647/130532) 证明媒体引擎可接入，不能单独证明 AtomicX 直播成员、互动和房间互通。需要下面列出的真实 transport 参数与成员/互动协议，当前组件输入仅有 AtomicX liveId；不能据此构造房间映射或播放 URL。
+
+当前外部阻断是未取得具备上述 Live API 的实际原厂 Harmony SDK，或经腾讯/后端确认的现有房间 transport 与成员/互动协议。拿到其中一条完整契约后可直接实现 Native HAR 与 Kuikly接线；本轮未生成返回空成功的占位 OHOS 组件。Android/iOS PiP 已补 Kuikly公共入口及 Native 命令透传，复用同一 core，会话与状态没有复制。
+
+## 历史暂停背景（不作为本轮阻断依据）
 
 2026-09-30，用户转述腾讯人员说明鸿蒙 SDK 计划节后发布，并决定先不实现。该时间为用户提供的厂商沟通信息，尚无本轮核验的公开发布公告或确定版本。等待正式 SDK 可取得后，再核对直播 API、房间协议和 Android/iOS 互通；当前不开发 TRTC 替代适配。已完成的 Android/iOS 组件保留。
 
@@ -77,7 +88,7 @@
 
 [TRTC FAQ](https://cloud.tencent.com/document/faq/647/43020)说明远端用户进退回调面向有上行能力的用户，不能靠它们重建完整观众列表/人数。列表预览直接 TRTC 进房也可能与 AtomicX 原有预览在成员登记、订阅和计费上不同，应单独核对。连麦、礼物、主播开播和 PK 不在当前观看库范围。
 
-以上为先前评估的备选路线，当前按用户决定暂停，等待腾讯正式 SDK。本轮未新增 OHOS 实现。
+以上为先前评估的备选路线。本轮已重新核查公开 SDK，阻断依据见开头当前实证；不把历史暂停决定当作当前授权限制。本轮未新增 OHOS 实现。
 
 给腾讯或后端确认的最短清单：
 

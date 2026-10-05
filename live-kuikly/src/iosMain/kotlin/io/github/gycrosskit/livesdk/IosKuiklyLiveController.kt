@@ -60,15 +60,23 @@ class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
     /**
      * Main 执行原生观看命令；弹幕迟到结果不允许跨代次报成功。
      *
-     * @param method 命令名称：like、toggleFollow、refreshAudience、release 或 sendBarrage。
-     * @param params 命令 JSON，sendBarrage 读取 message 字段。
-     * @param callback 仅 sendBarrage 返回 JSON 回执，其余命令不调用此回调。
+     * @param method 互动、释放、弹幕或 PiP 命令名称。
+     * @param params 命令 JSON：message、wideContent 或 enabled，布尔值必须是真实 Boolean。
+     * @param callback sendBarrage 返回 success/message；enterPictureInPicture 返回 accepted（不代表浮窗可见）。
      */
     fun command(method: String, params: String, callback: (String) -> Unit) {
         when (method) {
             "like" -> audience?.like()
             "toggleFollow" -> audience?.toggleFollow()
             "refreshAudience" -> audience?.refreshAudience()
+            "enterPictureInPicture" -> {
+                val wide = try { JSONObject(params).opt("wideContent") as? Boolean } catch (_: Exception) { null }
+                callback(JSONObject().put("accepted", wide != null && !released && audience?.enterPictureInPicture(wide) == true).toString())
+            }
+            "updatePictureInPicture" -> {
+                val enabled = try { JSONObject(params).opt("enabled") as? Boolean } catch (_: Exception) { null }
+                if (enabled != null && !released) audience?.updatePictureInPicture(enabled)
+            }
             "release" -> release()
             "sendBarrage" -> {
                 val message = try { JSONObject(params).optString("message") } catch (_: Exception) { "" }

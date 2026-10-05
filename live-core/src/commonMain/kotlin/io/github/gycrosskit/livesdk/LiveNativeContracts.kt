@@ -10,7 +10,7 @@ package io.github.gycrosskit.livesdk
  * @property onKickedOut 观看期间被主播或管理员移出当前直播间。
  * @property onLiveEnded 观看期间收到关播或解散事件。
  * @property onCurrentUserMessageDisabled 当前登录观众的弹幕权限变化。
- * @property onPictureInPictureChanged 平台 PiP 标记变化；Android 包含请求准备值与 Activity 回报，iOS 为实验接口回执，不能证明浮窗可见。
+ * @property onPictureInPictureChanged 平台 PiP 实际状态变化；两端由真实平台/宿主回报驱动，关闭会话清理 false；请求 accepted 不更新状态。
  */
 class LivePlaybackCallbacks(
     val onJoinStarted: () -> Unit = {},

@@ -36,6 +36,10 @@ class IosLiveAudienceSession(
     fun toggleFollow() = player.toggleFollow()
     /** 刷新在线观众，结果通过 snapshots 发布。 */
     fun refreshAudience() = player.refreshAudience()
+    /** 返回值仅表示实验接口请求已提交，不证明系统浮窗可见。 */
+    fun enterPictureInPicture(wideContent: Boolean): Boolean = player.enterPictureInPicture(wideContent)
+    /** 透传宿主平台状态；SDK 实验接口回执与浮窗实际可见性须分别验收。 */
+    fun updatePictureInPicture(enabled: Boolean) = player.updatePictureInPicture(enabled)
     /** Main 幂等释放当前会话；此实例不能重新使用。 */
     fun release() = player.release()
 }

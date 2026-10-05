@@ -85,8 +85,8 @@ public protocol GycAudiencePlayerObserver {
     /// - Parameter userId: 腾讯账号 ID，按原值匹配。
     /// - Parameter disabled: true 禁止该账号发送弹幕。
     func onAudienceMessageDisabled(userId: String, disabled: Bool)
-    /// 表示 RoomEngine 实验接口响应；不能据此推断系统浮窗已可见。
-    /// - Parameter enabled: 实验接口回执标记，不代表系统浮窗已经可见。
+    /// 会话关闭时清理 PiP 状态；实验接口准备成功不发布此事件。
+    /// - Parameter enabled: 关闭会话为 false；系统启动/停止的实际状态由宿主生命周期同步到 Kotlin View。
     func onPictureInPictureChanged(enabled: Bool)
 }
 

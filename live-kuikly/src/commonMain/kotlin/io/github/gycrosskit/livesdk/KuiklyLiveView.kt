@@ -33,6 +33,20 @@ class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
     fun toggleFollow() = command("toggleFollow")
     /** 请求刷新当前观看会话的在线观众快照。 */
     fun refreshAudience() = command("refreshAudience")
+    /** 异步回报平台是否接受请求；accepted 不能证明系统浮窗可见。 */
+    fun enterPictureInPicture(wideContent: Boolean, callback: (accepted: Boolean) -> Unit) {
+        performTaskWhenRenderViewDidLoad {
+            renderView?.callMethod("enterPictureInPicture", JSONObject().put("wideContent", wideContent).toString()) {
+                callback((it as? JSONObject)?.optBoolean("accepted") == true)
+            }
+        }
+    }
+    /** 同步宿主收到的真实平台 PiP 状态；不要用 enter 的 accepted 回执填入。 */
+    fun updatePictureInPicture(enabled: Boolean) {
+        performTaskWhenRenderViewDidLoad {
+            renderView?.callMethod("updatePictureInPicture", JSONObject().put("enabled", enabled).toString())
+        }
+    }
     /** 显式退出当前会话，原生节点销毁时还会幂等清理。 */
     fun release() = command("release")
 

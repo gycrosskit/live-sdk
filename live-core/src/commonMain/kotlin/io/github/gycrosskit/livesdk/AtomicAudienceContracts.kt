@@ -37,7 +37,7 @@ interface AtomicAudienceListener {
     fun onCurrentUserMessageDisabled(disabled: Boolean)
 
     /**
-     * 平台 PiP 标记变化：Android 包含请求准备值与 Activity 实际回报；iOS 为实验接口回执，不能证明浮窗可见。默认实现兼容未提供回执的平台。
+     * 平台 PiP 实际状态变化：Android 读取 Activity/宿主回报，iOS 由宿主生命周期同步；关闭会话时清理 false。请求 accepted/实验准备回执不更新此状态。
      *
      * @param enabled 平台 PiP 标记，不能单独证明浮窗可见。
      */
@@ -120,7 +120,7 @@ data class LiveAudienceHostSnapshot(
  * @property introduction 直播简介或公告。
  * @property interactionReady 弹幕等互动 Store 是否已可用。
  * @property loading 原生观看会话是否仍在进房。
- * @property pictureInPicture 平台 PiP 标记；Android 包含请求准备值与 Activity 回报，iOS 为实验接口回执，不能单独证明浮窗可见。
+ * @property pictureInPicture 平台 PiP 实际状态；Android 读取 Activity/宿主回报，iOS 由宿主生命周期同步，关闭会话清理 false；accepted 不更新此值。
  * @property likeEffectSequence 点赞动效事件序号，每次收到有效点赞时递增。
  * @property host 当前直播间和主播快照。
  * @property audience 当前已获得资料的在线观众。
