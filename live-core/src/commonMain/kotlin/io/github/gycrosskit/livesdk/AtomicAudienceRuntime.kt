@@ -2,15 +2,32 @@ package io.github.gycrosskit.livesdk
 
 /** AtomicX 观看组件向双端宿主请求日志和短提示的最小桥接。 */
 interface AtomicAudienceRuntime {
-    /** 记录组件运行信息；宿主负责持久化和 Release 环境输出策略。 */
+    /**
+     * 记录组件运行信息；宿主负责持久化和 Release 环境输出策略。
+     *
+     * @param level 宿主日志级别。
+     * @param message 原始事件文本，展示与脱敏策略由宿主决定。
+     * @param error 可选异常，默认 null。
+     */
     fun log(level: AtomicAudienceLogLevel, message: String, error: Throwable? = null)
 
-    /** 展示不需要用户决策的短暂提示；宿主决定 Toast 或 iOS Banner 形式。 */
+    /**
+     * 展示不需要用户决策的短暂提示；宿主决定 Toast 或 iOS Banner 形式。
+     *
+     * @param message 原始事件文本，展示与脱敏策略由宿主决定。
+     */
     fun showMessage(message: String)
 }
 
 /** 宿主日志桥可消费的稳定级别，不映射具体日志库类型。 */
-enum class AtomicAudienceLogLevel { INFO, WARNING, ERROR }
+enum class AtomicAudienceLogLevel {
+    /** 正常流程诊断。 */
+    INFO,
+    /** 可恢复异常或平台限制。 */
+    WARNING,
+    /** 操作失败，需宿主记录诊断。 */
+    ERROR
+}
 
 /**
  * 进程级运行时桥注册表。
@@ -21,7 +38,11 @@ enum class AtomicAudienceLogLevel { INFO, WARNING, ERROR }
 object AtomicAudienceRuntimeRegistry {
     private var runtime: AtomicAudienceRuntime? = null
 
-    /** 安装或替换进程级宿主桥，应在创建任何直播控件前调用。 */
+    /**
+     * 安装或替换进程级宿主桥，应在创建任何直播控件前调用。
+     *
+     * @param value 进程级宿主桥，替换后生命周期由宿主管理。
+     */
     fun install(value: AtomicAudienceRuntime) {
         runtime = value
     }

@@ -19,6 +19,16 @@ func login(_ client: GycLiveClient, _ user: String = "member") -> Callback {
 }
 func completeLogin(_ result: Result<Void, SdkError>) { sdk.logins.removeFirst()(result) }
 func completeLogout(_ result: Result<Void, SdkError>) { sdk.logouts.removeFirst()(result) }
+// 与 Android 的 isNotBlank 一致；拒绝空白凭据，但不改写服务端凭据原文。
+runtime(nil)
+let invalidCredentials = GycLiveClient()
+for (user, signature) in [(" \n\t", "mock-signature"), ("member", " \n\t")] {
+    let callback = Callback()
+    invalidCredentials.login(sdkAppId: 100, userId: user, userSig: signature,
+                             nickname: "", avatarUrl: "", callback: callback)
+    assert(callback.failures == 1 && callback.successes == 0)
+    assert(sdk.logins.isEmpty && !invalidCredentials.ownsTencentRuntime)
+}
 // 空 runtime 的真实成功才取得注销权限。
 runtime(nil)
 let owned = GycLiveClient(); let first = login(owned)

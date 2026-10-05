@@ -1,0 +1,9 @@
+// Kuikly iOS 依赖真实 Render C 符号；只为独立测试链接 SDK，不改变发布产物配置。
+gradle.projectsEvaluated {
+    def directory = System.getenv('LIVE_KUIKLY_IOS_SIMULATOR_FRAMEWORK_DIR')
+    if (!directory || !new File(directory, 'OpenKuiklyIOSRender.framework/OpenKuiklyIOSRender').isFile()) {
+        throw new org.gradle.api.GradleException('Set LIVE_KUIKLY_IOS_SIMULATOR_FRAMEWORK_DIR to the real arm64 iOS Simulator Render framework parent')
+    }
+    def target = gradle.rootProject.project(':live-kuikly').extensions.getByName('kotlin').targets.getByName('iosSimulatorArm64')
+    target.binaries.getByName('debugTest').linkerOpts('-F' + directory, '-framework', 'OpenKuiklyIOSRender')
+}

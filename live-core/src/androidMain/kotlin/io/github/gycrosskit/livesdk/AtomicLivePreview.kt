@@ -8,10 +8,17 @@ import com.tencent.cloud.tuikit.engine.room.TUIRoomDefine
 import io.trtc.tuikit.atomicxcore.api.view.CoreViewType
 import io.trtc.tuikit.atomicxcore.api.view.LiveCoreView
 
+/**
+ * Android Main 静音预览实现；容器和 Store 生命周期由预览控制器成对管理。
+ *
+ * @param context 当前页面 Context，在实例存活期间持有。
+ * @param liveId 当前实例的腾讯房间 ID，不跨房间复用。
+ */
 class AtomicLiveCorePreviewPlayback(
     private val context: Context,
     private val liveId: String,
 ) : AtomicLivePreviewPlayback {
+    /** 宿主挂载的轻量容器，停止时移除 SDK 子 View 以释放 Store 监听。 */
     val container = FrameLayout(context)
     private var view: LiveCoreView? = null
 

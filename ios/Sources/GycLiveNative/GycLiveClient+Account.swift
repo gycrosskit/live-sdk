@@ -1,8 +1,11 @@
 import AtomicXCore
+import Foundation
 import ImSDK_Plus
 
 /** AtomicX 全局账号接线；稳定门面仍由 `GycLiveClient` 对 KMP 暴露。 */
 extension GycLiveClient {
+    /// 同步确认 AtomicX 与 IM 实际账号一致；后台查询等待 Main，不等同业务账号已准备。
+    /// - Parameter userId: 腾讯账号 ID，按原值匹配。
     public func isLoggedInAs(userId: String) -> Bool {
         onMainSync {
             let state = LoginStore.shared.state.value
@@ -11,6 +14,10 @@ extension GycLiveClient {
         }
     }
 
+    /// 在 Main 更新匹配账号资料；不匹配身份忽略，返回不代表后台派发已完成。
+    /// - Parameter userId: 腾讯账号 ID，按原值匹配。
+    /// - Parameter nickname: 展示昵称，空字符串回退 userId；空白文本按原值保留。
+    /// - Parameter avatarUrl: 头像 URL，可为空。
     public func updateProfile(userId: String, nickname: String, avatarUrl: String) {
         onMain { [weak self] in
             guard let self, self.actualTencentUser() == userId else { return }
@@ -18,11 +25,20 @@ extension GycLiveClient {
         }
     }
 
+    /// Main 登录服务端签发账号，拒绝替换外部身份；成功借用的同账号不取得注销权限。
+    /// - Parameter sdkAppId: 腾讯 SDK 应用 ID，必须大于 0。
+    /// - Parameter userId: 腾讯账号 ID，按原值匹配。
+    /// - Parameter userSig: 服务端 UserSig，必须非空白，按原值交给 SDK。
+    /// - Parameter nickname: 展示昵称，空字符串回退 userId；空白文本按原值保留。
+    /// - Parameter avatarUrl: 头像 URL，可为空。
+    /// - Parameter callback: Main 交付当前操作结果；借用身份清理成功不表示 SDK 已注销。
     public func login(sdkAppId: Int32, userId: String, userSig: String, nickname: String,
                       avatarUrl: String, callback: GycLiveOperationCallback) {
         onMain { [weak self] in
             guard let self else { return }
-            guard sdkAppId > 0, !userId.isEmpty, !userSig.isEmpty,
+            guard sdkAppId > 0,
+                  !userId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  !userSig.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   V2TIMManager.sharedInstance()?.getLoginStatus().rawValue != 2 else {
                 callback.onFailure(code: -1, message: "Invalid or pending Tencent login")
                 return
@@ -81,6 +97,7 @@ extension GycLiveClient {
     }
 
     /// 先关闭本组件的观看/监听；借用身份和 foreign runtime 不执行 SDK 注销。
+    /// - Parameter callback: Main 交付当前操作结果；借用身份清理成功不表示 SDK 已注销。
     public func logout(callback: GycLiveOperationCallback) {
         onMain { [weak self] in
             guard let self else { return }

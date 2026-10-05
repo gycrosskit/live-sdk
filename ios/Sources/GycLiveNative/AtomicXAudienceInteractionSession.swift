@@ -16,8 +16,9 @@ final class AtomicXAudienceInteractionSession {
         let content: String
     }
 
-    /// 当前互动会话绑定的直播 ID；nil 表示尚未进房或已经离房。
+    /// 同房重连仍撤销旧回调的绑定代次。
     private var generation = 0
+    /// 当前互动会话绑定的直播 ID；nil 表示尚未进房或已经离房。
     private var activeLiveID: String?
     /// 把 SDK 互动事件转换给 live-sdk 的当前观察者。
     private var observer: GycAudiencePlayerObserver?

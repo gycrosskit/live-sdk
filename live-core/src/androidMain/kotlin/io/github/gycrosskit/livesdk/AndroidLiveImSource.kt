@@ -5,6 +5,7 @@ import java.io.Closeable
 
 /** 唯一原生事件源；监听注册/撤回串行，迟到/异群回调不会交给新观察者。 */
 class AndroidLiveImSource internal constructor(private val sdk: LiveImRegistration) : Closeable {
+    /** 使用当前进程腾讯 IM SDK；不执行 SDK 初始化或登录。 */
     constructor() : this(TencentLiveImRegistration)
     private val lock = Any()
     private val gate = LiveImBindingGate()
@@ -12,6 +13,12 @@ class AndroidLiveImSource internal constructor(private val sdk: LiveImRegistrati
     private var sdkListener: V2TIMSDKListener? = null
     private var closed = false
 
+    /**
+     * 替换监听绑定；群 ID 去空白并去重，旧绑定回调立即失效。close 后不可再连接。
+     *
+     * @param groupIds 需监听的群组 ID，绑定时过滤空白和重复值。
+     * @param observer 当前绑定的观察者，替换绑定后旧监听失效。
+     */
     fun connect(groupIds: Set<String>, observer: LiveImObserver) = synchronized(lock) {
         check(!closed) { "IM source closed" }
         detach()
@@ -43,7 +50,9 @@ class AndroidLiveImSource internal constructor(private val sdk: LiveImRegistrati
         }
     }
 
+    /** 先撤销回调门禁，再移除 SDK listener；移除失败保留 handle 供重试。 */
     fun disconnect() = synchronized(lock) { detach() }
+    /** 永久关闭，允许重复清理；移除失败会抛出并允许再次 close 重试。 */
     override fun close() = synchronized(lock) { closed = true; detach() }
 
     private fun terminal(binding: LiveImBindingGate.Binding, event: (LiveImObserver) -> Unit) = synchronized(lock) {

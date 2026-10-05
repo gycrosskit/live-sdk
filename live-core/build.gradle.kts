@@ -22,6 +22,7 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
         }
+        androidUnitTest.dependencies { implementation("org.robolectric:robolectric:4.16.1") }
     }
 }
 android {
