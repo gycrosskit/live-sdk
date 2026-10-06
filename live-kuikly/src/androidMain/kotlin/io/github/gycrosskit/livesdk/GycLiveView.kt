@@ -87,9 +87,10 @@ class GycLiveView(context: Context) : FrameLayout(context), IKuiklyRenderViewExp
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        // STARTED 的 owner 在 addObserver 内同步回调，必须先准备快照订阅的 scope。
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         lifecycle = findViewTreeLifecycleOwner()?.lifecycle
         lifecycle?.addObserver(observer)
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         scope?.launch { AndroidLiveSdkRuntime.sessionReadyFlow.collect { reconcile() } }
         reconcile()
     }
