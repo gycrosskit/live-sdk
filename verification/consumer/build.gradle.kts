@@ -5,6 +5,8 @@ plugins {
 }
 val liveVersion = providers.gradleProperty("liveVersion").orElse("0.2.1-rc.7").get()
 val verifyCmp = providers.gradleProperty("verifyCmp").isPresent
+val verifyFrame = providers.gradleProperty("verifyFrame").isPresent
+check(!verifyFrame || !verifyCmp) { "FRAME belongs to the Kuikly consumer" }
 if (verifyCmp) pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 kotlin {
  androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
@@ -44,6 +46,17 @@ kotlin {
  sourceSets.commonMain.dependencies {
   if (!verifyCmp) api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
   api("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
+ }
+ if (verifyFrame) {
+  sourceSets.androidUnitTest {
+   // 复用同一布局契约，GycLiveView 的生产实现仍只从远程 AAR 解析。
+   kotlin.srcDir("../../live-kuikly/src/androidUnitTest/kotlin")
+   kotlin.include("**/KuiklyLiveLayoutTest.kt")
+   dependencies {
+    implementation(kotlin("test-junit"))
+    implementation("org.robolectric:robolectric:4.16.1")
+   }
+  }
  }
 }
 android {

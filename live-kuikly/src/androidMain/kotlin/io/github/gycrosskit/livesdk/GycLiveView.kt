@@ -52,7 +52,8 @@ class GycLiveView(context: Context) : FrameLayout(context), IKuiklyRenderViewExp
             } catch (_: Exception) { emit(liveEventJson("joinFailed", -1, "Invalid room configuration")) }
             true
         }
-        else -> false
+        // Render 从 0×0 开始，FRAME/透明度等通用属性必须交还 SDK 的 CSS 实现。
+        else -> super<IKuiklyRenderViewExport>.setProp(propKey, propValue)
     }
 
     override fun call(method: String, params: String?, callback: KuiklyRenderCallback?): Any? {

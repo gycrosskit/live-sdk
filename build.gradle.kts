@@ -8,7 +8,7 @@ plugins {
 publishing { repositories.maven { name = "staging"; url = uri(layout.buildDirectory.dir("maven")) } }
 
 group = providers.environmentVariable("GROUP").orElse("com.github.gycrosskit.live-sdk").get()
-version = providers.environmentVariable("VERSION").orElse("0.2.1-rc.7").get()
+version = providers.environmentVariable("VERSION").orElse("0.2.1-rc.8").get()
 
 
 allprojects {

@@ -32,6 +32,9 @@ jobs:
           cache: gradle
       - run: bash scripts/verify-release.sh
       - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly assembleDebug verifyNoCompose verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
+      # PR 的 rc.7 发布渠道基线保留；新版本另验真实远程 AAR 的 FRAME 行为。
+      - if: github.event_name != 'pull_request'
+        run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyFrame testDebugUnitTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLayoutTest --no-daemon --max-workers=1 --stacktrace --info
       - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyCmp assembleDebug verifyNoKuikly verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
   release-native:
     runs-on: macos-15
