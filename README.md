@@ -2,7 +2,7 @@
 
 基于腾讯 AtomicX 的 Android/iOS 直播观看组件，支持列表静音预览、完整观看、原生视频画面和互动命令。CMP 与 Kuikly Native DSL 共用账号门禁、会话与状态；应用提供 SDKAppId、服务端 UserSig、业务账号、房间路由和操作 UI。
 
-当前 Maven 固定版本 **0.2.1-rc.8**：Android `GycLiveView` 将 FRAME/透明度等通用属性交回 Kuikly Render，修复初始 0×0 视频布局；房间与事件仍由组件处理。布局契约同时用于源码与实际远程 AAR 回归，发布/消费结果见 [rc.8 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.8)。iOS 原生源码没有修改，配套 Git Pod 保持已验 **0.2.1-rc.7**；历史范围见[完整源码审查](docs/完整源码审查.md)。
+当前 Maven 固定版本 **0.2.1-rc.9**：Android `GycLiveView` 在注册 Lifecycle observer 前准备快照订阅 scope，修复已 STARTED 宿主可播放视频但 loading、主播资料和人数停在默认值的竞态；保留 rc.8 的 FRAME 布局修复。布局与真实 attach 生命周期契约同时用于源码与远程 AAR 回归，发布/消费结果见 [rc.9 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.9)。iOS 初始化无同源竞态，原生源码未变，配套 Git Pod 保持已验 **0.2.1-rc.7**；范围见[完整源码审查](docs/完整源码审查.md)。
 
 上一轮 Maven 预发行 **0.2.1-rc.5** 已发布，修复 Renderer 停止预览的线程边界和退出后的 SDK 回调隔离：Renderer 使用 `stopActivePreviewAndAwait()`，同步 `stopActivePreview()` 仅供 Main 调用。Android 38 项、iOS Simulator 35 项测试与 iOS arm64 编译、完整归档、公开 Release 下载 SHA 和 JitPack 制品审计均通过，见 [rc.5 验收记录](docs/0.2.1-rc.5远程发布验收.md)。该轮原生 Swift 源码未变，配套已验 Git Pod `0.2.1-rc.3`；独立消费者与设备验收单独记录，历史结果见 [M19 记录](docs/M19验证记录.md)。
 
@@ -147,9 +147,9 @@ Kuikly group 固定从腾讯 Maven 读取 metadata 和实际产物，避免其�
 
 ```kotlin
 // CMP
-implementation("com.github.gycrosskit.live-sdk:live-sdk:0.2.1-rc.8")
+implementation("com.github.gycrosskit.live-sdk:live-sdk:0.2.1-rc.9")
 // Kuikly Native DSL
-implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.2.1-rc.8")
+implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.2.1-rc.9")
 ```
 
 Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应用保留 `IosLiveSdkBridge` 的薄协议映射。原生 Pod `GycLiveNative` 承接 SDK 实现，独立于 `Shared.framework`，厂商版本固定为 AtomicXCore `4.3.9`、RTCRoomEngine/Professional `4.3.9` 和 IM `9.1.7818`；Kuikly 另外加入配套标签的 `GycLiveView.swift` 与 `OpenKuiklyIOSRender`，已验接线见历史 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/0.2.1-rc.3/live-kuikly/ios/GycLiveView.swift)。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
@@ -162,7 +162,7 @@ Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应
 pod 'GycLiveNative', :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => '0.2.1-rc.7'
 ```
 
-纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前固定组合为 Maven `0.2.1-rc.8` + Native Pod `0.2.1-rc.7`；各渠道结果见完整源码审查。
+纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前固定组合为 Maven `0.2.1-rc.9` + Native Pod `0.2.1-rc.7`；各渠道结果见完整源码审查。
 
 ## 快速使用
 
@@ -253,6 +253,6 @@ GitHub-hosted runner 的实际结果以 Actions 为准；没有 DevEco/ohpm runn
 
 远程 Android 消费分别以 Kuikly-only 和 CMP-only 配置编译，并检查两者运行时依赖隔离。原生 Kuikly iOS 消费编译 API；其真实 Render Framework 最终链接仍需既有脚本的 SDK 参数。CMP-only iOS Simulator 消费单独链接 Framework。
 
-PR 的远程验收固定使用已发布 `0.2.1-rc.7` 作为回归基线，验证 CI 检查器及消费工程；这不代表 PR 候选源码已经发布。正式 Release 事件始终使用事件自己的精确 tag，手动运行也必须填写精确已发布版本；两者另对公开 Kuikly Android AAR 执行 FRAME 布局契约，旧 rc.7 的零尺寸缺陷不豁免此检查。
+PR 的远程验收固定使用已发布 `0.2.1-rc.7` 作为回归基线，验证 CI 检查器及消费工程；这不代表 PR 候选源码已经发布。正式 Release 事件始终使用事件自己的精确 tag，手动运行也必须填写精确已发布版本；两者另对公开 Kuikly Android AAR 执行 FRAME 布局与快照生命周期契约，旧 rc.7 的零尺寸缺陷不豁免此检查。
 
 公网核验同步组织 `templates/check-public-maven.py`：使用冻结归档给出的完整 publications 清单，核对 JitPack tag/commit、每个公开 POM/Module、全部声明变体字节大小和四类哈希、内部精确版本及 `available-at`；MD5/SHA-1 sidecar 必须匹配。SHA-256/SHA-512 sidecar 的 HTTP 404 单独输出为渠道缺失，不计为校验通过。

@@ -49,12 +49,13 @@ kotlin {
  }
  if (verifyFrame) {
   sourceSets.androidUnitTest {
-   // 复用同一布局契约，GycLiveView 的生产实现仍只从远程 AAR 解析。
+   // 复用真实布局/生命周期契约，生产实现仍只从远程 AAR 解析。
    kotlin.srcDir("../../live-kuikly/src/androidUnitTest/kotlin")
-   kotlin.include("**/KuiklyLiveLayoutTest.kt")
+   kotlin.include("**/KuiklyLiveLayoutTest.kt", "**/KuiklyLiveLifecycleTest.kt")
    dependencies {
     implementation(kotlin("test-junit"))
     implementation("org.robolectric:robolectric:4.16.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
    }
   }
  }
