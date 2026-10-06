@@ -33,4 +33,6 @@ PYTHON
 )"
 tag_refs="$(git ls-remote --tags https://github.com/gycrosskit/live-sdk.git "refs/tags/$VERSION" "refs/tags/$VERSION^{}")"
 commit="$(printf '%s\n' "$tag_refs" | awk '$2 ~ /\^\{\}$/ {peeled=$1} {plain=$1} END {print peeled ? peeled : plain}')"
+# 首次发布先请求精确 POM 触发构建，再核对实际产物；状态 API 本身不会触发 JitPack。
+curl --fail --location --retry 3 --connect-timeout 30 --max-time 300 -o "$output/trigger.pom" "https://jitpack.io/com/github/gycrosskit/live-sdk/live-sdk/$VERSION/live-sdk-$VERSION.pom"
 python3 scripts/check-public-maven.py --repo live-sdk --version "$VERSION" --commit "$commit" --expected-publications "$publications" --output-dir "$output/public"
