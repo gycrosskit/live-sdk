@@ -11,6 +11,8 @@ kotlin {
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+    // 仅发布中立协议与类型；OHOS 没有 AtomicX 平台会话或原生播放实现。
+    ohosArm64()
     sourceSets {
         commonMain.dependencies { api(libs.kotlinx.coroutines.core) }
         androidMain.dependencies {
