@@ -9,6 +9,11 @@ on:
         description: Immutable Maven release tag
         required: true
         type: string
+      diagnoseFork:
+        description: Diagnose public OHOS fork resolution with a cold Gradle home
+        required: false
+        default: false
+        type: boolean
 concurrency:
   group: release-validation-${{ github.ref }}
   cancel-in-progress: true
@@ -20,6 +25,7 @@ env:
   VERSION: ${{ github.event.release.tag_name || inputs.version || '0.2.1-rc.7' }}
 jobs:
   release-android:
+    if: inputs.diagnoseFork != true
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -40,6 +46,7 @@ jobs:
         run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyFrame testDebugUnitTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLayoutTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLifecycleTest --no-daemon --max-workers=1 --stacktrace --info
       - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyCmp assembleDebug verifyNoKuikly verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
   release-native:
+    if: inputs.diagnoseFork != true
     runs-on: macos-15
     timeout-minutes: 60
     steps:
@@ -61,3 +68,61 @@ jobs:
           bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyCmp "linkDebugFramework$ios_framework_target" compileKotlinIosArm64 compileKotlinIosX64 --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
       - if: github.event_name != 'pull_request'
         run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyOhos compileKotlinOhosArm64 --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
+  fork-resolution-diagnostic:
+    if: github.event_name == 'workflow_dispatch' && inputs.diagnoseFork == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Public DNS and fork POM probes
+        shell: bash
+        run: |
+          uname -a
+          java -version
+          sha256sum scripts/ci-repositories.gradle scripts/ci-java.security verification/consumer/settings.gradle.kts
+          getent ahosts maven.eazytec-cloud.com || true
+          python3 - <<'PYTHON'
+          import socket
+          try:
+              print(socket.getaddrinfo('maven.eazytec-cloud.com', 443))
+          except OSError as error:
+              print(type(error).__name__, str(error))
+          PYTHON
+          fork_repo=https://maven.eazytec-cloud.com/nexus/repository/maven-public
+          for artifact in \
+            org/jetbrains/kotlin/multiplatform/org.jetbrains.kotlin.multiplatform.gradle.plugin \
+            org/jetbrains/kotlin/plugin/compose/org.jetbrains.kotlin.plugin.compose.gradle.plugin \
+            org/jetbrains/kotlin/kotlin-gradle-plugin \
+            org/jetbrains/kotlin/compose-compiler-gradle-plugin \
+            org/jetbrains/kotlin/kotlin-test-junit; do
+            module=${artifact##*/}
+            url="$fork_repo/$artifact/2.2.21-1.0.0/$module-2.2.21-1.0.0.pom"
+            echo "$url"
+            curl --location --connect-timeout 20 --max-time 60 --silent --show-error --output "$RUNNER_TEMP/$module.pom" --write-out 'HTTP=%{http_code} remote=%{remote_ip} dns=%{time_namelookup} connect=%{time_connect} total=%{time_total}\n' "$url" || true
+          done
+      - name: Cold consumer plugin resolution
+        shell: bash
+        run: |
+          cold_home="$RUNNER_TEMP/live-fork-cold-gradle"
+          diagnostic_log="$RUNNER_TEMP/live-fork-gradle-debug.log"
+          mkdir "$cold_home"
+          set +e
+          bash gradlew --gradle-user-home "$cold_home" --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyEmoji help --refresh-dependencies --no-daemon --max-workers=1 --debug > "$diagnostic_log" 2>&1
+          result=$?
+          set -e
+          python3 - "$diagnostic_log" <<'PYTHON'
+          import re, sys
+          from pathlib import Path
+          public = re.compile(r'https?://(?:maven\.eazytec-cloud\.com|plugins\.gradle\.org|repo\.maven\.apache\.org|dl\.google\.com|services\.gradle\.org|jitpack\.io)/|UnknownHostException|Temporary failure in name resolution|Read timed out|ConnectTimeout|Could not resolve|Plugin .*was not found|BUILD (?:SUCCESSFUL|FAILED)')
+          sensitive = re.compile(r'authorization|password|credential|cookie|\btoken\b', re.I)
+          for line in Path(sys.argv[1]).read_text(errors='replace').splitlines():
+              if public.search(line) and not sensitive.search(line):
+                  print(line)
+          PYTHON
+          exit "$result"
