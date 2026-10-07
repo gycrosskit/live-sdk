@@ -123,7 +123,7 @@ jobs:
           python3 - "$diagnostic_log" <<'PYTHON'
           import re, sys
           from pathlib import Path
-          public = re.compile(r'https?://(?:maven\.eazytec-cloud\.com|plugins\.gradle\.org|repo\.maven\.apache\.org|dl\.google\.com|services\.gradle\.org|jitpack\.io)/|UnknownHostException|Temporary failure in name resolution|Read timed out|ConnectTimeout|Could not resolve|CI DNS|Plugin .*was not found|BUILD (?:SUCCESSFUL|FAILED)')
+          public = re.compile(r'https?://(?:maven\.eazytec-cloud\.com|plugins\.gradle\.org|repo\.maven\.apache\.org|dl\.google\.com|services\.gradle\.org|jitpack\.io)/|UnknownHostException|Temporary failure in name resolution|HTTP/[12](?:\.\d)?\s+\d{3}|[Ss]tatus(?: code)?[:= ]+\d{3}|Connection (?:reset|closed|timed out)|SocketTimeout|SSLHandshakeException|SSLException|Read timed out|ConnectTimeout|Could not resolve|CI DNS|Plugin .*was not found|BUILD (?:SUCCESSFUL|FAILED)')
           sensitive = re.compile(r'authorization|password|credential|cookie|\btoken\b', re.I)
           for line in Path(sys.argv[1]).read_text(errors='replace').splitlines():
               if public.search(line) and not sensitive.search(line):
