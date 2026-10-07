@@ -106,20 +106,24 @@ jobs:
             echo "$url"
             curl --location --connect-timeout 20 --max-time 60 --silent --show-error --output "$RUNNER_TEMP/$module.pom" --write-out 'HTTP=%{http_code} remote=%{remote_ip} dns=%{time_namelookup} connect=%{time_connect} total=%{time_total}\n' "$url" || true
           done
-      - name: Cold consumer plugin resolution
+      - name: Cold Kuikly then CMP consumer sequence
         shell: bash
         run: |
           cold_home="$RUNNER_TEMP/live-fork-cold-gradle"
           diagnostic_log="$RUNNER_TEMP/live-fork-gradle-debug.log"
           mkdir "$cold_home"
           set +e
-          bash gradlew --gradle-user-home "$cold_home" --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyEmoji help --refresh-dependencies --no-daemon --max-workers=1 --debug > "$diagnostic_log" 2>&1
+          bash gradlew --gradle-user-home "$cold_home" --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly assembleDebug verifyNoCompose verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --debug > "$diagnostic_log" 2>&1
           result=$?
+          if [[ "$result" == 0 ]]; then
+            bash gradlew --gradle-user-home "$cold_home" --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyCmp assembleDebug verifyNoKuikly verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --debug >> "$diagnostic_log" 2>&1
+            result=$?
+          fi
           set -e
           python3 - "$diagnostic_log" <<'PYTHON'
           import re, sys
           from pathlib import Path
-          public = re.compile(r'https?://(?:maven\.eazytec-cloud\.com|plugins\.gradle\.org|repo\.maven\.apache\.org|dl\.google\.com|services\.gradle\.org|jitpack\.io)/|UnknownHostException|Temporary failure in name resolution|Read timed out|ConnectTimeout|Could not resolve|Plugin .*was not found|BUILD (?:SUCCESSFUL|FAILED)')
+          public = re.compile(r'https?://(?:maven\.eazytec-cloud\.com|plugins\.gradle\.org|repo\.maven\.apache\.org|dl\.google\.com|services\.gradle\.org|jitpack\.io)/|UnknownHostException|Temporary failure in name resolution|Read timed out|ConnectTimeout|Could not resolve|CI DNS|Plugin .*was not found|BUILD (?:SUCCESSFUL|FAILED)')
           sensitive = re.compile(r'authorization|password|credential|cookie|\btoken\b', re.I)
           for line in Path(sys.argv[1]).read_text(errors='replace').splitlines():
               if public.search(line) and not sensitive.search(line):
