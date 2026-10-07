@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # 只在临时 GitHub runner 复用本 job 已经通过原域名 HTTPS 验证的地址。
-if [[ "${GITHUB_ACTIONS:-}" != true || ! "${RUNNER_OS:-}" =~ ^(Linux|macOS)$ ]]; then
-    echo "CI fork host reuse skipped outside GitHub runner"
+if [[ "${GITHUB_ACTIONS:-}" != true || "${RUNNER_ENVIRONMENT:-}" != github-hosted || ! "${RUNNER_OS:-}" =~ ^(Linux|macOS)$ ]]; then
+    echo "CI fork host reuse skipped outside temporary GitHub-hosted runner"
     exit 0
 fi
 ci_dns_host=maven.eazytec-cloud.com
@@ -28,8 +28,11 @@ if not address.is_global or address.is_multicast:
 print(address)
 PYTHON
         )"; then
-            printf '%s %s\n' "$ci_address" "$ci_dns_host" | sudo tee -a /etc/hosts >/dev/null
-            echo "CI fork HTTPS verified; job host address reused: $ci_dns_host $ci_address"
+            if printf '%s %s\n' "$ci_address" "$ci_dns_host" | sudo tee -a /etc/hosts >/dev/null; then
+                echo "CI fork HTTPS verified; job host address reused: $ci_dns_host $ci_address"
+            else
+                echo "CI fork host write unavailable; continuing normal Gradle resolution"
+            fi
             exit 0
         fi
     fi
