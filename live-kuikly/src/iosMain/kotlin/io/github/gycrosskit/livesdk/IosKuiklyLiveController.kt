@@ -27,6 +27,7 @@ class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
     private var preview: IosLivePreviewSession? = null
     private var snapshots: Job? = null
     private var visible = false
+    private var explicitRelease = false
     private var released = false
     private var generation = 0L
 
@@ -43,6 +44,7 @@ class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
             val next = KuiklyLiveRoom.parse(value)
             if (room?.liveId != next.liveId || room?.preview != next.preview) stop()
             room = next
+            explicitRelease = false
             reconcile()
         } catch (_: Exception) { onEvent(liveEventJson("joinFailed", -1, "Invalid room configuration")) }
     }
@@ -77,7 +79,8 @@ class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
                 val enabled = try { JSONObject(params).opt("enabled") as? Boolean } catch (_: Exception) { null }
                 if (enabled != null && !released) audience?.updatePictureInPicture(enabled)
             }
-            "release" -> release()
+            // 页面命令退出当前房间；节点销毁才永久 release 本控制器。
+            "release" -> { explicitRelease = true; stop() }
             "sendBarrage" -> {
                 val message = try { JSONObject(params).optString("message") } catch (_: Exception) { "" }
                 val player = audience
@@ -102,7 +105,7 @@ class IosKuiklyLiveController(private val onEvent: (String) -> Unit) {
     }
 
     private fun reconcile() {
-        if (released) return
+        if (released || explicitRelease) return
         val request = room ?: return
         if (!IosLiveSdkRuntime.isSessionReady) { stop(); return }
         if (request.preview) {
