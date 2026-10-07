@@ -25,6 +25,7 @@ jobs:
       - run: |
           python3 verification/publication/test_maven_check.py
           python3 verification/publication/test_metadata.py
+          python3 verification/ci/test_fork_host.py
   android:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
