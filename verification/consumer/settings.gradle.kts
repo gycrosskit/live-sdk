@@ -1,5 +1,6 @@
 pluginManagement {
  repositories {
+  maven { url = uri("https://maven.eazytec-cloud.com/nexus/repository/maven-public/"); content { includeVersionByRegex(".*", ".*", ".*-1\\.0\\.0") } }
   maven { url = uri("https://maven.aliyun.com/repository/google") }
   maven { url = uri("https://maven.aliyun.com/repository/public") }
   google(); mavenCentral(); gradlePluginPortal()
@@ -7,6 +8,7 @@ pluginManagement {
 }
 dependencyResolutionManagement {
  repositories {
+  maven { url = uri("https://maven.eazytec-cloud.com/nexus/repository/maven-public/"); content { includeVersionByRegex(".*", ".*", ".*-1\\.0\\.0") } }
   if (providers.gradleProperty("remoteOnly").isPresent) {
    exclusiveContent {
     forRepository { maven { url = uri("https://jitpack.io") } }

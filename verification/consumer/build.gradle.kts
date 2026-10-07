@@ -1,20 +1,23 @@
 plugins {
- kotlin("multiplatform") version "2.2.21"
- kotlin("plugin.compose") version "2.2.21" apply false
+ kotlin("multiplatform") version "2.2.21-1.0.0"
+ kotlin("plugin.compose") version "2.2.21-1.0.0" apply false
  id("com.android.application") version "8.10.1"
 }
 val liveVersion = providers.gradleProperty("liveVersion").orElse("0.2.1-rc.7").get()
+val verifyOhos = providers.gradleProperty("verifyOhos").isPresent
+val verifyEmoji = verifyOhos || providers.gradleProperty("verifyEmoji").isPresent
 val verifyCmp = providers.gradleProperty("verifyCmp").isPresent
 val verifyFrame = providers.gradleProperty("verifyFrame").isPresent
 check(!verifyFrame || !verifyCmp) { "FRAME belongs to the Kuikly consumer" }
 if (verifyCmp) pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 kotlin {
+ if (verifyOhos) ohosArm64()
  androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
  iosX64 {
   binaries.framework {
    baseName = "LiveKuikly"
    isStatic = true
-   if (!verifyCmp) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   if (!verifyCmp && !verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
@@ -22,7 +25,7 @@ kotlin {
   binaries.framework {
    baseName = "LiveKuikly"
    isStatic = true
-   if (!verifyCmp) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   if (!verifyCmp && !verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
@@ -30,7 +33,7 @@ kotlin {
   binaries.framework {
    baseName = "LiveKuikly"
    isStatic = true
-   if (!verifyCmp) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   if (!verifyCmp && !verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
@@ -41,10 +44,11 @@ kotlin {
    implementation("org.jetbrains.compose.ui:ui:1.10.3")
   }
  }
- sourceSets.commonMain.get().kotlin.srcDir(if (verifyCmp) "src/cmpConsumerMain/kotlin" else "src/kuiklyMain/kotlin")
+ if (!verifyOhos) sourceSets.commonMain.get().kotlin.srcDir(if (verifyCmp) "src/cmpConsumerMain/kotlin" else "src/kuiklyMain/kotlin")
+ if (verifyEmoji) sourceSets.commonMain.get().kotlin.srcDir("src/emojiConsumerMain/kotlin")
  sourceSets.androidMain.get().kotlin.srcDir(if (verifyCmp) "src/cmpConsumerAndroidMain/kotlin" else "src/kuiklyAndroidMain/kotlin")
  sourceSets.commonMain.dependencies {
-  if (!verifyCmp) api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+  if (!verifyCmp && !verifyOhos) api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
   api("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
  }
  if (verifyFrame) {
