@@ -25,6 +25,7 @@ jobs:
       - run: |
           python3 verification/publication/test_maven_check.py
           python3 verification/publication/test_metadata.py
+          python3 verification/ci/test_fork_host.py
   android:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -37,6 +38,7 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
+      - run: bash scripts/ci-pin-fork-host.sh
       - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" testDebugUnitTest :live-core:testDebugUnitTest :live-kuikly:testDebugUnitTest compileReleaseKotlinAndroid :live-kuikly:compileReleaseKotlinAndroid --no-daemon --max-workers=1 --stacktrace --info
   native:
     runs-on: macos-15
@@ -50,6 +52,7 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
+      - run: bash scripts/ci-pin-fork-host.sh
       - run: bash verification/ownership/verify-callbacks.sh
       - run: bash verification/picture-in-picture/verify.sh
       - run: |

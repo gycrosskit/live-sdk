@@ -1,2 +1,3 @@
-networkaddress.cache.ttl=600
+# CI job 最长 60 分钟；保留预解析成功结果，失败不缓存。
+networkaddress.cache.ttl=3600
 networkaddress.cache.negative.ttl=0
