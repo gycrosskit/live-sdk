@@ -47,7 +47,7 @@ class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
             renderView?.callMethod("updatePictureInPicture", JSONObject().put("enabled", enabled).toString())
         }
     }
-    /** 显式退出当前会话，原生节点销毁时还会幂等清理。 */
+    /** 退出当前会话，直到重新下发 room 才可重启；原生节点销毁时永久释放。 */
     fun release() = command("release")
 
     private fun command(name: String) {

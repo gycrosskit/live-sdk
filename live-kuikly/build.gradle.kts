@@ -10,6 +10,14 @@ kotlin {
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+    // Native 测试与最终宿主一样，必须链接真实 Render 提供的 C 符号。
+    providers.gradleProperty("liveKuiklyIosRenderFrameworkDir").orNull?.let { frameworkDir ->
+        targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
+            binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable>().configureEach {
+                linkerOpts("-F$frameworkDir", "-framework", "OpenKuiklyIOSRender", "-rpath", frameworkDir)
+            }
+        }
+    }
     if (providers.gradleProperty("liveVerification").isPresent) {
         targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
             binaries.framework {

@@ -2,6 +2,8 @@
 
 基于腾讯 AtomicX 的 Android/iOS 直播观看组件，支持列表静音预览、完整观看、原生视频画面和互动命令。CMP 与 Kuikly Native DSL 共用账号门禁、会话与状态；应用提供 SDKAppId、服务端 UserSig、业务账号、房间路由和操作 UI。
 
+本轮统一候选 **0.2.1-rc.11**：iOS Kuikly 的 `release` 命令停止当前会话，hide/show 不恢复，下一份有效 room 可重新进入；native node 销毁仍永久 release。Android 同语义路径保持原样。源码回归和全部 16 个 Maven publication 归档校验通过，远程发布/消费和真实播放验收待继续执行；原生 Swift 未改，配套 Git Pod 仍为 rc.7。
+
 本轮 Maven 固定版本 **0.2.1-rc.10**：`live-core` 提供 62 项旧客户端兼容表情目录与 encode/decode，新增仅供中立协议/类型消费的 OHOS KLIB。root/CMP/Kuikly 原生播放仍仅支持 Android/iOS；Maven 三模块同版，未改原生 Swift，Git Pod 保持 **0.2.1-rc.7**。发布归档、JitPack 与三端远程验收分别见 [rc.10 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.10)。
 
 上一版 **0.2.1-rc.9**：Android `GycLiveView` 在注册 Lifecycle observer 前准备快照订阅 scope，修复已 STARTED 宿主可播放视频但 loading、主播资料和人数停在默认值的竞态；保留 rc.8 的 FRAME 布局修复。布局与真实 attach 生命周期契约同时用于源码与远程 AAR 回归，发布/消费结果见 [rc.9 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.9)。iOS 初始化无同源竞态，原生源码未变，配套 Git Pod 保持已验 **0.2.1-rc.7**；范围见[完整源码审查](docs/完整源码审查.md)。
