@@ -1,0 +1,11 @@
+// Resolve fixture compiler jars without compiling the Android SDK module.
+gradle.projectsEvaluated {
+    rootProject.tasks.register("resolveOwnershipFixtureDependencies") {
+        doLast {
+            rootProject.configurations.detachedConfiguration(
+                rootProject.dependencies.create("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21-1.0.0"),
+                rootProject.dependencies.create("org.jetbrains:annotations:13.0")
+            ).resolve()
+        }
+    }
+}
