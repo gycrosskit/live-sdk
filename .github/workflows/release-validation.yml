@@ -35,7 +35,7 @@ jobs:
       - run: bash scripts/verify-release.sh
         env:
           VERIFY_OHOS: ${{ github.event_name != 'pull_request' && '1' || '0' }}
-      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS assembleDebug verifyNoCompose verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
+      - run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS assembleDebug verifyNoCmpUi verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
       # PR 的 rc.7 发布渠道基线保留；新版本另验真实远程 AAR 的 FRAME 与快照生命周期。
       - if: github.event_name != 'pull_request'
         run: bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyFrame testDebugUnitTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLayoutTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLifecycleTest --no-daemon --max-workers=1 --stacktrace --info

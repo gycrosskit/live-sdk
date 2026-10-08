@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.compose.compiler)
     `maven-publish`
 }
 group = rootProject.group
@@ -31,6 +32,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":live-core"))
             api("com.tencent.kuikly-open:core:2.28.0-2.0.21-ohos")
+            api("com.tencent.kuikly-open:compose:2.28.0-2.0.21-ohos")
         }
         androidMain.dependencies {
             api("com.tencent.kuikly-open:core-render-android:2.28.0-2.0.21-ohos")
