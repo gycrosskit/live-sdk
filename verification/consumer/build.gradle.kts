@@ -9,7 +9,8 @@ val verifyEmoji = verifyOhos || providers.gradleProperty("verifyEmoji").isPresen
 val verifyCmp = providers.gradleProperty("verifyCmp").isPresent
 val verifyFrame = providers.gradleProperty("verifyFrame").isPresent
 check(!verifyFrame || !verifyCmp) { "FRAME belongs to the Kuikly consumer" }
-if (verifyCmp) pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
+val verifyKuiklyCompose = providers.gradleProperty("verifyKuiklyCompose").isPresent
+if (verifyCmp || verifyKuiklyCompose) apply(plugin = "org.jetbrains.kotlin.plugin.compose")
 kotlin {
  if (verifyOhos) ohosArm64()
  androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
@@ -37,6 +38,7 @@ kotlin {
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
+ sourceSets.commonMain.get().apply { if (verifyKuiklyCompose) kotlin.srcDir("src/kuiklyComposeMain/kotlin") }
  if (verifyCmp) {
   sourceSets.commonMain.dependencies {
    implementation("com.github.gycrosskit.live-sdk:live-sdk:$liveVersion")
@@ -70,11 +72,20 @@ android {
  defaultConfig { applicationId = "io.github.gycrosskit.liveconsumer"; minSdk = 24; targetSdk = 36 }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_11; targetCompatibility = JavaVersion.VERSION_11 }
 }
-tasks.register("verifyNoCompose") {
- doLast {
-  val deps = configurations.getByName("debugRuntimeClasspath").resolvedConfiguration.resolvedArtifacts
-  check(deps.none { it.moduleVersion.id.group.contains("compose") }) { "Kuikly Native DSL must not pull Compose runtime/UI" }
- }
+tasks.register("verifyNoCmpUi") {
+    doLast {
+        check(!verifyCmp) { "Run this check in Kuikly mode" }
+        val deps = configurations.getByName("debugRuntimeClasspath").incoming.resolutionResult.allComponents
+            .mapNotNull { it.moduleVersion }
+        val forbidden = deps.filter {
+            it.group.startsWith("org.jetbrains.compose.ui") || it.group.startsWith("org.jetbrains.compose.foundation") ||
+                it.group.startsWith("org.jetbrains.compose.material") || it.group.startsWith("androidx.compose.ui") ||
+                it.group.startsWith("androidx.compose.foundation") || it.group.startsWith("androidx.compose.material")
+        }
+        check(forbidden.isEmpty()) { "Kuikly consumer pulls a second CMP UI: $forbidden" }
+        if (verifyKuiklyCompose) check(deps.any { it.group == "com.tencent.kuikly-open" && it.name.startsWith("compose") })
+        println("PASS no second CMP UI (KuiklyCompose presence required when API probe enabled); Compose runtime: " + deps.filter { it.group.contains("compose.runtime") })
+    }
 }
 
 tasks.register("verifySingleSdk") {
