@@ -232,6 +232,7 @@ val incoming = LiveEmojiProtocol.decode("[TUIEmoji_Heart][TUIEmoji_Unknown]") //
 
 ## 文档与反馈
 
+- [早期版本候选、发布与远程验收](docs/M19验证记录.md)
 - [共享腾讯身份与中立 IM 源](docs/共享腾讯身份.md)
 - [SDK 账号、CMP/Kuikly 与 iOS 接入](docs/接入指南.md)
 - [源码开发与验证](docs/开发与验证.md)、[验证记录](docs/验证记录.md)
@@ -243,39 +244,6 @@ val incoming = LiveEmojiProtocol.decode("[TUIEmoji_Heart][TUIEmoji_Unknown]") //
 ## 许可证
 
 [Apache-2.0](LICENSE)。腾讯 SDK 与 Kuikly Render 遵循各自原厂许可，组件不重新分发 proprietary SDK。
-
-## 0.2.1-rc.4 历史候选
-
-观众快照只由现有 `StateFlow` 保存，`snapshot()` 与订阅者读取同一份状态，回调通过 `copy` 保留其他字段。
-弹幕队列、去重 key、有界容量与合成序号继续独立维护；平台回调原有主线程串行语义保持。
-
-本轮 core Android 35 项、Simulator 32 项测试和 core/CMP/Kuikly Android、iOS arm64/Simulator 编译通过；未执行真实直播业务。
-
-| rc.4 渠道 | 配套版本 |
-| --- | --- |
-| Maven / Git Pod | `0.2.1-rc.4` / `0.2.1-rc.3` |
-
-Android AtomicX 4.3.3.29 + IM 9.1.7818；iOS AtomicX/RoomEngine 4.3.9 + IM 9.1.7818；Kuikly Render 2.28.0。候选已完成发布与新版本远程消费；设备行为不由编译/链接推断。
-
-## 0.2.1-rc.4 发布与远程验收
-
-Fresh macOS staging 与归档解包复验均通过，全部 15 个 publication 的声明文件四类哈希、四类 sidecar、Apache-2.0 POM 及同名 available-at 目标身份均已校验。Maven 归档 SHA-256：`7ab65c2249f8284f57ae59bba03b40e600dcf76c735033cf34e4377a665a67b3`。
-
-Maven `0.2.1-rc.4`；未变 GycLiveNative Git Pod 保留 `0.2.1-rc.3`。
-
-不可变标签与 prerelease 已发布，所有 Release 附件重下载 SHA 与清单匹配。JitPack 新版本最终 ok/isTag/public 且 commit 匹配 tag，全部 15 module、18 个文件引用、15 个 available-at 的 HTTP/四类声明 hash/身份验证通过。新版真实远程 consumer 已通过；设备与业务 SDK 动作未验。
-
-精确 JitPack rc.4 新目录消费者：Kuikly 43 tasks / 43s，APK/D8、verifyNoCompose、verifySingleSdk（core/AtomicX 唯一依赖）、iOS 三架构编译和 device/simulator arm64 static Framework；CMP 19 tasks / 19s，Android 与 iOS 三架构编译。未变 Git Pod rc.3 沿用既有真实 UIKit 链接证据，本轮不重复发布或编译旧 Pod。
-
-实际日志与 JSON 账单位于 `build/remote-library-review/`。真实设备、业务账号登录/聊天/直播/PiP、权限 UI、真实 Bug/通知发送未执行。
-
-## 0.2.1-rc.6 本轮测试与远程验收
-
-2026-10-05：本轮自有源码和公开 API 审查、关键回归与受影响平台编译通过；真实 JitPack `0.2.1-rc.6` 的最终标签提交、15 个 publications 的 POM/Module、所有变体文件大小与四种声明哈希、内部精确版本及 available-at 均通过。Release Maven 归档重新下载 SHA-256 为 `6dc24dfab7b3309a58591b14c1ed3cb97605cbaf048ca3236c0410eb69ac35bb`。公开 MD5/SHA-1 sidecar 通过；SHA-256/SHA-512 sidecar 的 HTTP 404 记录为渠道缺失。
-
-干净消费工程使用固定远程版本，没有本地 Maven、includeBuild 或其他组件源码替代；通过现有入口的 Android/iOS 编译和相应最终链接。 Kuikly 与 CMP 分别验证。 新 Git Pod 从远程标签安装，实际编译 Swift 与标签逐字节匹配，纯 UIKit iphoneos arm64 App 链接通过。
-
-完整回归范围、精简原则、注释契约与仍需设备/业务验收的边界见 [14 个功能组件测试与 API 审查](https://github.com/gycrosskit/.github/blob/main/docs/组件测试与API审查.md)。源码测试与远程消费不代替真机和厂商业务验收。
 
 ## 自动回归
 
