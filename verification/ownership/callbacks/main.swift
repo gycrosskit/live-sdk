@@ -29,6 +29,29 @@ for (user, signature) in [(" \n\t", "mock-signature"), ("member", " \n\t")] {
     assert(callback.failures == 1 && callback.successes == 0)
     assert(sdk.logins.isEmpty && !invalidCredentials.ownsTencentRuntime)
 }
+// LOGINED completion 先于资料；资料为空/旧值/获取失败都不能拒绝认证或失去清理权限。
+for profile in [nil, "stale-profile"] as [String?] {
+    runtime(nil)
+    let client = GycLiveClient(); let callback = login(client)
+    runtime("member")
+    sdk.state.value.loginUserInfo = profile.map { UserProfile(userID: $0, nickname: $0, avatarURL: "") }
+    completeLogin(.success(()))
+    assert(callback.successes == 1 && callback.failures == 0 && client.ownsTencentRuntime)
+    assert(client.isLoggedInAs(userId: "member"))
+    let reused = login(client); assert(reused.successes == 1 && sdk.logins.isEmpty)
+    let cleanup = Callback(); client.logout(callback: cleanup)
+    assert(sdk.logouts.count == 1)
+    runtime(nil); completeLogout(.success(())); assert(cleanup.successes == 1)
+}
+// A退出 → B退出 → A首次登录，不需要重试且每次真实注销。
+let cycling = GycLiveClient()
+for user in ["member-a", "member-b", "member-a"] {
+    runtime(nil); let callback = login(cycling, user)
+    runtime(user); sdk.state.value.loginUserInfo = nil; completeLogin(.success(()))
+    assert(callback.successes == 1 && cycling.ownsTencentRuntime)
+    let cleanup = Callback(); cycling.logout(callback: cleanup); assert(sdk.logouts.count == 1)
+    runtime(nil); completeLogout(.success(())); assert(cleanup.successes == 1)
+}
 // 空 runtime 的真实成功才取得注销权限。
 runtime(nil)
 let owned = GycLiveClient(); let first = login(owned)
@@ -92,3 +115,21 @@ sdk.sdkAppID = 101; completeLogin(.failure(SdkError()))
 assert(appFailure.failures == 1 && !changedDuringInit.ownsTencentRuntime)
 sdk.sdkAppID = 100
 print("Live same-user foreign SDKAppID preparation/cleanup/failure guards passed")
+
+// facade 或 IM 任一没有真正登录，即使资料正确也不能算成功。
+for invalidIM in [false, true] {
+    runtime(nil); let client = GycLiveClient(); let callback = login(client)
+    runtime("member", facadeReady: invalidIM)
+    if invalidIM { im.actualStatus = .loggedOut }
+    assert(!client.isLoggedInAs(userId: "member"))
+    completeLogin(.success(())); assert(callback.failures == 1 && callback.successes == 0)
+    let cleanup = Callback(); client.logout(callback: cleanup); assert(sdk.logouts.isEmpty)
+}
+// 同 user 但 callback 前已换 AppId，拒绝错误成功，不取得外部注销权限。
+runtime(nil); sdk.sdkAppID = 100
+let changedBeforeSuccess = GycLiveClient(); let appSuccess = login(changedBeforeSuccess)
+runtime("member"); sdk.sdkAppID = 101; completeLogin(.success(()))
+assert(appSuccess.failures == 1 && !changedBeforeSuccess.ownsTencentRuntime)
+let appCleanup = Callback(); changedBeforeSuccess.logout(callback: appCleanup); assert(sdk.logouts.isEmpty)
+sdk.sdkAppID = 100
+print("Live profile-independent login, A/B/A logout, reuse and dual-status contracts passed")

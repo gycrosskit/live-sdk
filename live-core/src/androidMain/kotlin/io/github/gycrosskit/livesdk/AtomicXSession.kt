@@ -34,8 +34,8 @@ object AtomicXSession {
     fun isLoggedInAs(userId: String): Boolean {
         AtomicMainThread.checkMainThread()
         val state = LoginStore.shared.loginState
-        return state.loginStatus.value == LoginStatus.LOGINED &&
-            state.loginUserInfo.value?.userID == userId && actualUserId() == userId &&
+        // 资料由 SDK 异步获取，可能晚于 login completion；认证只看实际账号与登录状态。
+        return state.loginStatus.value == LoginStatus.LOGINED && actualUserId() == userId &&
             V2TIMManager.getInstance().loginStatus == V2TIMManager.V2TIM_STATUS_LOGINED
     }
 
@@ -100,12 +100,12 @@ object AtomicXSession {
             }
             val serial = ++operationSerial
             val previousIdentity = preparedIdentity
-            val mayOwn = actual == null || liveOwnsActualIdentity(preparedIdentity, ownsRuntime, actual, store.sdkAppID)
             val previouslyOwned = liveOwnsActualIdentity(preparedIdentity, ownsRuntime, actual, store.sdkAppID)
+            val mayOwn = actual == null || previouslyOwned
             preparedIdentity = null; ownsRuntime = false
             store.login(context, sdkAppId, userId, userSig, object : CompletionHandler {
                 override fun onSuccess() = AtomicMainThread.run {
-                    if (serial != operationSerial || actualUserId() != userId || !isLoggedInAs(userId) ||
+                    if (serial != operationSerial || !isLoggedInAs(userId) ||
                         (store.sdkAppID > 0 && store.sdkAppID != sdkAppId)) {
                         if (serial == operationSerial && liveOwnsActualIdentity(previousIdentity, previouslyOwned, actualUserId(), store.sdkAppID)) {
                             preparedIdentity = previousIdentity; ownsRuntime = true

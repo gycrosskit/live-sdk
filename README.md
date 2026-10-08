@@ -1,5 +1,7 @@
 # GY CrossKit Live SDK
 
+> 2026-10-08 本地未发布候选：Android/iOS 登录认证不再等待异步用户资料，保留实际 IM 账号、AtomicX/IM 状态、SDKAppId 与操作代次校验。当前 Maven `0.2.1-rc.12`、Git Pod `0.2.1-rc.7` 不包含此候选；真实宿主/设备登录退出仍待验证。合同与验证见[功能与平台差异](docs/功能与平台差异.md)。
+
 2026-10-08 功能索引：live-core提供原生会话与快照，根模块提供CMP，live-kuikly提供raw与KuiklyCompose Android/iOS；OHOS直播排除，真实音画/PiP仍需业务验收。 详见[功能与平台差异](docs/功能与平台差异.md)，含固定基线、五入口矩阵、真实回归与未验收范围。当前发布组合：Maven 0.2.1-rc.12；未变GycLiveNative Git Pod继续0.2.1-rc.7，Kuikly Swift接线取本次Maven标签；OHOS仅core中立协议。各渠道消费与设备验收分别核对。
 
 最终核对（2026-10-08）：本轮重跑Compose更新/句柄重建/迟回调；native会话为边界替身，真实音画/PiP未验。 逐项时点与边界见[验证范围](docs/功能与平台差异.md#sdk系统与真实验证范围)。

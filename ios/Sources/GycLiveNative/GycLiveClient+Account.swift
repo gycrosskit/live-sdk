@@ -9,7 +9,8 @@ extension GycLiveClient {
     public func isLoggedInAs(userId: String) -> Bool {
         onMainSync {
             let state = LoginStore.shared.state.value
-            return state.loginStatus == .logined && state.loginUserInfo?.userID == userId && self.actualTencentUser() == userId &&
+            // 资料由 SDK 异步获取，可能晚于 login completion；认证只看实际账号与登录状态。
+            return state.loginStatus == .logined && self.actualTencentUser() == userId &&
                 V2TIMManager.sharedInstance()?.getLoginStatus().rawValue == 1
         }
     }
@@ -67,8 +68,7 @@ extension GycLiveClient {
             let serial = self.accountOperationSerial
             let previousIdentity = self.preparedLiveIdentity
             let previouslyOwned = liveOwnsActualIdentity(prepared: previousIdentity, ownsRuntime: self.ownsTencentRuntime, actualUser: actual, configuredSdkAppId: LoginStore.shared.sdkAppID)
-            let mayOwn = actual == nil || liveOwnsActualIdentity(prepared: self.preparedLiveIdentity,
-                ownsRuntime: self.ownsTencentRuntime, actualUser: actual, configuredSdkAppId: LoginStore.shared.sdkAppID)
+            let mayOwn = actual == nil || previouslyOwned
             self.preparedLiveIdentity = nil; self.ownsTencentRuntime = false
             LoginStore.shared.login(sdkAppID: sdkAppId, userID: userId, userSig: userSig) { result in
                 self.onMain {
