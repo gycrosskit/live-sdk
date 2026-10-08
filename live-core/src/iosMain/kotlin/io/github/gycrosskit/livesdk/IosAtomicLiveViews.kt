@@ -85,7 +85,9 @@ class IosAtomicAudienceView(
     private var sessionGranted = false
     private var resourcesReleased = false
     private val likeBatcher = LiveLikeBatcher(
-        send = { count, onFinished ->
+        send = send@ { count, onFinished ->
+            // Bridge 是全局当前 Store；排队或已交出令牌的实例不能发送尾批次。
+            if (!ownsJoinedSession()) { onFinished(false); return@send }
             val reportingUserId = bridge.currentUserId()
             bridge.sendLike(count, object : IosLiveOperationCallback {
                 override fun onSuccess() {
@@ -296,9 +298,15 @@ class IosAtomicAudienceView(
         host.addSubview(view)
     }
 
+    private fun ownsJoinedSession(): Boolean = sessionGranted && session.isJoined && nativeView != null
+
     override fun sendBarrage(message: String, onFinished: (Boolean, String) -> Unit) {
+        if (resourcesReleased || !ownsJoinedSession()) { onFinished(false, "Not ready"); return }
         bridge.sendBarrage(message, object : IosLiveOperationCallback {
-            override fun onSuccess() = onFinished(true, "")
+            override fun onSuccess() {
+                val current = !resourcesReleased && ownsJoinedSession()
+                onFinished(current, if (current) "" else "Released")
+            }
 
             override fun onFailure(code: Int, message: String) {
                 AtomicAudienceRuntimeRegistry.warning(
@@ -309,11 +317,11 @@ class IosAtomicAudienceView(
         })
     }
 
-    override fun like() = likeBatcher.like()
+    override fun like() { if (!resourcesReleased && ownsJoinedSession()) likeBatcher.like() }
 
     override fun toggleFollow() = roomInfoController.toggleFollow()
 
-    override fun refreshAudience() = bridge.refreshAudience()
+    override fun refreshAudience() { if (!resourcesReleased && ownsJoinedSession()) bridge.refreshAudience() }
 
     override fun enterPictureInPicture(wideContent: Boolean): Boolean =
         !resourcesReleased && session.isJoined && bridge.enterPictureInPicture(wideContent)

@@ -6,7 +6,15 @@ cd "$(dirname "$0")/.."
 checksum="$(awk -v version="$VERSION" '$1 == version {print $2}' release-checksums.txt)"
 [[ "$checksum" =~ ^[a-f0-9]{64}$ ]] || { echo "Missing frozen archive checksum for $VERSION" >&2; exit 1; }
 output="$(mktemp -d)"
-trap 'rm -rf "$output"' EXIT
+preserve_evidence() {
+  status=$?
+  diagnostics="${CI_DIAGNOSTICS_DIR:-ci-diagnostics}/public"
+  mkdir -p "$diagnostics"
+  printf 'version=%s\nexit=%s\n' "$VERSION" "$status" > "$diagnostics/result.txt"
+  rm -rf "$output"
+  exit "$status"
+}
+trap preserve_evidence EXIT
 archive="$output/live-sdk-maven.tar.gz"
 curl --fail --location --retry 3 --connect-timeout 30 --max-time 300 -o "$archive" "https://github.com/gycrosskit/live-sdk/releases/download/$VERSION/live-sdk-maven.tar.gz"
 printf '%s  %s\n' "$checksum" "$archive" | shasum -a 256 --check
@@ -35,6 +43,4 @@ PYTHON
 )"
 tag_refs="$(git ls-remote --tags https://github.com/gycrosskit/live-sdk.git "refs/tags/$VERSION" "refs/tags/$VERSION^{}")"
 commit="$(printf '%s\n' "$tag_refs" | awk '$2 ~ /\^\{\}$/ {peeled=$1} {plain=$1} END {print peeled ? peeled : plain}')"
-# 首次发布先请求精确 POM 触发构建，再核对实际产物；状态 API 本身不会触发 JitPack。
-curl --fail --location --retry 3 --connect-timeout 30 --max-time 300 -o "$output/trigger.pom" "https://jitpack.io/com/github/gycrosskit/live-sdk/live-sdk/$VERSION/live-sdk-$VERSION.pom"
-python3 scripts/check-public-maven.py --repo live-sdk --version "$VERSION" --commit "$commit" --expected-publications "$publications" --output-dir "$output/public"
+python3 scripts/check-public-maven.py --repo live-sdk --version "$VERSION" --commit "$commit" --expected-publications "$publications" --output-dir "${CI_DIAGNOSTICS_DIR:-ci-diagnostics}/public"
