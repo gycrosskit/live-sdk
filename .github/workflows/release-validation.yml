@@ -17,7 +17,7 @@ permissions:
 env:
   JAVA_TOOL_OPTIONS: -Djava.security.properties=${{ github.workspace }}/scripts/ci-java.security
   EMOJI_FLAGS: ${{ github.event_name != 'pull_request' && '-PverifyEmoji' || '' }}
-  KUIKLY_COMPOSE_FLAGS: ${{ github.event_name != 'pull_request' && '-PverifyKuiklyCompose' || '' }}
+  KUIKLY_COMPOSE_FLAGS: ${{ (github.event.release.tag_name == '0.2.1-rc.12' || inputs.version == '0.2.1-rc.12') && '-PverifyKuiklyCompose' || '' }}
   VERSION: ${{ github.event.release.tag_name || inputs.version || '0.2.1-rc.7' }}
 jobs:
   release-android:
