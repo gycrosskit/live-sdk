@@ -7,3 +7,6 @@ local.properties
 .DS_Store
 
 .research/
+/scripts/ci-changes.py
+/scripts/ci-run.py
+/scripts/ci-native-cache.py
