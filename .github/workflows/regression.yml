@@ -117,9 +117,13 @@ jobs:
       - run: bash scripts/ci-pin-fork-host.sh
         timeout-minutes: 3
         if: needs.changes.outputs.source == 'true'
-      - run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" testDebugUnitTest :live-core:testDebugUnitTest :live-kuikly:testDebugUnitTest compileReleaseKotlinAndroid :live-kuikly:compileReleaseKotlinAndroid --no-daemon --max-workers=1 --stacktrace --info
+      - run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-core:testDebugUnitTest :live-kuikly:testDebugUnitTest :live-core:compileReleaseKotlinAndroid :live-kuikly:compileReleaseKotlinAndroid --no-daemon --max-workers=1 --stacktrace --info
         timeout-minutes: 35
         if: needs.changes.outputs.source == 'true'
+      - name: Verify source Kuikly consumer and dependency isolation
+        if: needs.changes.outputs.source == 'true'
+        timeout-minutes: 20
+        run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/consumer-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PliveVersion=0.3.0-dev -PverifyKuiklyCompose assembleDebug verifyNoCmpUi verifySingleSdk --no-daemon --max-workers=1 --stacktrace --info
       - name: Explain lightweight completion
         if: ${{ !(needs.changes.outputs.source == 'true') }}
         run: echo 'No build is required for this event and scope.'
@@ -188,13 +192,13 @@ jobs:
         run: |
           ios_test_target=iosSimulatorArm64Test
           if [[ "$(uname -m)" != arm64 ]]; then ios_test_target=iosX64Test; fi
-          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-core:"$ios_test_target" compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinIosX64 :live-kuikly:compileKotlinIosArm64 :live-kuikly:compileKotlinIosSimulatorArm64 :live-kuikly:compileKotlinIosX64 :live-core:compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace --info
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-core:"$ios_test_target" :live-core:compileKotlinIosArm64 :live-core:compileKotlinIosSimulatorArm64 :live-core:compileKotlinIosX64 :live-kuikly:compileKotlinIosArm64 :live-kuikly:compileKotlinIosSimulatorArm64 :live-kuikly:compileKotlinIosX64 :live-core:compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace --info
           python3 -c 'import pathlib, sys, xml.etree.ElementTree as ET; files=pathlib.Path(".").glob("**/build/test-results/"+sys.argv[1]+"/*.xml"); cases=[case for path in files for case in ET.parse(path).iter("testcase")]; assert any(case.find("skipped") is None for case in cases), "No executed iOS test cases"' "$ios_test_target"
       - name: Link legacy LiveKuikly Swift adapter against candidate Renderer Pod
         if: needs.changes.outputs.source == 'true'
         timeout-minutes: 20
         run: |
-          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/renderer-kmp.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PliveVersion=0.2.1-rc.13 linkDebugFrameworkIosArm64 --no-daemon --max-workers=1 --stacktrace
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/renderer-kmp.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PliveVersion=0.3.0-dev linkDebugFrameworkIosArm64 --no-daemon --max-workers=1 --stacktrace
           LIVE_RENDERER_IOS_FRAMEWORK_DIR="$PWD/build/native-renderer-consumer/iphoneos" LIVE_KUIKLY_IOS_FRAMEWORK_DIR="$PWD/build/native-renderer-consumer/iphoneos" python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/renderer-kmp.log -- bash scripts/verify-ios-native.sh
       - name: Explain lightweight completion
         if: ${{ !(needs.changes.outputs.source == 'true') }}

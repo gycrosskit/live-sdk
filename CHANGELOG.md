@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.3.0-dev（未发布）
+
+- 移除根 CMP UI 与根 Maven 产品，根工程仅聚合 `live-core` / `live-kuikly`。
+- 保留原生会话、Kuikly raw / KuiklyCompose、共用测试和 iOS Pod 原版本。
+- 当前 consumer / CI / 归档只验证两产品、11 个 publication；旧 tag 与 checksum 保留，重验旧版使用其原脚本。
+
 ## 0.2.1-rc.7（预发布）
 
 - Kuikly View提供 PiP进入/实际状态同步，Android/iOS复用核心观看会话。

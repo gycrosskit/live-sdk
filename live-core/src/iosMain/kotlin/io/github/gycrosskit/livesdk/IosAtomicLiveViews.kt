@@ -283,7 +283,7 @@ class IosAtomicAudienceView(
         get() = snapshotStore.snapshot()
 
     /**
-     * Kuikly 与 CMP 共用观看会话；只有取得会话令牌后才创建 SDK View。
+     * Kuikly 与原生宿主共用观看会话；只有取得会话令牌后才创建 SDK View。
      *
      * @param host 宿主拥有的 UIView 容器，仅 Main 挂载和移除子 View。
      */

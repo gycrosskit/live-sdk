@@ -14,7 +14,7 @@ internal data class AtomicAudienceSessionMessages(
     val joinInvocationFailed: String,
 )
 
-/** 会话状态机只发稳定事件，不直接修改平台 View、SDK Store 或业务 Compose 状态。 */
+/** 会话状态机只发稳定事件，不直接修改平台 View、SDK Store 或业务页面状态。 */
 internal interface AtomicAudienceSessionEvents {
     fun onJoinStarted()
     fun onJoinSucceeded()

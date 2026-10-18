@@ -30,7 +30,6 @@ rootProject.name = "live-independent-consumer"
 if (providers.gradleProperty("verifyLocalSource").isPresent) {
     includeBuild("../..") {
         dependencySubstitution {
-            substitute(module("com.github.gycrosskit.live-sdk:live-sdk")).using(project(":"))
             substitute(module("com.github.gycrosskit.live-sdk:live-core")).using(project(":live-core"))
             substitute(module("com.github.gycrosskit.live-sdk:live-kuikly")).using(project(":live-kuikly"))
         }

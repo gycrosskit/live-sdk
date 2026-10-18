@@ -46,7 +46,7 @@ internal class LiveHostFollowController(
     private var fansGeneration = 0L
     private var released = false
 
-    // 这些字段只用于状态机决策；Compose 的唯一可观察状态由 onStateChanged 写入快照 Store。
+    // 这些字段只用于状态机决策；页面的唯一可观察状态由 onStateChanged 写入快照 Store。
     private var visible = false
     private var followed = false
     private var requestRunning = false

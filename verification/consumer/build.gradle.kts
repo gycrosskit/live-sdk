@@ -3,14 +3,14 @@ plugins {
  kotlin("plugin.compose") version "2.2.21-1.0.0" apply false
  id("com.android.application") version "8.10.1"
 }
-val liveVersion = providers.gradleProperty("liveVersion").orElse("0.2.1-rc.7").get()
+val liveVersion = providers.gradleProperty("liveVersion").orElse("0.3.0-dev").get()
 val verifyOhos = providers.gradleProperty("verifyOhos").isPresent
 val verifyEmoji = verifyOhos || providers.gradleProperty("verifyEmoji").isPresent
-val verifyCmp = providers.gradleProperty("verifyCmp").isPresent
+val verifyLocalSource = providers.gradleProperty("verifyLocalSource").isPresent
+check(!verifyLocalSource || !providers.gradleProperty("remoteOnly").isPresent) { "Local source and remote-only validation are separate modes" }
 val verifyFrame = providers.gradleProperty("verifyFrame").isPresent
-check(!verifyFrame || !verifyCmp) { "FRAME belongs to the Kuikly consumer" }
 val verifyKuiklyCompose = providers.gradleProperty("verifyKuiklyCompose").isPresent
-if (verifyCmp || verifyKuiklyCompose) apply(plugin = "org.jetbrains.kotlin.plugin.compose")
+if (verifyKuiklyCompose) apply(plugin = "org.jetbrains.kotlin.plugin.compose")
 kotlin {
  if (verifyOhos) ohosArm64()
  androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
@@ -18,7 +18,7 @@ kotlin {
   binaries.framework {
    baseName = "LiveKuikly"
    isStatic = true
-   if (!verifyCmp && !verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   if (!verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
@@ -26,7 +26,7 @@ kotlin {
   binaries.framework {
    baseName = "LiveKuikly"
    isStatic = true
-   if (!verifyCmp && !verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   if (!verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
@@ -34,23 +34,16 @@ kotlin {
   binaries.framework {
    baseName = "LiveKuikly"
    isStatic = true
-   if (!verifyCmp && !verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+   if (!verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
   }
  }
  sourceSets.commonMain.get().apply { if (verifyKuiklyCompose) kotlin.srcDir("src/kuiklyComposeMain/kotlin") }
- if (verifyCmp) {
-  sourceSets.commonMain.dependencies {
-   implementation("com.github.gycrosskit.live-sdk:live-sdk:$liveVersion")
-   implementation("org.jetbrains.compose.runtime:runtime:1.10.3")
-   implementation("org.jetbrains.compose.ui:ui:1.10.3")
-  }
- }
- if (!verifyOhos) sourceSets.commonMain.get().kotlin.srcDir(if (verifyCmp) "src/cmpConsumerMain/kotlin" else "src/kuiklyMain/kotlin")
+ if (!verifyOhos) sourceSets.commonMain.get().kotlin.srcDir("src/kuiklyMain/kotlin")
  if (verifyEmoji) sourceSets.commonMain.get().kotlin.srcDir("src/emojiConsumerMain/kotlin")
- sourceSets.androidMain.get().kotlin.srcDir(if (verifyCmp) "src/cmpConsumerAndroidMain/kotlin" else "src/kuiklyAndroidMain/kotlin")
+ sourceSets.androidMain.get().kotlin.srcDir("src/kuiklyAndroidMain/kotlin")
  sourceSets.commonMain.dependencies {
-  if (!verifyCmp && !verifyOhos) api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+  if (!verifyOhos) api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
   api("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
  }
  if (verifyFrame) {
@@ -74,9 +67,9 @@ android {
 }
 tasks.register("verifyNoCmpUi") {
     doLast {
-        check(!verifyCmp) { "Run this check in Kuikly mode" }
-        val deps = configurations.getByName("debugRuntimeClasspath").incoming.resolutionResult.allComponents
-            .mapNotNull { it.moduleVersion }
+        val resolution = configurations.getByName("debugRuntimeClasspath").incoming.resolutionResult
+        check(resolution.allDependencies.none { it is org.gradle.api.artifacts.result.UnresolvedDependencyResult }) { "Runtime dependencies must resolve before checking UI isolation" }
+        val deps = resolution.allComponents.mapNotNull { it.moduleVersion }
         val forbidden = deps.filter {
             it.group.startsWith("org.jetbrains.compose.ui") || it.group.startsWith("org.jetbrains.compose.foundation") ||
                 it.group.startsWith("org.jetbrains.compose.material") || it.group.startsWith("androidx.compose.ui") ||
@@ -90,19 +83,27 @@ tasks.register("verifyNoCmpUi") {
 
 tasks.register("verifySingleSdk") {
  doLast {
-  val deps = configurations.getByName("debugRuntimeClasspath").resolvedConfiguration.resolvedArtifacts
-  val liveArtifacts = deps.filter { it.moduleVersion.id.group == "com.github.gycrosskit.live-sdk" }
-  check(liveArtifacts.isNotEmpty() && liveArtifacts.all { it.moduleVersion.id.version == liveVersion })
-  println("Exact Live artifacts: " + liveArtifacts.joinToString { it.moduleVersion.id.toString() })
-  check(deps.count { it.moduleVersion.id.name == "live-core-android" } == 1)
-  check(deps.count { it.moduleVersion.id.name == "atomicx-core" } == 1)
+  val runtime = configurations.getByName("debugRuntimeClasspath")
+  val resolution = runtime.incoming.resolutionResult
+  check(resolution.allDependencies.none { it is org.gradle.api.artifacts.result.UnresolvedDependencyResult }) { "Runtime dependencies must resolve before checking product identity" }
+  // 检查组件图，避免 source consumer 在 Android 多种输出文件间做无类型选择。
+  val deps = resolution.allComponents.mapNotNull { it.moduleVersion }
+  val liveArtifacts = deps.filter { it.group == "com.github.gycrosskit.live-sdk" }
+  check(liveArtifacts.isNotEmpty() && liveArtifacts.all { it.version == liveVersion })
+  if (verifyLocalSource) {
+   val liveComponents = runtime.incoming.resolutionResult.allComponents.filter {
+    it.moduleVersion?.group == "com.github.gycrosskit.live-sdk"
+   }
+   check(liveComponents.size == 2 && liveComponents.all { it.id is org.gradle.api.artifacts.component.ProjectComponentIdentifier }) {
+    "Local validation must consume both source projects, without published Live artifacts: $liveComponents"
+   }
+   check(liveComponents.map { (it.id as org.gradle.api.artifacts.component.ProjectComponentIdentifier).projectPath }.toSet() == setOf(":live-core", ":live-kuikly"))
+  } else {
+   check(liveArtifacts.map { it.name }.toSet() == setOf("live-core", "live-core-android", "live-kuikly", "live-kuikly-android")) {
+    "Published validation requires exactly the two Live products: $liveArtifacts"
+   }
+  }
+  println("Exact Live components: " + liveArtifacts.joinToString())
+  check(deps.count { it.name == "atomicx-core" } == 1)
  }
-}
-
-tasks.register("verifyNoKuikly") {
-    doLast {
-        check(verifyCmp) { "Run this check in CMP mode" }
-        val artifacts = configurations.getByName("debugRuntimeClasspath").resolvedConfiguration.resolvedArtifacts
-        check(artifacts.none { it.moduleVersion.id.group == "com.tencent.kuikly-open" || it.moduleVersion.id.name.endsWith("-kuikly-android") }) { "CMP-only consumer unexpectedly pulls Kuikly runtime" }
-    }
 }
