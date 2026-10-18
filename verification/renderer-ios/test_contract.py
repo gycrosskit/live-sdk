@@ -4,6 +4,10 @@ from pathlib import Path
 import re
 import os
 import sys
+import hashlib
+import json
+import subprocess
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -12,12 +16,52 @@ ROOT = Path(__file__).resolve().parents[2]
 def verify_remote_source(text, tag, commit):
     assert re.fullmatch(r"native-\d+\.\d+\.\d+(?:-rc\.\d+)?", tag), tag
     assert re.fullmatch(r"[a-f0-9]{40}", commit), "Expected exact release commit"
+    pods = text.split("PODS:\n", 1)[1].split("\n\n", 1)[0]
+    versions = re.findall(r"^  - GycLiveNative(?:/(?:Core|Renderer))? \(([^)]+)\)", pods, re.M)
+    assert versions and set(versions) == {tag.removeprefix("native-")}, "Pod version differs from Native tag"
     options = text.split("CHECKOUT OPTIONS:\n", 1)[1].split("\n\n", 1)[0]
     component = options.split("  GycLiveNative:\n", 1)[1].split("\n  OpenKuikly", 1)[0]
-    assert f":tag: {tag}" in component
-    assert f":commit: {commit}" in component
-    assert ":git: https://github.com/gycrosskit/live-sdk.git" in component
+    assert re.search(r"^    :tag: " + re.escape(tag) + r"$", component, re.M), "Wrong Native tag"
+    assert re.search(r"^    :git: https://github\.com/gycrosskit/live-sdk\.git$", component, re.M), "Wrong Native repository"
+    recorded = re.search(r"^    :commit: (.+)$", component, re.M)
+    if recorded:
+        assert recorded.group(1) == commit, "Wrong optional commit"
     assert ":path:" not in text, "Remote proof must not use local Pod paths"
+
+
+def verify_tag_refs(text, tag, commit):
+    refs = dict(line.split()[::-1] for line in text.splitlines())
+    ref = "refs/tags/" + tag
+    assert ref in refs, "Native tag does not exist"
+    assert refs.get(ref + "^{}", refs[ref]) == commit, "Remote tag moved from frozen checkout"
+
+
+def verify_installed_swift(installed, expected, required):
+    files = {path.relative_to(installed).as_posix(): path.read_bytes()
+             for path in installed.rglob("*.swift")}
+    assert files and required and required <= files.keys(), "Product Swift sources missing"
+    for name, content in files.items():
+        assert name in expected and content == expected[name], "Installed Swift differs: " + name
+    return {name: hashlib.sha256(content).hexdigest() for name, content in sorted(files.items())}
+
+
+def verify_remote_checkout(lock, product):
+    tag, commit = os.environ["LIVE_NATIVE_TAG"], os.environ["LIVE_NATIVE_COMMIT"]
+    verify_remote_source(lock.read_text(), tag, commit)
+    def git(*args):
+        return subprocess.check_output(["git", *args], cwd=ROOT)
+    assert git("rev-parse", "HEAD").decode().strip() == commit, "Checkout is not frozen release commit"
+    refs = git("ls-remote", "--tags", "https://github.com/gycrosskit/live-sdk.git",
+               "refs/tags/" + tag, "refs/tags/" + tag + "^{}").decode()
+    verify_tag_refs(refs, tag, commit)
+    tracked = git("ls-tree", "-r", "--name-only", commit).decode().splitlines()
+    expected = {name: git("show", commit + ":" + name) for name in tracked if name.endswith(".swift")}
+    required = {name for name in expected if name.startswith("ios/Sources/" + product + "/")}
+    hashes = verify_installed_swift(lock.parent / "Pods/GycLiveNative", expected, required)
+    proof = {"tag": tag, "podVersion": tag.removeprefix("native-"), "commit": commit, "product": product,
+             "lockSha256": hashlib.sha256(lock.read_bytes()).hexdigest(), "installedSwiftSha256": hashes}
+    (lock.parent / "native-source-proof.json").write_text(json.dumps(proof, indent=2) + "\n")
+    print("Exact remote tag/SHA and installed Swift bytes verified:", tag, commit, len(hashes))
 
 
 def verify_lock(text):
@@ -56,13 +100,45 @@ class RendererContractTest(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 verify_core_lock(invalid)
 
-    def test_remote_source_rejects_wrong_tag_commit_and_path(self):
+    def test_tag_only_lock_accepts_no_commit_and_rejects_wrong_source(self):
         commit = 'a' * 40
-        valid = "CHECKOUT OPTIONS:\n  GycLiveNative:\n    :commit: " + commit + "\n    :git: https://github.com/gycrosskit/live-sdk.git\n    :tag: native-0.2.1-rc.14\n"
-        verify_remote_source(valid, 'native-0.2.1-rc.14', commit)
-        for invalid in (valid.replace('rc.14', 'rc.13'), valid.replace(commit, 'b' * 40), valid + ':path: /tmp/source'):
+        # CocoaPods tag sources record git/tag, without a synthetic commit field.
+        valid = "PODS:\n  - GycLiveNative/Renderer (0.2.1-rc.15):\n    - OpenKuiklyIOSRender (< 2.30.0, >= 2.28.0)\n  - OpenKuiklyIOSRender (2.29.1)\n\nCHECKOUT OPTIONS:\n  GycLiveNative:\n    :git: https://github.com/gycrosskit/live-sdk.git\n    :tag: native-0.2.1-rc.15\n"
+        verify_remote_source(valid, 'native-0.2.1-rc.15', commit)
+        for invalid in (valid.replace('rc.15', 'rc.150'), valid.replace('Renderer (0.2.1-rc.15)', 'Renderer (0.2.1-rc.14)'),
+                        valid.replace('live-sdk.git', 'wrong.git'),
+                        valid + ':path: /tmp/source', valid + '    :commit: ' + 'b' * 40 + '\n'):
             with self.assertRaises(AssertionError):
-                verify_remote_source(invalid, 'native-0.2.1-rc.14', commit)
+                verify_remote_source(invalid, 'native-0.2.1-rc.15', commit)
+
+    def test_remote_tag_must_match_frozen_commit_for_lightweight_and_annotated(self):
+        tag, commit = 'native-0.2.1-rc.15', 'a' * 40
+        plain = commit + '\trefs/tags/' + tag + '\n'
+        annotated = 'b' * 40 + '\trefs/tags/' + tag + '\n' + plain.rstrip() + '^{}\n'
+        verify_tag_refs(plain, tag, commit)
+        verify_tag_refs(annotated, tag, commit)
+        for invalid in (plain.replace(commit, 'b' * 40), plain.replace('rc.15', 'rc.150'), ''):
+            with self.assertRaises(AssertionError):
+                verify_tag_refs(invalid, tag, commit)
+
+    def test_installed_swift_rejects_missing_extra_and_modified_files(self):
+        name = 'ios/Sources/GycLiveRenderer/View.swift'
+        expected = {name: b'public class Renderer {}\n'}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            file = root / name
+            file.parent.mkdir(parents=True)
+            with self.assertRaises(AssertionError):
+                verify_installed_swift(root, expected, {name})
+            file.write_bytes(expected[name])
+            self.assertEqual(set(verify_installed_swift(root, expected, {name})), {name})
+            file.write_bytes(b'modified')
+            with self.assertRaises(AssertionError):
+                verify_installed_swift(root, expected, {name})
+            file.write_bytes(expected[name])
+            (root / 'Extra.swift').write_text('extra')
+            with self.assertRaises(AssertionError):
+                verify_installed_swift(root, expected, {name})
 
     def test_native_release_skips_maven_jobs(self):
         workflow = (ROOT / '.github/workflows/release-validation.yml').read_text()
@@ -102,9 +178,8 @@ class RendererContractTest(unittest.TestCase):
 
 if __name__ == "__main__":
     if len(sys.argv) == 3 and os.environ.get("LIVE_NATIVE_TAG"):
-        verify_remote_source(Path(sys.argv[2]).read_text(), os.environ["LIVE_NATIVE_TAG"],
-                             os.environ["LIVE_NATIVE_COMMIT"])
-        print("Exact remote Native tag/commit lock verified")
+        product = "GycLiveNative" if sys.argv[1] == "--core-lock" else "GycLiveRenderer"
+        verify_remote_checkout(Path(sys.argv[2]), product)
     if len(sys.argv) == 3 and sys.argv[1] == "--core-lock":
         verify_core_lock(Path(sys.argv[2]).read_text())
         print("Default Pod lock: Core SDK dependencies retained, no Renderer")

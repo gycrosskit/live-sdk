@@ -175,8 +175,18 @@ jobs:
           export LIVE_NATIVE_COMMIT="$(git rev-parse HEAD)"
           python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native-pod-core.log -- bash scripts/verify-live-native-ios.sh
           python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native-pod-renderer.log -- bash scripts/verify-live-renderer-ios.sh
-          cp build/native-live-consumer/Podfile.lock ci-diagnostics/native-core-Podfile.lock
-          cp build/native-renderer-consumer/Podfile.lock ci-diagnostics/native-renderer-Podfile.lock
+      - name: Preserve installed Pod locks and source proofs
+        if: always()
+        run: |
+          mkdir -p ci-diagnostics
+          for consumer in native-live-consumer native-renderer-consumer; do
+            if [[ -f "build/$consumer/Podfile.lock" ]]; then
+              cp "build/$consumer/Podfile.lock" "ci-diagnostics/$consumer-Podfile.lock.txt"
+            fi
+            if [[ -f "build/$consumer/native-source-proof.json" ]]; then
+              cp "build/$consumer/native-source-proof.json" "ci-diagnostics/$consumer-source-proof.json"
+            fi
+          done
       - name: Save public CI diagnostics
         if: always()
         uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
