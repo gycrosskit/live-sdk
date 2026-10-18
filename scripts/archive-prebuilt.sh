@@ -6,7 +6,7 @@ export GROUP=com.github.gycrosskit.live-sdk
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 # staging 为本脚本独占的生成仓库，先移除旧版本和 SNAPSHOT 历史文件。
 rm -rf build/maven
-bash gradlew --no-daemon --max-workers=1 -Dorg.gradle.parallel=false :live-core:publishAllPublicationsToStagingRepository :live-kuikly:publishAllPublicationsToStagingRepository
+bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" --no-daemon --max-workers=1 -Dorg.gradle.parallel=false :live-core:publishAllPublicationsToStagingRepository :live-kuikly:publishAllPublicationsToStagingRepository
 repository=build/maven/com/github/gycrosskit/live-sdk
 python3 jitpack-metadata.py "$repository"
 python3 scripts/check-maven.py build/maven com.github.gycrosskit.live-sdk "$VERSION" live-core,live-kuikly ios_arm64,ios_x64,ios_simulator_arm64,ohos_arm64 live-core,live-core-android,live-core-iosarm64,live-core-iosx64,live-core-iossimulatorarm64,live-core-ohosarm64,live-kuikly,live-kuikly-android,live-kuikly-iosarm64,live-kuikly-iosx64,live-kuikly-iossimulatorarm64
