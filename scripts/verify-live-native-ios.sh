@@ -5,7 +5,7 @@ consumer="build/native-live-consumer"
 mkdir -p "$consumer"
 cp verification/native-ios/Main.swift verification/native-ios/Podfile "$consumer/"
 ruby_bin="${LIVE_NATIVE_RUBY:-ruby}"
-ruby_env=()
+ruby_env=(env)
 if ! "$ruby_bin" -rxcodeproj -e '' 2>/dev/null; then
   # Homebrew CocoaPods 的 xcodeproj gem 不在 macOS 系统 Ruby 中。
   ruby_bin="$(brew --prefix ruby)/bin/ruby"

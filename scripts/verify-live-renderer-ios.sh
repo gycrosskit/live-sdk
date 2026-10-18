@@ -5,7 +5,7 @@ consumer="build/native-renderer-consumer"
 mkdir -p "$consumer"
 cp verification/renderer-ios/RendererTests.swift verification/renderer-ios/Podfile "$consumer/"
 ruby_bin="${LIVE_NATIVE_RUBY:-ruby}"
-ruby_env=()
+ruby_env=(env)
 if ! "$ruby_bin" -rxcodeproj -e '' 2>/dev/null; then
   ruby_bin="$(brew --prefix ruby)/bin/ruby"
   ruby_env=(env "GEM_HOME=$(brew --prefix cocoapods)/libexec")
