@@ -86,7 +86,10 @@ jobs:
     if: ${{ always() && !startsWith(github.event.release.tag_name || inputs.version, 'native-') }}
     needs: verify-public
     runs-on: ${{ (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) && 'macos-15' || 'ubuntu-24.04' }}
-    timeout-minutes: 60
+    timeout-minutes: 90
+    env:
+      LIVE_NATIVE_TAG: 'native-0.2.1-rc.15'
+      LIVE_NATIVE_COMMIT: 'c9362a1df4c420fafd8f7b47865d34c598ccab1f'
     steps:
       - name: Require successful public verification
         run: |
@@ -127,6 +130,48 @@ jobs:
       - if: (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) && (github.event_name != 'pull_request')
         timeout-minutes: 45
         run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyOhos compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace --info
+      - name: Build exact retained remote Native Renderer
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
+        timeout-minutes: 35
+        run: |
+          native_source="$RUNNER_TEMP/live-release-native"
+          git clone --depth 1 --single-branch --branch "$LIVE_NATIVE_TAG" https://github.com/gycrosskit/live-sdk.git "$native_source"
+          test "$(git -C "$native_source" rev-parse HEAD)" = "$LIVE_NATIVE_COMMIT"
+          # 验证入口用当前候选；Native Swift 与 checker 的 ROOT/HEAD 仍绑定原生 tag。
+          python3 - "$native_source" <<'PYTHON'
+          import hashlib, json, os, shutil, subprocess, sys
+          from pathlib import Path
+          source, native = Path.cwd(), Path(sys.argv[1])
+          runners = ('scripts/verify-live-renderer-ios.sh',
+                     'verification/renderer-ios/Podfile', 'verification/renderer-ios/RendererTests.swift',
+                     'verification/renderer-ios/test_contract.py')
+          hashes = {}
+          for name in runners:
+              shutil.copyfile(source / name, native / name)
+              hashes[name] = hashlib.sha256((native / name).read_bytes()).hexdigest()
+              assert hashes[name] == hashlib.sha256((source / name).read_bytes()).hexdigest()
+          subprocess.run(['git', '-C', str(native), 'diff', '--exit-code', 'HEAD', '--', 'ios/Sources'], check=True)
+          candidate = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          assert candidate == os.environ['GITHUB_SHA']
+          receipt = {'candidate_commit': candidate, 'runner_sha256': hashes,
+                     'native_tag': os.environ['LIVE_NATIVE_TAG'], 'native_commit': os.environ['LIVE_NATIVE_COMMIT'],
+                     'scope': 'Verification runner/Podfile/checker from candidate; production Swift unchanged from exact Native tag; installed Swift proof is emitted by the current checker inside the Native checkout.'}
+          Path('ci-diagnostics/release-renderer-runner-proof.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          PYTHON
+          (
+            cd "$native_source"
+            python3 "$GITHUB_WORKSPACE/scripts/ci-run.py" --no-progress-seconds 300 --log "$GITHUB_WORKSPACE/ci-diagnostics/release-native-renderer.log" -- bash scripts/verify-live-renderer-ios.sh
+          )
+          cp "$native_source/build/native-renderer-consumer/Podfile.lock" ci-diagnostics/release-renderer-Podfile.lock.txt
+          cp "$native_source/build/native-renderer-consumer/native-source-proof.json" ci-diagnostics/release-renderer-source-proof.json
+          printf 'LIVE_RENDERER_IOS_FRAMEWORK_DIR=%s/build/native-renderer-consumer/iphoneos\n' "$native_source" >> "$GITHUB_ENV"
+          printf 'LIVE_KUIKLY_IOS_FRAMEWORK_DIR=%s/build/native-renderer-consumer/iphoneos\n' "$native_source" >> "$GITHUB_ENV"
+      - name: Link new Maven with retained Native Renderer
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
+        timeout-minutes: 25
+        run: |
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-maven-native-link.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyKuiklyCompose "-PkuiklyRenderFrameworkDir=$LIVE_KUIKLY_IOS_FRAMEWORK_DIR" linkDebugFrameworkIosArm64 --no-daemon --max-workers=1 --stacktrace --info
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-maven-native-link.log -- bash scripts/verify-ios-native.sh
       - name: Explain lightweight completion
         if: ${{ !(github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) }}
         run: echo 'No build is required for this event and scope.'
