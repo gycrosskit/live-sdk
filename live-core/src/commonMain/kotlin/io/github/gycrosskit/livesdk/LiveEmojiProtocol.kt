@@ -9,7 +9,7 @@ package io.github.gycrosskit.livesdk
 data class LiveEmojiValue(val display: String, val token: String)
 
 /**
- * CMP/Kuikly 共用的直播兼容表情协议，不依赖 SDK 登录或 UI 引擎。
+ * 宿主共用的直播兼容表情协议，不依赖 SDK 登录或 UI 引擎。
  *
  * 保留既有客户端的 62 项映射，不代表厂商官方 token 标准全集；未知表情和 token 保留原文。
  */

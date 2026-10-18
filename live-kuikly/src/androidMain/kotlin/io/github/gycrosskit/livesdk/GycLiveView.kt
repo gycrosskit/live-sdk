@@ -16,7 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * Native 视频层直接复用 CMP 的会话和 Store，不创建 ComposeView 或独立登录。
+ * Native 视频层直接复用 live-core 的会话和 Store，不创建独立 UI 根节点或登录。
  *
  * @param context 当前页面 Context，在实例存活期间持有。
  */
@@ -33,7 +33,7 @@ class GycLiveView(context: Context) : FrameLayout(context), IKuiklyRenderViewExp
     private val pendingEvents = ArrayDeque<String>()
     private val observer = LifecycleEventObserver { _, _ -> reconcile() }
 
-    /** 业务点赞上报与 CMP 使用同一个宿主 reporter。 */
+    /** 业务点赞上报使用宿主注入的 reporter。 */
     var likeReporter: LiveLikeReporter = LiveLikeReporter.None
 
     override fun setProp(propKey: String, propValue: Any): Boolean = when (propKey) {

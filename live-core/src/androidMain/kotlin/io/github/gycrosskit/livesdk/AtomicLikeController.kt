@@ -10,7 +10,7 @@ import io.trtc.tuikit.atomicxcore.api.live.LiveUserInfo
  * 管理 Android LikeStore 发送和远端点赞事件；合并策略与动画状态分别复用 commonMain 能力。
  *
  * 本地连点按固定窗口合并，节流使用单调时钟，不受用户修改系统时间影响；SDK 失败只在当前房间仍绑定时
- * 恢复批次。切房或释放后的迟到事件会被丢弃，不能继续驱动已经离开的 Compose 页面。
+ * 恢复批次。切房或释放后的迟到事件会被丢弃，不能继续驱动已经离开的页面。
  */
 internal class AtomicLikeController(
     private val context: Context,

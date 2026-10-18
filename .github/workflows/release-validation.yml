@@ -18,7 +18,6 @@ env:
   CI_FORK_HOST_FALLBACK_IP: ${{ vars.CI_FORK_HOST_FALLBACK_IP }}
   JAVA_TOOL_OPTIONS: -Djava.security.properties=${{ github.workspace }}/scripts/ci-java.security -Dsun.net.client.defaultConnectTimeout=30000 -Dsun.net.client.defaultReadTimeout=60000
   EMOJI_FLAGS: ${{ github.event_name != 'pull_request' && '-PverifyEmoji' || '' }}
-  KUIKLY_COMPOSE_FLAGS: ${{ (github.event.release.tag_name == '0.2.1-rc.12' || inputs.version == '0.2.1-rc.12' || github.event.release.tag_name == '0.2.1-rc.13' || inputs.version == '0.2.1-rc.13') && '-PverifyKuiklyCompose' || '' }}
   VERSION: ${{ github.event.release.tag_name || inputs.version }}
 jobs:
   verify-public:
@@ -28,7 +27,6 @@ jobs:
     env:
       VERSION: ${{ github.event.release.tag_name || inputs.version }}
       CI_DIAGNOSTICS_DIR: ${{ github.workspace }}/ci-diagnostics
-      VERIFY_OHOS: '1'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -69,16 +67,13 @@ jobs:
       - run: bash scripts/ci-pin-fork-host.sh
         timeout-minutes: 3
         if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
-      - run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS $KUIKLY_COMPOSE_FLAGS assembleDebug verifyNoCmpUi verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
+      - run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyKuiklyCompose assembleDebug verifyNoCmpUi verifySingleSdk --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
         timeout-minutes: 35
         if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
-      # PR 的 rc.7 发布渠道基线保留；新版本另验真实远程 AAR 的 FRAME 与快照生命周期。
+      # 新两产品合同同样验证真实远程 AAR 的 FRAME 与快照生命周期。
       - if: (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) && (github.event_name != 'pull_request')
         timeout-minutes: 35
-        run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS $KUIKLY_COMPOSE_FLAGS -PverifyFrame testDebugUnitTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLayoutTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLifecycleTest --no-daemon --max-workers=1 --stacktrace --info
-      - run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyCmp assembleDebug verifyNoKuikly verifySingleSdk --no-daemon --max-workers=1 --stacktrace --info
-        timeout-minutes: 35
-        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
+        run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyKuiklyCompose -PverifyFrame testDebugUnitTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLayoutTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLifecycleTest --no-daemon --max-workers=1 --stacktrace --info
       - name: Explain lightweight completion
         if: ${{ !(github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) }}
         run: echo 'No build is required for this event and scope.'
@@ -126,15 +121,9 @@ jobs:
       - run: bash scripts/ci-pin-fork-host.sh
         timeout-minutes: 3
         if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
-      - run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS $KUIKLY_COMPOSE_FLAGS compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinIosX64 --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
+      - run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyKuiklyCompose compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinIosX64 --refresh-dependencies --no-daemon --max-workers=1 --stacktrace --info
         timeout-minutes: 45
         if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
-      - timeout-minutes: 45
-        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
-        run: |
-          ios_framework_target=IosSimulatorArm64
-          if [[ "$(uname -m)" != arm64 ]]; then ios_framework_target=IosX64; fi
-          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyCmp "linkDebugFramework$ios_framework_target" compileKotlinIosArm64 compileKotlinIosX64 --no-daemon --max-workers=1 --stacktrace --info
       - if: (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) && (github.event_name != 'pull_request')
         timeout-minutes: 45
         run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly -PverifyOhos compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace --info

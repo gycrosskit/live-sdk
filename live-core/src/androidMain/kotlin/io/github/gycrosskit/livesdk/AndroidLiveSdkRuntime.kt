@@ -7,7 +7,7 @@ object AndroidLiveSdkRuntime {
 
     /** 同步 AtomicX 账号是否已准备完成，未准备时列表预览不得启动。 */
     private val ready = kotlinx.coroutines.flow.MutableStateFlow(false)
-    /** Compose/Kuikly 共用的只读账号准备状态流。 */
+    /** 原生/Kuikly 共用的只读账号准备状态流。 */
     val sessionReadyFlow: kotlinx.coroutines.flow.StateFlow<Boolean> get() = ready
 
     /**

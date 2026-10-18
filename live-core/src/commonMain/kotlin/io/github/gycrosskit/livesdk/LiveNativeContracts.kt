@@ -1,7 +1,7 @@
 package io.github.gycrosskit.livesdk
 
 /**
- * 观看控件事件；缺省回调均为空操作，平台 actual 必须始终调用重组后的最新实例。
+ * 观看控件事件；缺省回调均为空操作，平台监听器必须始终调用最新实例。
  *
  * @property onJoinStarted 获得共享会话执行权并开始调用原生进房。
  * @property onJoinSucceeded 原生 SDK 确认进房成功。
@@ -26,9 +26,9 @@ class LivePlaybackCallbacks(
 /**
  * 把声明式回调转为原生会话监听器。
  *
- * [callbacks] 是 provider 而不是固定快照，以便原生 View 在 Compose 重组后继续调用最新业务回调。
+ * [callbacks] 是 provider 而不是固定快照，以便原生 View 在宿主更新后继续调用最新业务回调。
  *
- * @param callbacks 事件发生时读取最新回调的 provider，避免捕获过期组合快照。
+ * @param callbacks 事件发生时读取最新回调的 provider，避免捕获过期回调。
  */
 class LivePlaybackCallbackListener(
     private val callbacks: () -> LivePlaybackCallbacks,

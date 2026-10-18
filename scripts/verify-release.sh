@@ -29,9 +29,8 @@ with tarfile.open(sys.argv[1]) as archive:
             raise ValueError(f"Unsafe archive member: {entry.name}")
     archive.extractall(root)
 PYTHON
-native_targets=ios_arm64,ios_x64,ios_simulator_arm64
-if [[ "${VERIFY_OHOS:-1}" == 1 ]]; then native_targets+=,ohos_arm64; fi
-python3 scripts/check-maven.py "$output/maven" com.github.gycrosskit.live-sdk "$VERSION" live-sdk,live-core,live-kuikly "$native_targets"
+native_targets=ios_arm64,ios_x64,ios_simulator_arm64,ohos_arm64
+python3 scripts/check-maven.py "$output/maven" com.github.gycrosskit.live-sdk "$VERSION" live-core,live-kuikly "$native_targets" live-core,live-core-android,live-core-iosarm64,live-core-iosx64,live-core-iossimulatorarm64,live-core-ohosarm64,live-kuikly,live-kuikly-android,live-kuikly-iosarm64,live-kuikly-iosx64,live-kuikly-iossimulatorarm64
 # 消费方只使用 JitPack；归档校验不会安装到 MavenLocal 或替代远程解析。
 
 # 预期 inventory 来自通过冻结 SHA 的归档，不从 JitPack 自报 inventory 反推。

@@ -33,8 +33,8 @@ import kotlinx.coroutines.launch
 /**
  * AtomicX 观看端会话与原生播放器入口。
  *
- * 本类只管理腾讯会话、Store 和 `LiveCoreView` 生命周期；所有直播间操作层 UI 均由 shared CMP 绘制。
- * 类本身不继承 Android View，也不创建 `ComposeView`，确保直播页面只有一个 Compose 根节点。
+ * 本类只管理腾讯会话、Store 和 SDK `LiveCoreView` 生命周期；直播间操作层 UI 由宿主绘制。
+ * 类本身不继承 Android View，原生视频容器由宿主挂载。
  *
  * @param context 当前页面 Context，在实例存活期间持有。
  * @param liveId 当前实例的腾讯房间 ID，不跨房间复用。
@@ -373,7 +373,7 @@ class AtomicAudienceView(
 
     /**
      * 弹幕、观众和点赞 Store 只服务已加入的当前房间。关播时先停掉这些流与监听，即使宿主退出动画尚未完成，
-     * 迟到回调也不会继续修改 Compose 状态；真正的共享 LiveListStore 仍由离房流程单独释放。
+     * 迟到回调也不会继续修改页面状态；真正的共享 LiveListStore 仍由离房流程单独释放。
      */
     private fun releaseInteractionStores() {
         if (interactionStoresReleased) return
@@ -426,7 +426,7 @@ class AtomicAudienceView(
 
 }
 
-/** 逐层解包 Compose 提供的 ContextWrapper，找不到 Activity 时由调用方按不支持 PiP 处理。 */
+/** 逐层解包宿主提供的 ContextWrapper，找不到 Activity 时由调用方按不支持 PiP 处理。 */
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
