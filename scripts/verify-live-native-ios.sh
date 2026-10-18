@@ -31,6 +31,7 @@ scheme.set_launch_target(target)
 scheme.save_as(project.path, 'LiveNativeConsumer')
 RUBY
 pod install --project-directory="$consumer"
+python3 verification/renderer-ios/test_contract.py --core-lock "$consumer/Podfile.lock"
 xcodebuild -workspace "$consumer/LiveNativeConsumer.xcworkspace" \
   -scheme LiveNativeConsumer -configuration Debug -sdk iphoneos \
   -destination 'generic/platform=iOS' -derivedDataPath "$consumer/DerivedData" \

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Immutable Maven release tag
+        description: Immutable Maven or native-* Git Pod release tag
         required: true
         type: string
 concurrency:
@@ -22,6 +22,7 @@ env:
   VERSION: ${{ github.event.release.tag_name || inputs.version }}
 jobs:
   verify-public:
+    if: ${{ !startsWith(github.event.release.tag_name || inputs.version, 'native-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
@@ -46,7 +47,7 @@ jobs:
         with:
           status: ${{ job.status }}
   release-android:
-    if: always()
+    if: ${{ always() && !startsWith(github.event.release.tag_name || inputs.version, 'native-') }}
     needs: verify-public
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -87,7 +88,7 @@ jobs:
         with:
           status: ${{ job.status }}
   release-native:
-    if: always()
+    if: ${{ always() && !startsWith(github.event.release.tag_name || inputs.version, 'native-') }}
     needs: verify-public
     runs-on: ${{ (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) && 'macos-15' || 'ubuntu-24.04' }}
     timeout-minutes: 60
@@ -151,6 +152,31 @@ jobs:
             !~/.konan/**/*.tmp
             !~/.konan/**/*.lock
           key: ${{ steps.konan.outputs.cache-primary-key }}
+      - name: Save public CI diagnostics
+        if: always()
+        uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
+        with:
+          status: ${{ job.status }}
+  release-pod:
+    if: startsWith(github.event.release.tag_name || inputs.version, 'native-')
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      LIVE_NATIVE_TAG: ${{ github.event.release.tag_name || inputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.version }}
+          persist-credentials: false
+      - name: Install shared CI tools
+        uses: gycrosskit/.github/actions/ci-tools@607ff44db144c68fc6523de38c04aac29e427b68
+      - name: Consume exact remote Native Core and Renderer Pods
+        run: |
+          export LIVE_NATIVE_COMMIT="$(git rev-parse HEAD)"
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native-pod-core.log -- bash scripts/verify-live-native-ios.sh
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native-pod-renderer.log -- bash scripts/verify-live-renderer-ios.sh
+          cp build/native-live-consumer/Podfile.lock ci-diagnostics/native-core-Podfile.lock
+          cp build/native-renderer-consumer/Podfile.lock ci-diagnostics/native-renderer-Podfile.lock
       - name: Save public CI diagnostics
         if: always()
         uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
