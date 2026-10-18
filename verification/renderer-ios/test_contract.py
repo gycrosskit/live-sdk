@@ -16,6 +16,9 @@ ROOT = Path(__file__).resolve().parents[2]
 def verify_remote_source(text, tag, commit):
     assert re.fullmatch(r"native-\d+\.\d+\.\d+(?:-rc\.\d+)?", tag), tag
     assert re.fullmatch(r"[a-f0-9]{40}", commit), "Expected exact release commit"
+    pods = text.split("PODS:\n", 1)[1].split("\n\n", 1)[0]
+    versions = re.findall(r"^  - GycLiveNative(?:/(?:Core|Renderer))? \(([^)]+)\)", pods, re.M)
+    assert versions and set(versions) == {tag.removeprefix("native-")}, "Pod version differs from Native tag"
     options = text.split("CHECKOUT OPTIONS:\n", 1)[1].split("\n\n", 1)[0]
     component = options.split("  GycLiveNative:\n", 1)[1].split("\n  OpenKuikly", 1)[0]
     assert re.search(r"^    :tag: " + re.escape(tag) + r"$", component, re.M), "Wrong Native tag"
@@ -55,7 +58,7 @@ def verify_remote_checkout(lock, product):
     expected = {name: git("show", commit + ":" + name) for name in tracked if name.endswith(".swift")}
     required = {name for name in expected if name.startswith("ios/Sources/" + product + "/")}
     hashes = verify_installed_swift(lock.parent / "Pods/GycLiveNative", expected, required)
-    proof = {"tag": tag, "commit": commit, "product": product,
+    proof = {"tag": tag, "podVersion": tag.removeprefix("native-"), "commit": commit, "product": product,
              "lockSha256": hashlib.sha256(lock.read_bytes()).hexdigest(), "installedSwiftSha256": hashes}
     (lock.parent / "native-source-proof.json").write_text(json.dumps(proof, indent=2) + "\n")
     print("Exact remote tag/SHA and installed Swift bytes verified:", tag, commit, len(hashes))
@@ -100,9 +103,10 @@ class RendererContractTest(unittest.TestCase):
     def test_tag_only_lock_accepts_no_commit_and_rejects_wrong_source(self):
         commit = 'a' * 40
         # CocoaPods tag sources record git/tag, without a synthetic commit field.
-        valid = "CHECKOUT OPTIONS:\n  GycLiveNative:\n    :git: https://github.com/gycrosskit/live-sdk.git\n    :tag: native-0.2.1-rc.15\n"
+        valid = "PODS:\n  - GycLiveNative/Renderer (0.2.1-rc.15):\n    - OpenKuiklyIOSRender (< 2.30.0, >= 2.28.0)\n  - OpenKuiklyIOSRender (2.29.1)\n\nCHECKOUT OPTIONS:\n  GycLiveNative:\n    :git: https://github.com/gycrosskit/live-sdk.git\n    :tag: native-0.2.1-rc.15\n"
         verify_remote_source(valid, 'native-0.2.1-rc.15', commit)
-        for invalid in (valid.replace('rc.15', 'rc.150'), valid.replace('live-sdk.git', 'wrong.git'),
+        for invalid in (valid.replace('rc.15', 'rc.150'), valid.replace('Renderer (0.2.1-rc.15)', 'Renderer (0.2.1-rc.14)'),
+                        valid.replace('live-sdk.git', 'wrong.git'),
                         valid + ':path: /tmp/source', valid + '    :commit: ' + 'b' * 40 + '\n'):
             with self.assertRaises(AssertionError):
                 verify_remote_source(invalid, 'native-0.2.1-rc.15', commit)
