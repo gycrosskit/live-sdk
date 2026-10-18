@@ -5,7 +5,7 @@ consumer="build/native-live-consumer"
 mkdir -p "$consumer"
 cp verification/native-ios/Main.swift verification/native-ios/Podfile "$consumer/"
 ruby_bin="${LIVE_NATIVE_RUBY:-ruby}"
-ruby_env=()
+ruby_env=(env)
 if ! "$ruby_bin" -rxcodeproj -e '' 2>/dev/null; then
   # Homebrew CocoaPods 的 xcodeproj gem 不在 macOS 系统 Ruby 中。
   ruby_bin="$(brew --prefix ruby)/bin/ruby"
@@ -31,6 +31,7 @@ scheme.set_launch_target(target)
 scheme.save_as(project.path, 'LiveNativeConsumer')
 RUBY
 pod install --project-directory="$consumer"
+python3 verification/renderer-ios/test_contract.py --core-lock "$consumer/Podfile.lock"
 xcodebuild -workspace "$consumer/LiveNativeConsumer.xcworkspace" \
   -scheme LiveNativeConsumer -configuration Debug -sdk iphoneos \
   -destination 'generic/platform=iOS' -derivedDataPath "$consumer/DerivedData" \
@@ -41,7 +42,7 @@ test -f "$binary"
 for product in "$binary" "$binary.debug.dylib"; do
   if [[ ! -f "$product" ]]; then continue; fi
   xcrun otool -L "$product"
-  if xcrun otool -L "$product" | rg 'Shared|LiveKuikly|Compose|OpenKuikly'; then
+  if xcrun otool -L "$product" | grep -E 'Shared|LiveKuikly|Compose|OpenKuikly'; then
     echo 'Unexpected UI/KMP runtime dependency' >&2
     exit 1
   fi

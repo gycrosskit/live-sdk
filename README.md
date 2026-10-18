@@ -2,6 +2,8 @@
 
 > 2026-10-08 已发布预发行：Maven 0.2.1-rc.13 / Git Pod 0.2.1-rc.13。冻结归档与严格公开产物检查已通过；[精确版本 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.13)、[远程消费 CI](https://github.com/gycrosskit/live-sdk/actions/runs/37771441035)分别记录产物和 Android/Native 结果。真实设备、云账号与宿主业务尚未验收。
 
+> 2026-10-18 Native-only 发布准备：`GycLiveNative` Pod `0.2.1-rc.14` / 不可变 Tag `native-0.2.1-rc.14`。新增可选 `Renderer`，通用 iOS View、Objective-C Block setter、缓存与生命周期由组件持有，应用仅映射自身 KMP controller 与业务点赞。默认仍为 `Core`，Renderer-only 不带腾讯 SDK、Shared 或 CMP。Maven 继续使用已发布 `0.2.1-rc.13`，不空发 Maven/HAR；下文 rc.13 发布验收属于历史。正式发布与精确远程消费状态以[Native Release](https://github.com/gycrosskit/live-sdk/releases/tag/native-0.2.1-rc.14)及其 Actions 为准，不把本地候选验收当发布证明。见[接线](docs/接入指南.md#未发布源码候选ios-renderer-出口)与[验证范围](docs/开发与验证.md#未发布-ios-renderer-出口验证)。
+
 > 已发布登录修复：Android/iOS 登录认证不再等待异步用户资料，保留实际 IM 账号、AtomicX/IM 状态、SDKAppId 与操作代次校验；Maven/Git Pod `0.2.1-rc.13` 同步纳入。合同与验证见[功能与平台差异](docs/功能与平台差异.md)。
 
 2026-10-08 功能索引：live-core提供原生会话与快照，根模块提供CMP，live-kuikly提供raw与KuiklyCompose Android/iOS；OHOS直播排除，真实音画/PiP仍需业务验收。 详见[功能与平台差异](docs/功能与平台差异.md)，含固定基线、五入口矩阵、真实回归与未验收范围。当前发布组合：Maven 0.2.1-rc.13；GycLiveNative Git Pod 0.2.1-rc.13，Kuikly Swift接线取本次Maven标签；OHOS仅core中立协议。各渠道消费与设备验收分别核对。

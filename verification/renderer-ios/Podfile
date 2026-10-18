@@ -1,0 +1,13 @@
+platform :ios, '15.0'
+source 'https://cdn.cocoapods.org/'
+use_frameworks!
+
+target 'LiveRendererTests' do
+  tag = ENV['LIVE_NATIVE_TAG']
+  raise 'Expected immutable native release tag' if tag && !tag.match?(/\Anative-\d+\.\d+\.\d+(?:-rc\.\d+)?\z/)
+  native_source = tag ? { :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => tag } :
+    { :path => File.expand_path('../..', __dir__) }
+  pod 'GycLiveNative/Renderer', **native_source
+  ENV['KUIKLY_VERSION'] = '2.29.1'
+  pod 'OpenKuiklyIOSRender', :git => 'https://github.com/Tencent-TDS/KuiklyUI.git', :tag => '2.29.1'
+end

@@ -4,7 +4,11 @@ use_frameworks! :linkage => :static
 
 target 'LiveNativeConsumer' do
   # 源码消费验证；候选尚未发布，不使用虚构的 Git tag。
-  pod 'GycLiveNative', :path => File.expand_path('../..', __dir__)
+  tag = ENV['LIVE_NATIVE_TAG']
+  raise 'Expected immutable native release tag' if tag && !tag.match?(/\Anative-\d+\.\d+\.\d+(?:-rc\.\d+)?\z/)
+  native_source = tag ? { :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => tag } :
+    { :path => File.expand_path('../..', __dir__) }
+  pod 'GycLiveNative', **native_source
 end
 
 post_install do |installer|
