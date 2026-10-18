@@ -3,7 +3,8 @@ plugins {
  kotlin("plugin.compose") version "2.2.21-1.0.0" apply false
  id("com.android.application") version "8.10.1"
 }
-val liveVersion = providers.gradleProperty("liveVersion").orElse("0.3.0-dev").get()
+val kuiklyRenderFrameworkDir = providers.gradleProperty("kuiklyRenderFrameworkDir").orNull
+val liveVersion = providers.gradleProperty("liveVersion").orElse("0.3.0-rc.1").get()
 val verifyOhos = providers.gradleProperty("verifyOhos").isPresent
 val verifyEmoji = verifyOhos || providers.gradleProperty("verifyEmoji").isPresent
 val verifyLocalSource = providers.gradleProperty("verifyLocalSource").isPresent
@@ -17,6 +18,7 @@ kotlin {
  iosX64 {
   binaries.framework {
    baseName = "LiveKuikly"
+   kuiklyRenderFrameworkDir?.let { linkerOpts("-F$it", "-framework", "OpenKuiklyIOSRender") }
    isStatic = true
    if (!verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
@@ -25,6 +27,7 @@ kotlin {
  iosSimulatorArm64 {
   binaries.framework {
    baseName = "LiveKuikly"
+   kuiklyRenderFrameworkDir?.let { linkerOpts("-F$it", "-framework", "OpenKuiklyIOSRender") }
    isStatic = true
    if (!verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
@@ -33,6 +36,7 @@ kotlin {
  iosArm64 {
   binaries.framework {
    baseName = "LiveKuikly"
+   kuiklyRenderFrameworkDir?.let { linkerOpts("-F$it", "-framework", "OpenKuiklyIOSRender") }
    isStatic = true
    if (!verifyOhos) export("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
    export("com.github.gycrosskit.live-sdk:live-core:$liveVersion")

@@ -1,16 +1,16 @@
 # GY CrossKit Live SDK
 
-当前源码候选为 Maven `0.3.0-dev`，尚未发布。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、11 个 publication 合同。
+当前源码候选为 Maven `0.3.0-rc.1`，尚未发布。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、11 个 publication 合同。
 
-下列带日期的发布/验收段落属于历史，不能作为 `0.3.0-dev` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-dev移除-cmp)。
+下列带日期的发布/验收段落属于历史，不能作为 `0.3.0-rc.1` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp)。
 
 > 2026-10-08 已发布预发行：Maven 0.2.1-rc.13 / Git Pod 0.2.1-rc.13。冻结归档与严格公开产物检查已通过；[精确版本 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.13)、[远程消费 CI](https://github.com/gycrosskit/live-sdk/actions/runs/37771441035)分别记录产物和 Android/Native 结果。真实设备、云账号与宿主业务尚未验收。
 
-> 2026-10-18 Native-only 发布准备：`GycLiveNative` Pod `0.2.1-rc.15` / 不可变 Tag `native-0.2.1-rc.15`。新增可选 `Renderer`，通用 iOS View、Objective-C Block setter、缓存与生命周期由组件持有，应用仅映射自身 KMP controller 与业务点赞。默认仍为 `Core`，Renderer-only 不带腾讯 SDK、Shared 或 CMP。Maven 继续使用已发布 `0.2.1-rc.13`，不空发 Maven/HAR；下文 rc.13 发布验收属于历史。正式发布与精确远程消费状态以[Native Release](https://github.com/gycrosskit/live-sdk/releases/tag/native-0.2.1-rc.15)及其 Actions 为准，不把本地候选验收当发布证明。见[接线](docs/接入指南.md#未发布源码候选ios-renderer-出口)与[验证范围](docs/开发与验证.md#未发布-ios-renderer-出口验证)。
+> 2026-10-18 Native-only 发布记录（历史）：`GycLiveNative` Pod `0.2.1-rc.15` / 不可变 Tag `native-0.2.1-rc.15`。新增可选 `Renderer`，通用 iOS View、Objective-C Block setter、缓存与生命周期由组件持有，应用仅映射自身 KMP controller 与业务点赞。默认仍为 `Core`，Renderer-only 不带腾讯 SDK、Shared 或 CMP。Maven 继续使用已发布 `0.2.1-rc.13`，不空发 Maven/HAR；下文 rc.13 发布验收属于历史。正式发布与精确远程消费状态以[Native Release](https://github.com/gycrosskit/live-sdk/releases/tag/native-0.2.1-rc.15)及其 Actions 为准，不把本地候选验收当发布证明。见[接线](docs/接入指南.md#未发布源码候选ios-renderer-出口)与[验证范围](docs/开发与验证.md#未发布-ios-renderer-出口验证)。
 
 > 已发布登录修复：Android/iOS 登录认证不再等待异步用户资料，保留实际 IM 账号、AtomicX/IM 状态、SDKAppId 与操作代次校验；Maven/Git Pod `0.2.1-rc.13` 同步纳入。合同与验证见[功能与平台差异](docs/功能与平台差异.md)。
 
-2026-10-08 功能索引：live-core提供原生会话与快照，根模块提供CMP，live-kuikly提供raw与KuiklyCompose Android/iOS；OHOS直播排除，真实音画/PiP仍需业务验收。 详见[功能与平台差异](docs/功能与平台差异.md)，含固定基线、五入口矩阵、真实回归与未验收范围。当前发布组合：Maven 0.2.1-rc.13；GycLiveNative Git Pod 0.2.1-rc.13，Kuikly Swift接线取本次Maven标签；OHOS仅core中立协议。各渠道消费与设备验收分别核对。
+2026-10-08 功能索引：live-core提供原生会话与快照，根模块提供CMP，live-kuikly提供raw与KuiklyCompose Android/iOS；OHOS直播排除，真实音画/PiP仍需业务验收。 详见[功能与平台差异](docs/功能与平台差异.md)，含固定基线、五入口矩阵、真实回归与未验收范围。当时发布组合：Maven 0.2.1-rc.13；GycLiveNative Git Pod 0.2.1-rc.13，Kuikly Swift接线取本次Maven标签；OHOS仅core中立协议。各渠道消费与设备验收分别核对。
 
 最终核对（2026-10-08）：本轮重跑Compose更新/句柄重建/迟回调；native会话为边界替身，真实音画/PiP未验。 逐项时点与边界见[验证范围](docs/功能与平台差异.md#sdk系统与真实验证范围)。
 
@@ -28,6 +28,8 @@ Maven `0.2.1-rc.12`新增 `io.github.gycrosskit.livesdk.kuikly.LiveVideo` Compos
 
 
 PiP 的 `accepted` 只表示请求受理；观看snapshot/event由两端真实平台或宿主生命周期回报驱动，关闭会话清理false。iOS实验接口准备成功不更新actual状态。
+
+迁移与本轮渠道组合见 [RC 迁移说明](docs/RC迁移说明.md)。
 
 ## 架构与调用流程
 
@@ -137,6 +139,16 @@ Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，�
 
 ## 安装
 
+本轮 Maven `0.3.0-rc.1` 尚未发布，待完整 CI 与精确公开消费完成后使用以下两产品坐标；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
+
+```kotlin
+commonMain.dependencies {
+    implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.3.0-rc.1")
+}
+```
+
+iOS 配套独立 Git Pod tag `native-0.2.1-rc.15` / Pod `0.2.1-rc.15`，详见 [RC 迁移说明](docs/RC迁移说明.md)。下方 `0.2.1-rc.13` 的固定坐标、证明与 Swift 接线均保留为历史。
+
 在 `settings.gradle.kts` 添加依赖仓库：
 
 ```kotlin
@@ -216,7 +228,7 @@ val outgoing = LiveEmojiProtocol.encode("你好😮‍💨❤️") // 你好[TUI
 val incoming = LiveEmojiProtocol.decode("[TUIEmoji_Heart][TUIEmoji_Unknown]") // ❤️[TUIEmoji_Unknown]
 ```
 
-发送前编码、展示前解码均由宿主调用；组件不会自动修改 IM 消息。组合字符优先最长匹配，已编码 token、未知 token、未支持表情与普通文本保持原文。此 API 位于 `commonMain`，`live-core` 的 Android/iOS/OHOS 变体共用同一映射；OHOS 宿主直接依赖 `live-core`，不会获取 AtomicX 会话、播放或 SDK 登录实现。历史 Maven `0.2.1-rc.13` 包含 root/core/Kuikly；当前 `0.3.0-dev` 仅保留 core/Kuikly，尚未发布，原生 Pod 不随本次调整升版。
+发送前编码、展示前解码均由宿主调用；组件不会自动修改 IM 消息。组合字符优先最长匹配，已编码 token、未知 token、未支持表情与普通文本保持原文。此 API 位于 `commonMain`，`live-core` 的 Android/iOS/OHOS 变体共用同一映射；OHOS 宿主直接依赖 `live-core`，不会获取 AtomicX 会话、播放或 SDK 登录实现。历史 Maven `0.2.1-rc.13` 包含 root/core/Kuikly；当前 `0.3.0-rc.1` 仅保留 core/Kuikly，尚未发布，原生 Pod 不随本次调整升版。
 
 ## 生命周期与能力边界
 
