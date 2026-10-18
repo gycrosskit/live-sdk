@@ -42,7 +42,7 @@ test -f "$binary"
 for product in "$binary" "$binary.debug.dylib"; do
   if [[ ! -f "$product" ]]; then continue; fi
   xcrun otool -L "$product"
-  if xcrun otool -L "$product" | rg 'Shared|LiveKuikly|Compose|OpenKuikly'; then
+  if xcrun otool -L "$product" | grep -E 'Shared|LiveKuikly|Compose|OpenKuikly'; then
     echo 'Unexpected UI/KMP runtime dependency' >&2
     exit 1
   fi

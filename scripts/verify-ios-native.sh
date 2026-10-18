@@ -11,4 +11,5 @@ renderer="$LIVE_RENDERER_IOS_FRAMEWORK_DIR"
 test -f "$renderer/GycLiveNative.framework/GycLiveNative"
 sdk="$(xcrun --sdk iphoneos --show-sdk-path)"
 xcrun --sdk iphoneos swiftc -sdk "$sdk" -target arm64-apple-ios15.0 -F "$framework" -F "$LIVE_KUIKLY_IOS_FRAMEWORK_DIR" -F "$renderer" -typecheck live-kuikly/ios/GycLiveView.swift
-xcrun --sdk iphoneos swiftc -sdk "$sdk" -target arm64-apple-ios15.0 -F "$framework" -F "$LIVE_KUIKLY_IOS_FRAMEWORK_DIR" -F "$renderer" live-kuikly/ios/GycLiveView.swift verification/ios/Main.swift -framework LiveKuikly -framework GycLiveNative -framework OpenKuiklyIOSRender -framework UIKit -framework Foundation -Xlinker -ObjC -o build/native-ios/live-consumer
+# 按 Xcode 的静态库消费方式去掉未使用的平台 wrapper；仍严格拒绝未定义符号。
+xcrun --sdk iphoneos swiftc -sdk "$sdk" -target arm64-apple-ios15.0 -F "$framework" -F "$LIVE_KUIKLY_IOS_FRAMEWORK_DIR" -F "$renderer" live-kuikly/ios/GycLiveView.swift verification/ios/Main.swift -framework LiveKuikly -framework GycLiveNative -framework OpenKuiklyIOSRender -framework UIKit -framework Foundation -Xlinker -ObjC -Xlinker -dead_strip -o build/native-ios/live-consumer
