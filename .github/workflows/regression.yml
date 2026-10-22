@@ -9,6 +9,10 @@ on:
         description: Warm Native toolchains on main only (leave version empty)
         type: boolean
         default: false
+      har_only:
+        description: Only HarmonyOS HAR and contracts (not full source acceptance)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -101,6 +105,7 @@ jobs:
         with:
           status: ${{ job.status }}
   android:
+    if: github.event_name != 'workflow_dispatch' || !inputs.har_only
     needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -188,6 +193,7 @@ jobs:
         with:
           status: ${{ job.status }}
   native:
+    if: github.event_name != 'workflow_dispatch' || !inputs.har_only
     needs: changes
     runs-on: ${{ ((needs.changes.outputs.source == 'true') || (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main')) && 'macos-15' || 'ubuntu-24.04' }}
     timeout-minutes: 90
