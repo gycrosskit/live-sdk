@@ -1,6 +1,6 @@
 # 更新记录
 
-## 0.3.0-rc.2（RC 发布准备）
+## 0.3.0-rc.2（预发行）
 
 - 新增鸿蒙 Kuikly 观看及配套 `@gycrosskit/live-native@0.3.0-rc.3` HAR，复用公共会话、预览、快照和点赞逻辑；不含连麦、PK、关注和 PiP。
 - Maven 新增 `live-kuikly-ohosarm64`，两产品共 12 个 publication；Android/iOS 平台源码与 SDK 版本不变。

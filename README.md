@@ -2,7 +2,7 @@
 
 当前配套候选为 Maven `0.3.0-rc.2` / ohpm `@gycrosskit/live-native@0.3.0-rc.3`，发布与精确消费以 Release 收据为准。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
 
-2026-10-22 鸿蒙观看源码候选：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；支持观看、弹幕、点赞、观众人数、退出换房和静音预览。不含连麦、PK、关注和系统 PiP。已分别取得固定 SHA 的远程 Kotlin/HAR 编译证据；最终完整回归按当前推送 SHA 核对，仍未发布或真机验收，见[鸿蒙接线](ohos/live-native/README.md)与[验证边界](docs/开发与验证.md#2026-10-22鸿蒙观看源码候选)。
+2026-10-22 鸿蒙观看RC：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；支持观看、弹幕、点赞、观众人数、退出换房和静音预览。不含连麦、PK、关注和系统 PiP。已取得固定 SHA 的远程 Kotlin/HAR 编译证据；ohpm `0.3.0-rc.3` 已提交审核，JitPack 与 Registry 的公开消费状态以 [RC Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.3.0-rc.2) 收据为准，真机尚未验收，见[鸿蒙接线](ohos/live-native/README.md)与[验证边界](docs/开发与验证.md#2026-10-22鸿蒙观看源码候选)。
 
 下列带日期的发布/验收段落属于历史，不能作为 `0.3.0-rc.2` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp)。
 
@@ -141,7 +141,7 @@ Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，�
 
 ## 安装
 
-本轮 Maven `0.3.0-rc.2` 尚未发布，待完整 CI 与精确公开消费完成后使用以下两产品坐标；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
+Maven `0.3.0-rc.2` 使用以下两产品坐标，公开消费结果见本版本 Release 收据；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
 
 ```kotlin
 commonMain.dependencies {
@@ -230,7 +230,7 @@ val outgoing = LiveEmojiProtocol.encode("你好😮‍💨❤️") // 你好[TUI
 val incoming = LiveEmojiProtocol.decode("[TUIEmoji_Heart][TUIEmoji_Unknown]") // ❤️[TUIEmoji_Unknown]
 ```
 
-发送前编码、展示前解码均由宿主调用；组件不会自动修改 IM 消息。组合字符优先最长匹配，已编码 token、未知 token、未支持表情与普通文本保持原文。此 API 位于 `commonMain`，`live-core` 的 Android/iOS/OHOS 变体共用同一映射；OHOS 宿主直接依赖 `live-core`，不会获取 AtomicX 会话、播放或 SDK 登录实现。历史 Maven `0.2.1-rc.13` 包含 root/core/Kuikly；当前 `0.3.0-rc.2` 仅保留 core/Kuikly，尚未发布，原生 Pod 不随本次调整升版。
+发送前编码、展示前解码均由宿主调用；组件不会自动修改 IM 消息。组合字符优先最长匹配，已编码 token、未知 token、未支持表情与普通文本保持原文。此 API 位于 `commonMain`，`live-core` 的 Android/iOS/OHOS 变体共用同一映射；OHOS 宿主直接依赖 `live-core`，不会获取 AtomicX 会话、播放或 SDK 登录实现。历史 Maven `0.2.1-rc.13` 包含 root/core/Kuikly；当前 `0.3.0-rc.2` 仅保留 core/Kuikly，原生 Pod 不随本次调整升版。
 
 ## 生命周期与能力边界
 

@@ -1,1 +1,2 @@
 # Version SHA256; append only after a verified remote HAR build.
+0.3.0-rc.3 4980eb6a2d6d82c5261b9252d19f7b3df2a0a5d250a3a69456dad2d6827d8892
