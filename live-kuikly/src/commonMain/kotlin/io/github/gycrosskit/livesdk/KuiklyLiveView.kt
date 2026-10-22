@@ -15,13 +15,13 @@ class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
     override fun createEvent() = KuiklyLiveEvent().apply {
         // 只有鸿蒙 HAR 发送此事件；Android/iOS 继续使用已有原生会话。
         register("nativeLiveEvent") { value ->
-            if (!acceptingNativeEvents) return@register
+            if (!this@KuiklyLiveView.acceptingNativeEvents) return@register
             val event = value as? JSONObject ?: return@register
-            val controller = nativeController ?: KuiklyNativeLiveController(pagerId) { method, params, callback ->
-                val target = renderView
+            val controller = this@KuiklyLiveView.nativeController ?: KuiklyNativeLiveController(this@KuiklyLiveView.pagerId) { method, params, callback ->
+                val target = this@KuiklyLiveView.renderView
                 if (target == null) callback?.invoke(JSONObject().put("success", false).put("message", "View released"))
                 else target.callMethod(method, params.toString(), callback?.let { done -> { done(it as? JSONObject ?: JSONObject()) } })
-            }.also { nativeController = it }
+            }.also { this@KuiklyLiveView.nativeController = it }
             controller.event(event)
         }
     }

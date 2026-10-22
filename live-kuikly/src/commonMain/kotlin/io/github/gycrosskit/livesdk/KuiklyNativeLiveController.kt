@@ -61,8 +61,8 @@ internal class KuiklyNativeLiveController(
                     "playbackError" -> publish(JSONObject(liveEventJson("playbackError", event.optInt("code", -1), event.optString("message"))))
                     "messages" -> {
                         val list = event.optJSONArray("messages") ?: return
-                        observer?.messages((0 until list.length()).map { index ->
-                            val item = list.getJSONObject(index)
+                        observer?.messages((0 until list.length()).mapNotNull { index ->
+                            val item = list.optJSONObject(index) ?: return@mapNotNull null
                             LiveAudienceMessageSnapshot(item.optLong("sequence"), item.optDouble("timestampSeconds"),
                                 item.optString("senderId"), item.optString("senderName"), item.optString("senderAvatarUrl"),
                                 item.optString("content"), item.optString("businessId"), item.optString("data"))
@@ -70,8 +70,8 @@ internal class KuiklyNativeLiveController(
                     }
                     "audience" -> {
                         val list = event.optJSONArray("audience") ?: return
-                        observer?.audience((0 until list.length()).map { index ->
-                            val item = list.getJSONObject(index)
+                        observer?.audience((0 until list.length()).mapNotNull { index ->
+                            val item = list.optJSONObject(index) ?: return@mapNotNull null
                             LiveAudienceUserSnapshot(item.optString("id"), item.optString("name"), item.optString("avatarUrl"))
                         }, event.optInt("count"))
                     }
@@ -97,7 +97,7 @@ internal class KuiklyNativeLiveController(
                 preview = AtomicLivePreviewController(request.liveId, object : AtomicLivePreviewPlayback {
                     override fun start(liveId: String, callback: AtomicLivePreviewPlayback.Callback) {
                         previewCallback = callback
-                        native("sdkPreview", token) { put("liveId", liveId) }
+                        native("sdkPreview", token, { put("liveId", liveId) })
                     }
                     override fun stopAndDetach(liveId: String) {
                         previewCallback = null
