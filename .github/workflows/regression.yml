@@ -78,6 +78,7 @@ jobs:
           python3 verification/ci/test_fork_host.py
           python3 verification/renderer-ios/test_contract.py
           python3 verification/ci/test_release_candidate.py
+          python3 verification/ci/test_ohos_har.py
       - name: Explain lightweight completion
         if: ${{ !(needs.changes.outputs.source == 'true') }}
         run: echo 'No build is required for this event and scope.'
@@ -134,6 +135,41 @@ jobs:
       - name: Explain lightweight completion
         if: ${{ !(needs.changes.outputs.source == 'true') }}
         run: echo 'No build is required for this event and scope.'
+      - name: Save public CI diagnostics
+        if: always()
+        uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
+        with:
+          status: ${{ job.status }}
+  ohos-har:
+    needs: changes
+    if: needs.changes.outputs.source == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OHOS_CLT_URL: ${{ vars.OHOS_CLT_URL }}
+      OHOS_CLT_SHA256: ${{ vars.OHOS_CLT_SHA256 }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Install shared CI tools
+        uses: gycrosskit/.github/actions/ci-tools@607ff44db144c68fc6523de38c04aac29e427b68
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile HarmonyOS HAR with official CLT
+        run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/ohos-har.log -- bash scripts/build-ohos-har.sh
+      - name: Keep compiled HAR and source identity
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ohos-har-${{ github.sha }}
+          path: |
+            build/ohos-har/GycLiveNative.har
+            build/ohos-har/SOURCE_SHA
+            build/ohos-har/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
       - name: Save public CI diagnostics
         if: always()
         uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
