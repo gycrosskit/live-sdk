@@ -9,7 +9,8 @@ export function createGycLiveView(view: KuiklyRenderBaseView) {
 
 @Component
 struct GycLiveHost {
-  @ObjectLink renderView: GycLiveView;
+  // Renderer 直传对象，不经过父组件的状态变量，由本节点订阅其属性变化。
+  @State renderView: GycLiveView = new GycLiveView();
   aboutToAppear(): void { this.renderView.attach(); }
   aboutToDisappear(): void { this.renderView.setVisible(false); }
   build() {
