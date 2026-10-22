@@ -2,7 +2,7 @@
 
 ## 0.3.0-rc.1（RC 准备，尚未发布）
 
-- 新增鸿蒙 Kuikly 观看源码候选及独立 HAR 接线，复用公共会话/预览/快照/点赞逻辑；不含连麦、PK、关注和 PiP，未编译/真机验收。
+- 新增鸿蒙 Kuikly 观看源码候选及独立 HAR 接线，复用公共会话/预览/快照/点赞逻辑；不含连麦、PK、关注和 PiP；Kotlin/HAR 固定 SHA 编译记录见开发与验证，未做真机验收。
 - 移除根 CMP UI 与根 Maven 产品，根工程仅聚合 `live-core` / `live-kuikly`。
 - 保留原生会话、Kuikly raw / KuiklyCompose、共用测试和 iOS Pod 原版本。
 - 当前 consumer / CI / 归档只验证两产品、12 个 publication；旧 tag 与 checksum 保留，重验旧版使用其原脚本。

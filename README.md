@@ -2,7 +2,7 @@
 
 当前源码候选为 Maven `0.3.0-rc.1`，尚未发布。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
 
-2026-10-22 鸿蒙观看源码候选：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；支持观看、弹幕、点赞、观众人数、退出换房和静音预览。不含连麦、PK、关注和系统 PiP。仍未发布、未通过 Kotlin/HAR 编译或真机验收，见[鸿蒙接线](ohos/live-native/README.md)与[验证边界](docs/开发与验证.md#2026-10-22鸿蒙观看源码候选)。
+2026-10-22 鸿蒙观看源码候选：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；支持观看、弹幕、点赞、观众人数、退出换房和静音预览。不含连麦、PK、关注和系统 PiP。已分别取得固定 SHA 的远程 Kotlin/HAR 编译证据；最终完整回归按当前推送 SHA 核对，仍未发布或真机验收，见[鸿蒙接线](ohos/live-native/README.md)与[验证边界](docs/开发与验证.md#2026-10-22鸿蒙观看源码候选)。
 
 下列带日期的发布/验收段落属于历史，不能作为 `0.3.0-rc.1` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp)。
 
@@ -124,14 +124,14 @@ classDiagram
     AtomicAudienceSessionGate <|.. AtomicAudienceSessionCoordinator
 ```
 
-源码入口：[Android 原生会话](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveNativeSession.kt)、[AtomicAudienceView](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt)、[共用会话状态机](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt)、[会话排队与预览门禁](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSessionCoordinator.kt)、[预览生命周期](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt)、[唯一快照](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt)、[Android 账号门禁](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveSdkRuntime.kt)、[iOS 桥安装](live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveSdkRuntime.kt)。OHOS 源码候选经独立 HAR 与 Kuikly 桥接复用 core，尚未编译或真机验收；Kuikly PiP 请求与状态同步同样复用平台会话，`accepted` 仅表示平台受理。
+源码入口：[Android 原生会话](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveNativeSession.kt)、[AtomicAudienceView](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt)、[共用会话状态机](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt)、[会话排队与预览门禁](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSessionCoordinator.kt)、[预览生命周期](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt)、[唯一快照](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt)、[Android 账号门禁](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveSdkRuntime.kt)、[iOS 桥安装](live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveSdkRuntime.kt)。OHOS 源码候选经独立 HAR 与 Kuikly 桥接复用 core，固定 SHA 编译证据见开发与验证，未做真机验收；Kuikly PiP 请求与状态同步同样复用平台会话，`accepted` 仅表示平台受理。
 
 ## 平台与模块
 
 | 模块 | 平台 | 能力 |
 | --- | --- | --- |
 | 根 `live-sdk` | Gradle 聚合工程 | 不发布 Maven 产品；统一两个子模块的 group/version 与 POM 许可 |
-| `live-core` | Android、iOS、OHOS | 公共观看/预览状态机、快照与互动；OHOS 经 `LiveAudiencePlatform` 接入原生 HAR，尚未编译验收 |
+| `live-core` | Android、iOS、OHOS | 公共观看/预览状态机、快照与互动；OHOS 经 `LiveAudiencePlatform` 接入原生 HAR，编译证据按固定 SHA 记录，未做设备验收 |
 | `live-kuikly` | Android、iOS；OHOS 源码候选 | Kuikly Native DSL、KuiklyCompose 与薄原生视频 View，无第二套 CMP UI |
 | `GycLiveNative` | iOS | 独立 Swift CocoaPod，AtomicX 账号/视频/互动/IM/RoomEngine 系统 PiP；Git Pod `0.2.1-rc.13` 已发布，登录资料门禁已修复；真实 SDK/App 最终链接已通过；`rc.6`/`rc.3` 历史验收保留 |
 
