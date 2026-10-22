@@ -3,7 +3,9 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -16,6 +18,27 @@ spec.loader.exec_module(module)
 
 
 class HarIdentityTest(unittest.TestCase):
+    def test_install_recovers_and_stops_after_three_failures(self):
+        script = (ROOT / 'scripts/build-ohos-har.sh').read_text()
+        install = 'for TASK_ATTEMPT' + script.split('for TASK_ATTEMPT', 1)[1].split('\ndone', 1)[0] + '\ndone'
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            tool = root / 'ohpm'
+            tool.write_text('#!/bin/bash\nn=0; if [[ -f "$TASK_COUNTER" ]]; then read -r n < "$TASK_COUNTER"; fi\n'
+                            'n=$((n+1)); echo "$n" > "$TASK_COUNTER"\n[[ "$n" -ge "$TASK_SUCCEED_AT" ]]\n')
+            tool.chmod(0o755)
+            (root / 'sleep').write_text('#!/bin/bash\nexit 0\n')
+            (root / 'sleep').chmod(0o755)
+            counter = root / 'count'
+            for succeeds_at, exit_code in ((2, 0), (4, 1)):
+                with self.subTest(succeeds_at=succeeds_at):
+                    counter.unlink(missing_ok=True)
+                    env = dict(os.environ, PATH=str(root) + ':' + os.environ['PATH'],
+                               TASK_COUNTER=str(counter), TASK_SUCCEED_AT=str(succeeds_at))
+                    result = subprocess.run(['bash', '-c', install], env=env, capture_output=True)
+                    self.assertEqual(result.returncode, exit_code)
+                    self.assertEqual(int(counter.read_text()), min(succeeds_at, 3))
+
     def test_official_toolchain_source_gate(self):
         script = (ROOT / 'scripts/build-ohos-har.sh').read_text()
         check = script.split("<<'CHECK'\n", 1)[1].split('\nCHECK', 1)[0]

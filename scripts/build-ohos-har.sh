@@ -18,8 +18,11 @@ if url.scheme != 'https' or url.hostname not in {'dl.developer.huawei.com', 'dev
 if not re.fullmatch('[a-f0-9]{64}', os.environ['OHOS_CLT_SHA256']):
     raise SystemExit('CLT SHA-256 must be an exact lowercase digest')
 CHECK
-curl --fail --location --proto '=https' --proto-redir '=https' --retry 3 "$OHOS_CLT_URL" -o "$TASK_OUTPUT/clt.zip"
+if [[ ! -f "$TASK_OUTPUT/clt.zip" ]]; then
+  curl --fail --location --proto '=https' --proto-redir '=https' --retry 3 "$OHOS_CLT_URL" -o "$TASK_OUTPUT/clt.zip"
+fi
 printf '%s  %s\n' "$OHOS_CLT_SHA256" "$TASK_OUTPUT/clt.zip" | sha256sum --check --strict
+touch "$TASK_OUTPUT/CLT_VERIFIED"
 unzip -q "$TASK_OUTPUT/clt.zip" -d "$TASK_OUTPUT/tools"
 TASK_CLT="$TASK_OUTPUT/tools/command-line-tools"
 export DEVECO_SDK_HOME="$TASK_CLT/sdk"
@@ -31,7 +34,12 @@ export PATH="$TASK_CLT/tool/node/bin:$TASK_CLT/bin:$PATH"
 node --version
 bash "$TASK_CLT/bin/hvigorw" --version
 cd "$TASK_ROOT/ohos"
-ohpm install --all
+for TASK_ATTEMPT in 1 2 3; do
+  if ohpm install --all; then break; fi
+  [[ "$TASK_ATTEMPT" != 3 ]] || exit 1
+  echo "OHPM install failed; retry $TASK_ATTEMPT/2 in 10 seconds" >&2
+  sleep 10
+done
 bash "$TASK_CLT/bin/hvigorw" --mode module -p product=default -p module=GycLiveNative@default -p buildMode=release assembleHar --no-daemon
 python3 "$TASK_ROOT/scripts/verify-ohos-har.py" "$TASK_ROOT/ohos/live-native" "$TASK_OUTPUT/GycLiveNative.har"
 git -C "$TASK_ROOT" rev-parse HEAD > "$TASK_OUTPUT/SOURCE_SHA"
