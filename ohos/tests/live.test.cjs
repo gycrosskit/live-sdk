@@ -53,6 +53,8 @@ function fixture() {
       if (name === '@tencentcloud/atomicxcore') return sdk;
       if (name === '@kit.AbilityKit') return {};
       if (name === '@kuikly-open/render') return { KuiklyRenderBaseView: BaseView };
+      if (name === '@ohos.arkui.node') return { ComponentContent: class {} };
+      if (name === './LiveComponent') return { createGycLiveView() {} };
       return load(name.replace('./', ''));
     }, Observed: value => value, setInterval(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearInterval(id) { timers.delete(id); },
       setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); },
@@ -108,6 +110,21 @@ test('release while joining waits for join and leave before allowing the next ro
   f.live.leave.resolve(); await failed; await leaving; await next;
   assert.equal(f.calls.some(c => c[0] === 'join' && c[1] === 'B'), true);
   await f.client.leave(b);
+});
+
+test('SDK dataset callbacks publish updated barrage contents', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  const events = []; const session = new f.Session('A', 1, false, event => events.push(event));
+  await f.client.enter(session);
+  const source = f.barrage.barrageState.messageList;
+  const listener = [...source.listeners][0];
+  source.values = [{ sequence: 1, timestampInSecond: 1, sender: { userID: 'u', userName: 'viewer', avatarURL: '' },
+    messageType: 0, textContent: 'first', businessID: '', data: '' }];
+  listener.onDataAdded(0);
+  assert.equal(events.filter(e => e.type === 'messages').at(-1).messages[0].content, 'first');
+  source.values[0].textContent = 'updated'; listener.onDatasetChange([]);
+  assert.equal(events.filter(e => e.type === 'messages').at(-1).messages[0].content, 'updated');
+  await f.client.leave(session); assert.equal(source.listeners.size, 0);
 });
 
 test('released barrage cannot report success and old events stop reaching the observer', async () => {

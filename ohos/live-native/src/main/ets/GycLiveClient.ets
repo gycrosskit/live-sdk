@@ -131,7 +131,7 @@ export class GycLiveClient {
       if (session.closed) throw new Error('Session released');
       GycLiveClient.owner = session;
       try { await session.open(); }
-      catch (error) { await session.close(); throw error; }
+      catch (error) { await session.close(); throw error as Error; }
     });
   }
   static leave(session: NativeLiveSession): Promise<void> {
@@ -146,16 +146,26 @@ export class GycLiveClient {
 }
 
 class LiveDataListener implements DataChangeListener {
-  constructor(private changed: () => void) {}
+  private changed: () => void;
+  constructor(changed: () => void) { this.changed = changed; }
   onDataReloaded(): void { this.changed(); }
+  onDataAdded(_index: number): void { this.changed(); }
   onDataAdd(_index: number): void { this.changed(); }
+  onDataMoved(_from: number, _to: number): void { this.changed(); }
   onDataMove(_from: number, _to: number): void { this.changed(); }
+  onDataDeleted(_index: number): void { this.changed(); }
   onDataDelete(_index: number): void { this.changed(); }
+  onDataChanged(_index: number): void { this.changed(); }
   onDataChange(_index: number): void { this.changed(); }
+  onDatasetChange(_operations: DataOperation[]): void { this.changed(); }
 }
 
 /** 一实例一房间一代次；不维护业务快照、消息去重或点赞节流。 */
 export class NativeLiveSession {
+  readonly liveId: string;
+  readonly generation: number;
+  readonly preview: boolean;
+  private emit: (event: LiveNativeEvent) => void;
   readonly player: AtomicPlayer = new AtomicPlayer();
   readonly view: AtomicLiveView = new AtomicLiveView(AtomicLiveController.create(AtomicLiveViewType.playView));
   closed: boolean = false;
@@ -178,8 +188,11 @@ export class NativeLiveSession {
   private audienceListener: LiveAudienceListener = new LiveAudienceListener();
   private playerListener: PlayerListener = new PlayerListener();
 
-  constructor(readonly liveId: string, readonly generation: number, readonly preview: boolean,
-    private emit: (event: LiveNativeEvent) => void) {
+  constructor(liveId: string, generation: number, preview: boolean, emit: (event: LiveNativeEvent) => void) {
+    this.liveId = liveId;
+    this.generation = generation;
+    this.preview = preview;
+    this.emit = emit;
     this.player.setView(this.view);
     this.player.setVolume(preview ? 0 : 100);
     this.playerListener.playerError = (code, message) => {
@@ -299,7 +312,7 @@ export class NativeLiveSession {
       if (this.joinAttempted) await LiveListStore.shared().leaveLive();
       GycLiveClient.didClose(this, !cleanupFailed);
       if (cleanupFailed) throw new Error('SDK cleanup failed');
-    } catch (error) { GycLiveClient.didClose(this, false); throw error; }
+    } catch (error) { GycLiveClient.didClose(this, false); throw error as Error; }
     finally { this.joined = false; }
   }
 }

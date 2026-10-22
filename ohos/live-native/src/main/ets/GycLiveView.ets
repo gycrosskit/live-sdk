@@ -1,8 +1,9 @@
 import { KRAny, KuiklyRenderBaseView, KuiklyRenderCallback } from '@kuikly-open/render';
 import { GycLiveClient, NativeLiveSession, LiveNativeEvent } from './GycLiveClient';
 import { ErrorInfo } from '@tencentcloud/atomicxcore';
+import { ComponentContent } from '@ohos.arkui.node';
+import { createGycLiveView } from './LiveComponent';
 
-interface Room { liveId: string; preview?: boolean; active?: boolean; }
 interface Command {
   generation?: number; liveId?: string; count?: number; message?: string; requestId?: string;
   success?: boolean; accepted?: boolean; event?: KRAny;
@@ -11,7 +12,8 @@ interface Result { success: boolean; code?: number; message?: string; liveName?:
   notice?: string; ownerId?: string; ownerName?: string; ownerAvatarUrl?: string; }
 class PendingReply {
   timer: number = -1;
-  constructor(readonly callback: KuiklyRenderCallback) {}
+  readonly callback: KuiklyRenderCallback;
+  constructor(callback: KuiklyRenderCallback) { this.callback = callback; }
 }
 
 /** 与现有 LiveVideo 协议同名注册；公共状态机在 Kotlin，原生节点只传输与渲染。 */
@@ -28,6 +30,11 @@ export class GycLiveView extends KuiklyRenderBaseView {
   private requestId: number = 0;
   private pending: Map<string, PendingReply> = new Map();
   private publishedGeneration: number = -1;
+
+  createArkUIView(): ComponentContent<KuiklyRenderBaseView> {
+    return new ComponentContent<KuiklyRenderBaseView>(this.getUIContext() as UIContext,
+      wrapBuilder<[KuiklyRenderBaseView]>(createGycLiveView), this);
+  }
 
   setProp(key: string, value: KRAny | KuiklyRenderCallback): boolean {
     if (this.destroyed) return true;

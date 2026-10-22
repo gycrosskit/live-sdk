@@ -8,14 +8,13 @@
 
 HAR 精确依赖腾讯 `atomicxcore 5.2.2`、`imsdk 9.1.7818`、`liteavsdk_professional 13.5.9128` 和 Kuikly Render `2.28.0`。腾讯依赖遵循其 Proprietary 许可，本仓库接线代码使用 Apache-2.0。Kotlin 侧使用 Kuikly `2.28.0-2.0.21-ohos`，宿主须统一版本。
 
-在宿主原有 Kuikly 注册位置，沿用其 `GycLiveView` 工厂注册方式：
+在宿主原有外部 View 注册回调中追加以下注册，保留其他组件已有注册。组件自己的 `createArkUIView()` 创建 ArkUI 节点，宿主无需另接 Builder：
 
 ```ts
-import { GycLiveClient, GycLiveView, createGycLiveView } from '@gycrosskit/live-native';
+import { ViewsRegisterEntry } from '@kuikly-open/render';
+import { GycLiveClient, GycLiveView } from '@gycrosskit/live-native';
 
-// registerView 接收名称、原生 View 工厂和 wrapBuilder 后的 ArkUI 工厂。
-// 在宿主已有 KuiklyRenderAdapter.registerView 调用位置传入：
-// GycLiveView.VIEW_NAME, () => new GycLiveView(), wrapBuilder(createGycLiveView)
+ViewsRegisterEntry.registerViewCreator(GycLiveView.VIEW_NAME, () => new GycLiveView());
 ```
 
 宿主在已同意隐私后，把服务端 UserSig、业务用户与真实 Ability Context 交给 `await GycLiveClient.login(sdkAppId, userId, userSig, context, nickname, avatarUrl)`。组件核对 IM 实际用户、IM/AtomicX 登录状态和 SDKAppId；异步昵称/头像不参与认证，不在客户端生成 UserSig。
