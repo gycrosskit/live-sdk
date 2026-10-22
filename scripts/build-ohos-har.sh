@@ -13,7 +13,7 @@ python3 - <<'CHECK'
 import os, re
 from urllib.parse import urlsplit
 url = urlsplit(os.environ['OHOS_CLT_URL'])
-if url.scheme != 'https' or url.hostname not in {'dl.developer.huawei.com', 'developer.huawei.com'} or url.username or url.password:
+if url.scheme != 'https' or url.hostname not in {'dl.developer.huawei.com', 'developer.huawei.com', 'contentcenter-vali-drcn.dbankcdn.cn'} or url.username or url.password:
     raise SystemExit('CLT download must use an official Huawei HTTPS origin')
 if not re.fullmatch('[a-f0-9]{64}', os.environ['OHOS_CLT_SHA256']):
     raise SystemExit('CLT SHA-256 must be an exact lowercase digest')

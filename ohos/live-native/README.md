@@ -43,4 +43,4 @@ SDK 离房失败会关闭账号门禁，避免声称 SDK 已空闲；自有账�
 
 本轮没有测试直播间与观众凭据，不运行云端用例，不使用生产账号或在仓库保存 UserSig。替身测试、SDK 声明类型检查、Kotlin 编译、HAR 编译、远程公开消费和真机验收分别记录在 [开发与验证](../../docs/开发与验证.md)。
 
-远程 HAR 编译由源码 CI 的 `ohos-har` job 执行；需配置华为 Linux x64 CLT 直链 `OHOS_CLT_URL` 和对应 SHA-256 `OHOS_CLT_SHA256`，SDK 必须匹配 API 22。当前配置缺失，尚无真实 HAR 编译结果；产物归档不会发布到 ohpm 或创建 Release。
+远程 HAR 编译由源码 CI 的 `ohos-har` job 执行；使用华为 Linux x64 CLT 直链 `OHOS_CLT_URL` 和对应 SHA-256 `OHOS_CLT_SHA256`，SDK 必须匹配 API 22。本轮已核对官方 `6.0.2.670` 工具链，实际编译结果见开发与验证记录；产物归档不会发布到 ohpm 或创建 Release。

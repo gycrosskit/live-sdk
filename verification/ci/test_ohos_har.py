@@ -7,6 +7,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('verify_har', ROOT / 'scripts/verify-ohos-har.py')
@@ -15,6 +16,19 @@ spec.loader.exec_module(module)
 
 
 class HarIdentityTest(unittest.TestCase):
+    def test_official_toolchain_source_gate(self):
+        script = (ROOT / 'scripts/build-ohos-har.sh').read_text()
+        check = script.split("<<'CHECK'\n", 1)[1].split('\nCHECK', 1)[0]
+        for url in ('https://contentcenter-vali-drcn.dbankcdn.cn/tools.zip',
+                    'https://example.com/tools.zip', 'http://developer.huawei.com/tools.zip',
+                    'https://user@developer.huawei.com/tools.zip'):
+            with self.subTest(url=url), patch.dict('os.environ', OHOS_CLT_URL=url, OHOS_CLT_SHA256='a' * 64):
+                if url.startswith('https://contentcenter-vali-drcn.dbankcdn.cn/'):
+                    exec(check, {})
+                else:
+                    with self.assertRaises(SystemExit):
+                        exec(check, {})
+
     def test_accepts_identity_and_rejects_stale_version_exports_and_duplicate_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory)
