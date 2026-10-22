@@ -1,0 +1,15 @@
+{
+  "name": "@gycrosskit/live-native",
+  "version": "0.3.0-rc.1",
+  "description": "鸿蒙 AtomicX 观看与 Kuikly 视频接线",
+  "main": "Index.ets",
+  "author": "gycrosskit",
+  "repository": "https://github.com/gycrosskit/live-sdk",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@kuikly-open/render": "2.28.0",
+    "@tencentcloud/atomicxcore": "5.2.2",
+    "@tencentcloud/imsdk": "9.1.7818",
+    "@tencentcloud/liteavsdk_professional": "13.5.9128"
+  }
+}

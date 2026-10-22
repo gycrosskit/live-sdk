@@ -1,0 +1,4 @@
+{
+  "app": { "products": [{ "name": "default", "targetSdkVersion": "6.0.2(22)", "compatibleSdkVersion": "5.0.0(12)", "runtimeOS": "HarmonyOS" }] },
+  "modules": [{ "name": "GycLiveNative", "srcPath": "./live-native", "targets": [{ "name": "default", "applyToProducts": ["default"] }] }]
+}

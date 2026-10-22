@@ -43,11 +43,11 @@ kotlin {
   }
  }
  sourceSets.commonMain.get().apply { if (verifyKuiklyCompose) kotlin.srcDir("src/kuiklyComposeMain/kotlin") }
- if (!verifyOhos) sourceSets.commonMain.get().kotlin.srcDir("src/kuiklyMain/kotlin")
+ sourceSets.commonMain.get().kotlin.srcDir("src/kuiklyMain/kotlin")
  if (verifyEmoji) sourceSets.commonMain.get().kotlin.srcDir("src/emojiConsumerMain/kotlin")
  sourceSets.androidMain.get().kotlin.srcDir("src/kuiklyAndroidMain/kotlin")
  sourceSets.commonMain.dependencies {
-  if (!verifyOhos) api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+  api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
   api("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
  }
  if (verifyFrame) {

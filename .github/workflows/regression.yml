@@ -88,6 +88,12 @@ jobs:
       - name: Check source cache and test execution policy
         if: needs.changes.outputs.source == 'true'
         run: python3 verification/ci/test_cache_contract.py
+      - name: Install lightweight HarmonyOS fixture compiler
+        if: needs.changes.outputs.source == 'true'
+        run: npm install --prefix "$RUNNER_TEMP/live-typescript" --ignore-scripts --no-audit --no-fund typescript@4.9.5
+      - name: Verify HarmonyOS SDK boundary behavior
+        if: needs.changes.outputs.source == 'true'
+        run: TYPESCRIPT_PATH="$RUNNER_TEMP/live-typescript/node_modules/typescript" node --test ohos/tests/*.test.cjs
       - name: Save public CI diagnostics
         if: always()
         uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
@@ -194,6 +200,8 @@ jobs:
           ios_test_target=iosSimulatorArm64Test
           if [[ "$(uname -m)" != arm64 ]]; then ios_test_target=iosX64Test; fi
           python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-core:"$ios_test_target" :live-core:compileKotlinIosArm64 :live-core:compileKotlinIosSimulatorArm64 :live-core:compileKotlinIosX64 :live-kuikly:compileKotlinIosArm64 :live-kuikly:compileKotlinIosSimulatorArm64 :live-kuikly:compileKotlinIosX64 :live-core:compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace --info
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/ohos-kotlin.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-kuikly:compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/ohos-consumer.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PverifyOhos -PverifyKuiklyCompose -PliveVersion=0.3.0-rc.1 compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace
           python3 -c 'import pathlib, sys, xml.etree.ElementTree as ET; files=pathlib.Path(".").glob("**/build/test-results/"+sys.argv[1]+"/*.xml"); cases=[case for path in files for case in ET.parse(path).iter("testcase")]; assert any(case.find("skipped") is None for case in cases), "No executed iOS test cases"' "$ios_test_target"
       - name: Link legacy LiveKuikly Swift adapter against candidate Renderer Pod
         if: needs.changes.outputs.source == 'true'

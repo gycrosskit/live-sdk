@@ -11,6 +11,7 @@ kotlin {
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+    ohosArm64()
     // Native 测试与最终宿主一样，必须链接真实 Render 提供的 C 符号。
     providers.gradleProperty("liveKuiklyIosRenderFrameworkDir").orNull?.let { frameworkDir ->
         targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
