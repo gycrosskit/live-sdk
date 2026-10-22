@@ -13,6 +13,11 @@ on:
         description: Exact published HAR version; leave empty when Registry is not ready
         required: false
         type: string
+      android_only:
+        description: Only Maven public check and Android consumer (immutable version required)
+        required: false
+        type: boolean
+        default: false
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -67,7 +72,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+      - name: Restore trusted dependency downloads
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
+        with:
+          cache-read-only: true
       - run: bash scripts/ci-pin-fork-host.sh
         timeout-minutes: 3
         if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
@@ -78,6 +87,16 @@ jobs:
       - if: (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) && (github.event_name != 'pull_request')
         timeout-minutes: 35
         run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer "-PliveVersion=$VERSION" -PremoteOnly $EMOJI_FLAGS -PverifyKuiklyCompose -PverifyFrame testDebugUnitTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLayoutTest --tests io.github.gycrosskit.livesdk.KuiklyLiveLifecycleTest --no-daemon --max-workers=1 --stacktrace --info
+      - name: Require executed public AAR tests
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          cases = [case for path in Path('verification/consumer/build/test-results/testDebugUnitTest').glob('*.xml') for case in ET.parse(path).iter('testcase')]
+          assert len(cases) == 2 and all(case.find(kind) is None for case in cases for kind in ('failure', 'error', 'skipped'))
+          print('PASS: two public AAR behavior tests executed without failure or skip')
+          PYTHON
       - name: Explain lightweight completion
         if: ${{ !(github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) }}
         run: echo 'No build is required for this event and scope.'
@@ -87,7 +106,7 @@ jobs:
         with:
           status: ${{ job.status }}
   release-native:
-    if: ${{ always() && !startsWith(github.event.release.tag_name || inputs.version, 'native-') }}
+    if: ${{ always() && !inputs.android_only && !startsWith(github.event.release.tag_name || inputs.version, 'native-') }}
     needs: verify-public
     runs-on: ${{ (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) && 'macos-15' || 'ubuntu-24.04' }}
     timeout-minutes: 90
