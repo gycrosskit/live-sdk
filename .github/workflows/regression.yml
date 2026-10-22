@@ -86,6 +86,7 @@ jobs:
           python3 verification/ci/test_fork_host.py
           python3 verification/renderer-ios/test_contract.py
           python3 verification/ci/test_release_candidate.py
+          python3 verification/ci/test_release_android_cache.py
           python3 verification/ci/test_ohos_har.py
           python3 verification/ci/test_ohpm_consumer.py
       - name: Explain lightweight completion
