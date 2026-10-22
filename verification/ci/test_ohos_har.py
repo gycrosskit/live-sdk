@@ -40,7 +40,7 @@ class HarIdentityTest(unittest.TestCase):
                     self.assertEqual(int(counter.read_text()), min(succeeds_at, 3))
 
     def test_official_toolchain_source_gate(self):
-        script = (ROOT / 'scripts/build-ohos-har.sh').read_text()
+        script = (ROOT / 'scripts/prepare-ohos-clt.sh').read_text()
         check = script.split("<<'CHECK'\n", 1)[1].split('\nCHECK', 1)[0]
         for url in ('https://contentcenter-vali-drcn.dbankcdn.cn/tools.zip',
                     'https://example.com/tools.zip', 'http://developer.huawei.com/tools.zip',

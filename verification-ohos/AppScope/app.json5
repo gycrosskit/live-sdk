@@ -1,0 +1,8 @@
+{
+  "app": {
+    "bundleName": "io.github.gycrosskit.live",
+    "vendor": "gycrosskit",
+    "versionCode": 10000,
+    "versionName": "0.3.0"
+  }
+}

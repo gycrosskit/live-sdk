@@ -1,0 +1,1 @@
+# Version SHA256; append only after a verified remote HAR build.
