@@ -1,9 +1,9 @@
 {
   "name": "@gycrosskit/live-native",
-  "version": "0.3.0-rc.2",
+  "version": "0.3.0-rc.3",
   "description": "鸿蒙 AtomicX 观看与 Kuikly 视频接线",
   "main": "Index.ets",
-  "author": "gycrosskit",
+  "author": { "name": "gycrosskit", "url": "https://github.com/gycrosskit/live-sdk" },
   "repository": "https://github.com/gycrosskit/live-sdk",
   "license": "Apache-2.0",
   "dependencies": {

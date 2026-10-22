@@ -7,7 +7,7 @@
 - 删除根 `live-sdk` CMP 产品和对应 CMP UI / consumer，属于不兼容变更；不能仅替换版本号升级旧 CMP 调用方。
 - 旧 CMP 使用方继续锁定已发布的旧版本及其原 tag 文档，或先迁移到 Kuikly raw / KuiklyCompose / native 入口。KuiklyCompose 和 compiler / runtime 仍保留，宿主统一匹配 Kuikly / Renderer。
 - 新版本只提供 `live-core` / `live-kuikly`，共 12 个 Maven publication；根聚合工程不补兼容空壳或伪 Maven 坐标。
-- Git Pod `GycLiveNative` 固定 tag `native-0.2.1-rc.15` / Pod `0.2.1-rc.15`；新增 OHOS `live-kuikly` 变体与 `@gycrosskit/live-native` HAR 源码候选，均未发布或完成设备验收。编译证据见开发与验证，Maven RC 版本不能替代原生 tag 或 Pod 内部版本。
+- Git Pod `GycLiveNative` 固定 tag `native-0.2.1-rc.15` / Pod `0.2.1-rc.15`；新增 OHOS `live-kuikly` 变体与 `@gycrosskit/live-native@0.3.0-rc.3` HAR 源码候选，均未发布或完成设备验收。编译证据见开发与验证，Maven RC 版本不能替代原生 tag 或 Pod 内部版本。
 
 ## 发布与验收边界
 

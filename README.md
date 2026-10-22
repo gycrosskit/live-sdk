@@ -1,6 +1,6 @@
 # GY CrossKit Live SDK
 
-当前源码候选为 Maven `0.3.0-rc.2`，尚未发布。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
+当前配套候选为 Maven `0.3.0-rc.2` / ohpm `@gycrosskit/live-native@0.3.0-rc.3`，发布与精确消费以 Release 收据为准。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
 
 2026-10-22 鸿蒙观看源码候选：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；支持观看、弹幕、点赞、观众人数、退出换房和静音预览。不含连麦、PK、关注和系统 PiP。已分别取得固定 SHA 的远程 Kotlin/HAR 编译证据；最终完整回归按当前推送 SHA 核对，仍未发布或真机验收，见[鸿蒙接线](ohos/live-native/README.md)与[验证边界](docs/开发与验证.md#2026-10-22鸿蒙观看源码候选)。
 

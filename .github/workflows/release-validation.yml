@@ -9,6 +9,10 @@ on:
         description: Immutable Maven or native-* Git Pod release tag
         required: true
         type: string
+      ohpm_version:
+        description: Exact published HAR version; leave empty when Registry is not ready
+        required: false
+        type: string
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -192,10 +196,11 @@ jobs:
         with:
           status: ${{ job.status }}
   release-ohos:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.version == '0.3.0-rc.2' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ohpm_version != '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      VERSION: ${{ inputs.ohpm_version }}
       OHOS_CLT_URL: ${{ vars.OHOS_CLT_URL }}
       OHOS_CLT_SHA256: ${{ vars.OHOS_CLT_SHA256 }}
     steps:
