@@ -196,7 +196,7 @@ jobs:
         with:
           status: ${{ job.status }}
   release-ohos:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ohpm_version != '' }}
+    if: ${{ (github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'native-')) || (github.event_name == 'workflow_dispatch' && inputs.ohpm_version != '') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:

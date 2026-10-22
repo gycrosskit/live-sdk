@@ -2,7 +2,10 @@
 # 远程 Registry HAR 消费；不接受 source/file 依赖或当前工程替代。
 set -euo pipefail
 TASK_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-: "${VERSION:?Pass the immutable HAR release version}"
+# release 事件从已冻结的 consumer 读取独立 HAR 版本，dispatch 可显式指定。
+if [[ -z "${VERSION:-}" ]]; then
+  VERSION="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["dependencies"]["@gycrosskit/live-native"])' "$TASK_ROOT/verification-ohos/consumer/oh-package.json5")"
+fi
 source "$TASK_ROOT/scripts/prepare-ohos-clt.sh"
 TASK_CONSUMER="$TASK_ROOT/build/ohos-remote-consumer"
 [[ ! -e "$TASK_CONSUMER" ]] || { echo 'Consumer directory must be empty' >&2; exit 2; }
