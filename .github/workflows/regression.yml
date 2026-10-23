@@ -9,6 +9,14 @@ on:
         description: Warm Native toolchains on main only (leave version empty)
         type: boolean
         default: false
+      har_only:
+        description: Only HarmonyOS HAR and contracts (not full source acceptance)
+        type: boolean
+        default: false
+      consume_release_har_tag:
+        description: Consume the frozen HAR from this Release tag (requires har_only)
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -78,6 +86,9 @@ jobs:
           python3 verification/ci/test_fork_host.py
           python3 verification/renderer-ios/test_contract.py
           python3 verification/ci/test_release_candidate.py
+          python3 verification/ci/test_release_android_cache.py
+          python3 verification/ci/test_ohos_har.py
+          python3 verification/ci/test_ohpm_consumer.py
       - name: Explain lightweight completion
         if: ${{ !(needs.changes.outputs.source == 'true') }}
         run: echo 'No build is required for this event and scope.'
@@ -88,12 +99,19 @@ jobs:
       - name: Check source cache and test execution policy
         if: needs.changes.outputs.source == 'true'
         run: python3 verification/ci/test_cache_contract.py
+      - name: Install lightweight HarmonyOS fixture compiler
+        if: needs.changes.outputs.source == 'true'
+        run: npm install --prefix "$RUNNER_TEMP/live-typescript" --ignore-scripts --no-audit --no-fund typescript@4.9.5
+      - name: Verify HarmonyOS SDK boundary behavior
+        if: needs.changes.outputs.source == 'true'
+        run: TYPESCRIPT_PATH="$RUNNER_TEMP/live-typescript/node_modules/typescript" node --test ohos/tests/*.test.cjs
       - name: Save public CI diagnostics
         if: always()
         uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
         with:
           status: ${{ job.status }}
   android:
+    if: github.event_name != 'workflow_dispatch' || !inputs.har_only
     needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -124,7 +142,7 @@ jobs:
       - name: Verify source Kuikly consumer and dependency isolation
         if: needs.changes.outputs.source == 'true'
         timeout-minutes: 20
-        run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/consumer-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PliveVersion=0.3.0-rc.1 -PverifyKuiklyCompose assembleDebug verifyNoCmpUi verifySingleSdk --no-daemon --max-workers=1 --stacktrace --info
+        run: python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/consumer-android.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PliveVersion=0.3.0-rc.2 -PverifyKuiklyCompose assembleDebug verifyNoCmpUi verifySingleSdk --no-daemon --max-workers=1 --stacktrace --info
       - name: Explain lightweight completion
         if: ${{ !(needs.changes.outputs.source == 'true') }}
         run: echo 'No build is required for this event and scope.'
@@ -133,7 +151,63 @@ jobs:
         uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
         with:
           status: ${{ job.status }}
+  ohos-har:
+    needs: changes
+    if: needs.changes.outputs.source == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RELEASE_HAR_TAG: ${{ inputs.consume_release_har_tag }}
+      OHOS_CLT_URL: ${{ vars.OHOS_CLT_URL }}
+      OHOS_CLT_SHA256: ${{ vars.OHOS_CLT_SHA256 }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Install shared CI tools
+        uses: gycrosskit/.github/actions/ci-tools@607ff44db144c68fc6523de38c04aac29e427b68
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Restore official CLT archive
+        id: clt-cache
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: build/ohos-har/clt.zip
+          key: ohos-clt-linux-${{ env.OHOS_CLT_SHA256 }}
+      - name: Compile source HAR or consume exact Release HAR
+        run: |
+          if [[ -n "$RELEASE_HAR_TAG" ]]; then
+            test "${{ inputs.har_only }}" = true
+            python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/release-har-consumer.log -- bash scripts/verify-ohos-consumer.sh
+          else
+            python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/ohos-har.log -- bash scripts/build-ohos-har.sh
+          fi
+      - name: Cache verified official CLT archive
+        if: always() && steps.clt-cache.outputs.cache-hit != 'true' && hashFiles('build/ohos-har/CLT_VERIFIED') != ''
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: build/ohos-har/clt.zip
+          key: ohos-clt-linux-${{ env.OHOS_CLT_SHA256 }}
+      - name: Keep compiled HAR and source identity
+        if: inputs.consume_release_har_tag == ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ohos-har-${{ github.sha }}
+          path: |
+            build/ohos-har/GycLiveNative.har
+            build/ohos-har/SOURCE_SHA
+            build/ohos-har/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+      - name: Save public CI diagnostics
+        if: always()
+        uses: gycrosskit/.github/actions/ci-diagnostics@607ff44db144c68fc6523de38c04aac29e427b68
+        with:
+          status: ${{ job.status }}
   native:
+    if: github.event_name != 'workflow_dispatch' || !inputs.har_only
     needs: changes
     runs-on: ${{ ((needs.changes.outputs.source == 'true') || (github.event_name == 'workflow_dispatch' && inputs.warm_native_cache && github.ref == 'refs/heads/main')) && 'macos-15' || 'ubuntu-24.04' }}
     timeout-minutes: 90
@@ -194,12 +268,14 @@ jobs:
           ios_test_target=iosSimulatorArm64Test
           if [[ "$(uname -m)" != arm64 ]]; then ios_test_target=iosX64Test; fi
           python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/native.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-core:"$ios_test_target" :live-core:compileKotlinIosArm64 :live-core:compileKotlinIosSimulatorArm64 :live-core:compileKotlinIosX64 :live-kuikly:compileKotlinIosArm64 :live-kuikly:compileKotlinIosSimulatorArm64 :live-kuikly:compileKotlinIosX64 :live-core:compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace --info
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/ohos-kotlin.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" :live-kuikly:compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/ohos-consumer.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PverifyOhos -PverifyKuiklyCompose -PliveVersion=0.3.0-rc.2 compileKotlinOhosArm64 --no-daemon --max-workers=1 --stacktrace
           python3 -c 'import pathlib, sys, xml.etree.ElementTree as ET; files=pathlib.Path(".").glob("**/build/test-results/"+sys.argv[1]+"/*.xml"); cases=[case for path in files for case in ET.parse(path).iter("testcase")]; assert any(case.find("skipped") is None for case in cases), "No executed iOS test cases"' "$ios_test_target"
       - name: Link legacy LiveKuikly Swift adapter against candidate Renderer Pod
         if: needs.changes.outputs.source == 'true'
         timeout-minutes: 20
         run: |
-          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/renderer-kmp.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PliveVersion=0.3.0-rc.1 linkDebugFrameworkIosArm64 --no-daemon --max-workers=1 --stacktrace
+          python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/renderer-kmp.log -- bash gradlew --init-script "$PWD/scripts/ci-repositories.gradle" -p verification/consumer -PverifyLocalSource -PliveVersion=0.3.0-rc.2 linkDebugFrameworkIosArm64 --no-daemon --max-workers=1 --stacktrace
           LIVE_RENDERER_IOS_FRAMEWORK_DIR="$PWD/build/native-renderer-consumer/iphoneos" LIVE_KUIKLY_IOS_FRAMEWORK_DIR="$PWD/build/native-renderer-consumer/iphoneos" python3 scripts/ci-run.py --no-progress-seconds 300 --log ci-diagnostics/renderer-kmp.log -- bash scripts/verify-ios-native.sh
       - name: Explain lightweight completion
         if: ${{ !(needs.changes.outputs.source == 'true') }}

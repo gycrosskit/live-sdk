@@ -1,0 +1,130 @@
+package io.github.gycrosskit.livesdk
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class LiveBridgeAudienceSessionTest {
+    @Test
+    fun `bridge reuses snapshot deduplication and waits for old leave before joining next room`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val gate = Gate()
+        val a = Platform()
+        val b = Platform()
+        val first = LiveBridgeAudienceSession("A", a, LivePlaybackCallbacks(), gate, CoroutineScope(coroutineContext + SupervisorJob()))
+        val second = LiveBridgeAudienceSession("B", b, LivePlaybackCallbacks(), gate, CoroutineScope(coroutineContext + SupervisorJob()))
+        try {
+            runCurrent()
+            assertEquals(1, a.joins)
+            assertEquals(0, b.joins)
+            a.observer.joined(host("A"), "notice")
+            val message = LiveAudienceMessageSnapshot(1, 2.0, "viewer", "name", "", "hello")
+            a.observer.messages(listOf(message, message))
+            a.observer.audience(listOf(LiveAudienceUserSnapshot("viewer", "", "")), 10)
+            assertEquals(listOf(message), first.snapshot.messages)
+            assertEquals(10, first.snapshot.audienceCount)
+            first.release()
+            runCurrent()
+            assertEquals(0, b.joins)
+            a.observer.messages(listOf(message.copy(content = "late")))
+            assertEquals(1, first.snapshot.messages.size)
+            a.leaveFinished(true, 0, "")
+            runCurrent()
+            assertEquals(1, b.joins)
+            b.observer.joined(host("B"), "")
+            assertTrue(second.snapshot.interactionReady)
+            assertFalse(second.enterPictureInPicture(true))
+            second.updatePictureInPicture(true)
+            assertFalse(second.snapshot.pictureInPicture)
+        } finally {
+            first.release(); second.release()
+            a.leaveFinished(true, 0, ""); b.leaveFinished(true, 0, "")
+            runCurrent()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `release during join rejects late success and barrage acknowledgements`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val platform = Platform()
+        var successes = 0
+        val session = LiveBridgeAudienceSession("A", platform, LivePlaybackCallbacks(onJoinSucceeded = { successes++ }), Gate(), CoroutineScope(coroutineContext + SupervisorJob()))
+        try {
+            runCurrent()
+            platform.observer.joined(host("A"), "")
+            var sent: Boolean? = null
+            session.sendBarrage("hello") { success, _ -> sent = success }
+            session.like()
+            session.release()
+            platform.barrageFinished(true, "")
+            assertEquals(false, sent)
+            platform.observer.joined(host("A"), "")
+            assertEquals(1, successes)
+            assertFalse(session.snapshot.interactionReady)
+            assertEquals(listOf(1), platform.likes)
+        } finally {
+            session.release(); platform.leaveFinished(true, 0, "")
+            runCurrent(); Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `released in-flight join still settles through leave without publishing success`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val platform = Platform()
+        var successes = 0
+        val session = LiveBridgeAudienceSession("A", platform, LivePlaybackCallbacks(onJoinSucceeded = { successes++ }), Gate(), CoroutineScope(coroutineContext + SupervisorJob()))
+        try {
+            runCurrent(); session.release()
+            assertEquals(0, platform.leaves)
+            platform.observer.joined(host("A"), "")
+            assertEquals(1, platform.leaves)
+            assertEquals(0, successes)
+            assertFalse(session.snapshot.interactionReady)
+        } finally {
+            session.release(); platform.leaveFinished(true, 0, "")
+            runCurrent(); Dispatchers.resetMain()
+        }
+    }
+
+    private class Gate : AtomicAudienceSessionGate {
+        private var owner: Any? = null
+        private val waiting = ArrayDeque<Pair<Any, () -> Unit>>()
+        override fun acquire(token: Any, liveId: String, onTimeout: () -> Unit, start: () -> Unit) {
+            if (owner == null) { owner = token; start() } else waiting.addLast(token to start)
+        }
+        override fun release(token: Any) {
+            if (owner !== token) { waiting.removeAll { it.first === token }; return }
+            owner = null
+            waiting.removeFirstOrNull()?.let { (next, start) -> owner = next; start() }
+        }
+    }
+
+    private class Platform : LiveAudiencePlatform {
+        lateinit var observer: LiveAudiencePlatformObserver
+        var joins = 0
+        var leaves = 0
+        var leaveFinished: (Boolean, Int, String) -> Unit = { _, _, _ -> }
+        var barrageFinished: (Boolean, String) -> Unit = { _, _ -> }
+        val likes = mutableListOf<Int>()
+        override fun join(liveId: String, observer: LiveAudiencePlatformObserver) { joins++; this.observer = observer }
+        override fun leave(onFinished: (Boolean, Int, String) -> Unit) { leaves++; leaveFinished = onFinished }
+        override fun sendBarrage(message: String, onFinished: (Boolean, String) -> Unit) { barrageFinished = onFinished }
+        override fun sendLike(count: Int, onFinished: (Boolean) -> Unit) { likes += count; onFinished(true) }
+        override fun refreshAudience() = Unit
+    }
+
+    private fun host(id: String) = LiveAudienceContentSnapshot.Empty.host.copy(roomId = id)
+}

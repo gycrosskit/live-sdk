@@ -8,9 +8,35 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 
 /** 视频层；账号、业务接口、房间页面和生命周期策略由宿主提供。 */
 class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
+    private var nativeController: KuiklyNativeLiveController? = null
+    private var acceptingNativeEvents = true
     override fun viewName() = VIEW_NAME
     override fun createAttr() = KuiklyLiveAttr()
-    override fun createEvent() = KuiklyLiveEvent()
+    override fun createEvent() = KuiklyLiveEvent().apply {
+        // 只有鸿蒙 HAR 发送此事件；Android/iOS 继续使用已有原生会话。
+        register("nativeLiveEvent") { value ->
+            if (!this@KuiklyLiveView.acceptingNativeEvents) return@register
+            val event = value as? JSONObject ?: return@register
+            val controller = this@KuiklyLiveView.nativeController ?: KuiklyNativeLiveController(this@KuiklyLiveView.pagerId) { method, params, callback ->
+                val target = this@KuiklyLiveView.renderView
+                if (target == null) callback?.invoke(JSONObject().put("success", false).put("message", "View released"))
+                else target.callMethod(method, params.toString(), callback?.let { done -> { done(it as? JSONObject ?: JSONObject()) } })
+            }.also { this@KuiklyLiveView.nativeController = it }
+            controller.event(event)
+        }
+    }
+
+    override fun willRemoveFromParentView() {
+        acceptingNativeEvents = false
+        nativeController?.release()
+        nativeController = null
+        super.willRemoveFromParentView()
+    }
+
+    override fun didMoveToParentView() {
+        acceptingNativeEvents = true
+        super.didMoveToParentView()
+    }
 
     /**
      * 待原生节点就绪后发送弹幕，callback 返回已确认的 SDK 结果。

@@ -4,7 +4,7 @@ plugins {
  id("com.android.application") version "8.10.1"
 }
 val kuiklyRenderFrameworkDir = providers.gradleProperty("kuiklyRenderFrameworkDir").orNull
-val liveVersion = providers.gradleProperty("liveVersion").orElse("0.3.0-rc.1").get()
+val liveVersion = providers.gradleProperty("liveVersion").orElse("0.3.0-rc.2").get()
 val verifyOhos = providers.gradleProperty("verifyOhos").isPresent
 val verifyEmoji = verifyOhos || providers.gradleProperty("verifyEmoji").isPresent
 val verifyLocalSource = providers.gradleProperty("verifyLocalSource").isPresent
@@ -43,11 +43,11 @@ kotlin {
   }
  }
  sourceSets.commonMain.get().apply { if (verifyKuiklyCompose) kotlin.srcDir("src/kuiklyComposeMain/kotlin") }
- if (!verifyOhos) sourceSets.commonMain.get().kotlin.srcDir("src/kuiklyMain/kotlin")
+ sourceSets.commonMain.get().kotlin.srcDir("src/kuiklyMain/kotlin")
  if (verifyEmoji) sourceSets.commonMain.get().kotlin.srcDir("src/emojiConsumerMain/kotlin")
  sourceSets.androidMain.get().kotlin.srcDir("src/kuiklyAndroidMain/kotlin")
  sourceSets.commonMain.dependencies {
-  if (!verifyOhos) api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
+  api("com.github.gycrosskit.live-sdk:live-kuikly:$liveVersion")
   api("com.github.gycrosskit.live-sdk:live-core:$liveVersion")
  }
  if (verifyFrame) {

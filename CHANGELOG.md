@@ -1,12 +1,17 @@
 # 更新记录
 
-## 0.3.0-rc.1（RC 准备，尚未发布）
+## 0.3.0-rc.2（预发行）
 
-- 移除根 CMP UI 与根 Maven 产品，根工程仅聚合 `live-core` / `live-kuikly`。
-- 保留原生会话、Kuikly raw / KuiklyCompose、共用测试和 iOS Pod 原版本。
-- 当前 consumer / CI / 归档只验证两产品、11 个 publication；旧 tag 与 checksum 保留，重验旧版使用其原脚本。
-- 原生配套固定为 Git tag `native-0.2.1-rc.15` / Pod `0.2.1-rc.15`，新增本轮 Maven 与该 Renderer 的最终链接门禁；尚未执行远程消费。
-- 迁移与发布边界见 [RC 迁移说明](docs/RC迁移说明.md)。
+- 新增鸿蒙 Kuikly 观看及配套 `@gycrosskit/live-native@0.3.0-rc.3` HAR，复用公共会话、预览、快照和点赞逻辑；不含连麦、PK、关注和 PiP。
+- Maven 新增 `live-kuikly-ohosarm64`，两产品共 12 个 publication；Android/iOS 平台源码与 SDK 版本不变。
+- iOS Git Pod 沿用 `native-0.2.1-rc.15`，不空发原生版本。
+- Kotlin/HAR 完整源码 CI 已通过；本版本的归档摘要、发布与精确远程消费由发布收据记录。真机音画未验收。
+
+## 0.3.0-rc.1（已发布）
+
+- 移除根 CMP UI 与根 Maven 产品，仅保留 `live-core` / `live-kuikly`，共 11 个 publication；KuiklyCompose 及原生会话保留。
+- OHOS 仅包含 Core KLIB，不包含本次新增的 Kuikly 鸿蒙观看接线。
+- iOS Git Pod 配套 `native-0.2.1-rc.15`；历史制品与校验值保持不变。
 
 ## 0.2.1-rc.7（预发布）
 

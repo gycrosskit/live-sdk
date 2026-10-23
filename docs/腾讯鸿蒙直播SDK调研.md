@@ -1,6 +1,14 @@
 # 腾讯鸿蒙直播 SDK 调研
 
-最新核对日期：2026-10-05。结论：Android/iOS 可通过 Kuikly Native DSL 复用已有 AtomicX 观看组件；当前已核对的 HarmonyOS 官方 SDK 不能直接等价实现此组件的 `liveId` 观看协议。不能将 TRTC 房间号或播放 URL 当作 AtomicX `joinLive` 的替代。
+## 2026-10-22 更新
+
+已核对官方 `@tencentcloud/atomicxcore@5.2.2` HAR（SHA-256 `630788d102f0dbd2f153e6342e8d8233f315cea1afd97cf30490bf5f0becfe61`）：新增本组件实际消费的 `LiveListStore`、`AtomicPlayer`、`BarrageStore`、`LikeStore` 和 `LiveAudienceStore` 等直播入口。已实现鸿蒙 Kuikly 观看接线，并通过真实 Kotlin/HAR 编译及 Release HAR 独立消费；配套版本、Registry 审核/消费状态见 [RC Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.3.0-rc.2)。厂商内部导出的 ArkUI 节点需要精确版本约束，三端真实音画与设备验收仍未执行。
+
+下文仅保留 2026-10-05 对 **5.1.0** 的历史判断；不能据此宣称 5.2.2 仍缺少 Live API。当前能力以[功能与平台差异](功能与平台差异.md)为准。
+
+## 2026-10-05 历史结论
+
+当时核对日期：2026-10-05。结论：Android/iOS 可通过 Kuikly Native DSL 复用已有 AtomicX 观看组件；当前已核对的 HarmonyOS 官方 SDK 不能直接等价实现此组件的 `liveId` 观看协议。不能将 TRTC 房间号或播放 URL 当作 AtomicX `joinLive` 的替代。
 
 ## 2026-10-05 当前公开 SDK 实证
 
