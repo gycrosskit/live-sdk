@@ -10,9 +10,13 @@ export function createLiveView(): KuiklyRenderBaseView { return new GycLiveView(
 export async function prepareLive(context: common.Context, sdkAppId: number, userId: string,
   userSig: string): Promise<void> {
   await GycLiveClient.login(sdkAppId, userId, userSig, context);
-  GycLiveClient.setForeground(true);
+  GycLiveClient.setForeground(true, context);
 }
-export async function releaseLive(): Promise<void> {
-  GycLiveClient.setForeground(false);
+export async function releaseLive(context: common.Context): Promise<void> {
+  GycLiveClient.setForeground(false, context);
   await GycLiveClient.logout();
 }
+export function observePiP(changed: (enabled: boolean) => void, closed: () => void): () => void {
+  return GycLiveClient.observePictureInPicture(changed, closed);
+}
+export async function restorePiP(): Promise<void> { await GycLiveClient.restorePictureInPicture(); }

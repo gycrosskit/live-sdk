@@ -1,13 +1,13 @@
 # 鸿蒙观看接线（RC）
 
-`@gycrosskit/live-native@0.3.0-rc.3` 已上架 ohpm，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过。与 JitPack `live-core` / `live-kuikly:0.3.0-rc.2` 配套使用；不能只安装 HAR 就绕过 Kotlin 公共会话。声明最低 SDK API 12。以上发布不包含当前本地修订：修复后的主 TRTC 观看包已通过 HAR/宿主编译，用户真机确认音画、退出重入和前后台恢复正常；新源码尚未发布，不能只安装旧 Registry 版本获得修复。
+当前候选 `@gycrosskit/live-native@0.3.0-rc.4` 配套 JitPack `live-core` / `live-kuikly:0.3.0-rc.4`，包含主 TRTC 观看绑定、成员事件、独立宿主 PiP 与比例修复。Registry 查询、精确安装及编译结果以本版本 Release 收据为准，不能沿用旧 rc.3 的发布结果。源码已完成宿主本地编译与横向房间真机分项验收；旧 Registry rc.3 不包含这些修复。
 
 原生层只处理腾讯 SDK、ArkUI 视频节点和事件转换。`LiveBridgeAudienceSession` 复用 `AtomicAudienceSession`、`AtomicAudienceSessionCoordinator`、`LiveAudienceSnapshotStore`、`LiveLikeBatcher`；预览复用 `AtomicLivePreviewController`。Renderer 与 SDK UI 主线程之间异步传输，禁止阻塞互等。原生 Promise 队列额外保证即使公共会话超时，未结束的 SDK join/leave 也不会被下一场 SDK 操作越过。
 
 ## 依赖与注册
 
 ```bash
-ohpm install @gycrosskit/live-native@0.3.0-rc.3
+ohpm install @gycrosskit/live-native@0.3.0-rc.4
 ```
 
 
