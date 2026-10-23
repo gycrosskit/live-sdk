@@ -1,5 +1,12 @@
 # 更新记录
 
+## 0.3.0-rc.4
+
+- 配套 JitPack `live-core` / `live-kuikly:0.3.0-rc.4`，修复公共 View 事件提前注册导致的首次进入闪退。
+- 完整观看绑定原进房主 TRTC 的实际 owner，修复有声无画面；成员进退房与禁言事件复用公共语义。
+- 增加原 Surface 系统 PiP、所属 Ability 的前后台隔离与横竖画布比例，主应用可继续操作；宿主须提供独立直播 Ability。
+- 腾讯 SDK 版本及 iOS Native Pod 保持不变；列表 AtomicPlayer 预览和竖向房间设备尚未验收，不含连麦、PK 或开播。
+
 ## 0.3.0-rc.3
 
 - 首个鸿蒙观看 HAR RC，配套 JitPack `live-kuikly:0.3.0-rc.2`。

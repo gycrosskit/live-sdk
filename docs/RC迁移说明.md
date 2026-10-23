@@ -1,15 +1,15 @@
-# 0.3.0-rc.3 RC 迁移说明
+# 0.3.0-rc.4 RC 迁移说明
 
-本 RC 使用 Maven `0.3.0-rc.3` / ohpm `@gycrosskit/live-native@0.3.0-rc.3`；真实归档摘要、固定源码 SHA、远程 CI 与公开消费结果由本轮发布收据记录。没有新 checksum 时发布校验直接失败，不复用旧版本或填写占位摘要。
+本 RC 使用 Maven `0.3.0-rc.4` / ohpm `@gycrosskit/live-native@0.3.0-rc.4`；真实归档摘要、固定源码 SHA、远程 CI 与公开消费结果由本轮发布收据记录。没有新 checksum 时发布校验直接失败，不复用旧版本或填写占位摘要。
 
-本轮修正公共 `KuiklyLiveView` 提前注册事件的崩溃：事件工厂仅创建对象，待 Kuikly 注入 pagerId 并挂载 View 后注册 `nativeLiveEvent`。真实 Kuikly 初始化回归同时覆盖 Android/iOS/OHOS 的公共入口；HAR 与 iOS 原生实现不变，不重发对应渠道。源码 CI、公开 Maven 消费与宿主设备复验均须重新留证，不能套用 rc.2 的编译结论。
+本轮包含公共 `KuiklyLiveView` 挂载后注册事件、鸿蒙主 TRTC 观看绑定、成员消息及系统 PiP 修复。宿主需提供独立直播 Ability、根账号生命周期与每窗口策略；新 WebView HAR `0.2.0-rc.15` 提供窗口策略注入，Maven/iOS Pod 不随其空发版。Live iOS Native 源码不变，保留 `native-0.2.1-rc.15`。本地横向房间音画、PiP、主页操作与注销已有分项真机证据；新远程版本消费和升级后宿主回归仍分别验收。
 
 ## 从旧 CMP 产品迁移
 
 - 删除根 `live-sdk` CMP 产品和对应 CMP UI / consumer，属于不兼容变更；不能仅替换版本号升级旧 CMP 调用方。
 - 旧 CMP 使用方继续锁定已发布的旧版本及其原 tag 文档，或先迁移到 Kuikly raw / KuiklyCompose / native 入口。KuiklyCompose 和 compiler / runtime 仍保留，宿主统一匹配 Kuikly / Renderer。
 - 新版本只提供 `live-core` / `live-kuikly`，共 12 个 Maven publication；根聚合工程不补兼容空壳或伪 Maven 坐标。
-- Git Pod `GycLiveNative` 固定 tag `native-0.2.1-rc.15` / Pod `0.2.1-rc.15`；新增 OHOS `live-kuikly` 变体与 `@gycrosskit/live-native@0.3.0-rc.3` HAR；HAR 已上架，Registry 精确安装与独立 ArkTS 编译已通过，公开消费以发布收据为准，设备尚未验收。编译证据见开发与验证，Maven RC 版本不能替代原生 tag 或 Pod 内部版本。
+- Git Pod `GycLiveNative` 固定 tag `native-0.2.1-rc.15` / Pod `0.2.1-rc.15`；新增 OHOS `live-kuikly` 变体与 `@gycrosskit/live-native@0.3.0-rc.4` HAR；新 HAR 的 Registry 精确安装、独立 ArkTS 编译及宿主升级回归以 rc.4 收据为准，旧 rc.3 的结果不沿用。编译证据见开发与验证，Maven RC 版本不能替代原生 tag 或 Pod 内部版本。
 
 ## 发布与验收边界
 
