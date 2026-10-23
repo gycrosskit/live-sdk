@@ -126,6 +126,38 @@ class LiveBridgeAudienceSessionTest {
         }
     }
 
+    @Test
+    fun `only actual platform PiP callbacks change snapshots and callbacks are ignored after release`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val platform = Platform()
+        val changes = mutableListOf<Boolean>()
+        val session = LiveBridgeAudienceSession("A", platform,
+            LivePlaybackCallbacks(onPictureInPictureChanged = { changes += it }), Gate(), CoroutineScope(coroutineContext + SupervisorJob()))
+        try {
+            runCurrent()
+            platform.observer.pictureInPictureChanged(true)
+            assertFalse(session.snapshot.pictureInPicture)
+            platform.observer.joined(host("A"), "")
+            session.updatePictureInPicture(true)
+            assertFalse(session.snapshot.pictureInPicture)
+            assertTrue(changes.isEmpty())
+            platform.observer.pictureInPictureChanged(true)
+            assertTrue(session.snapshot.pictureInPicture)
+            platform.observer.pictureInPictureChanged(false)
+            assertFalse(session.snapshot.pictureInPicture)
+            assertEquals(listOf(true, false), changes)
+            platform.observer.pictureInPictureChanged(true)
+            session.release()
+            assertFalse(session.snapshot.pictureInPicture)
+            platform.observer.pictureInPictureChanged(true)
+            assertFalse(session.snapshot.pictureInPicture)
+            assertEquals(listOf(true, false, true), changes)
+        } finally {
+            session.release(); platform.leaveFinished(true, 0, "")
+            runCurrent(); Dispatchers.resetMain()
+        }
+    }
+
     private class Gate : AtomicAudienceSessionGate {
         private var owner: Any? = null
         private val waiting = ArrayDeque<Pair<Any, () -> Unit>>()

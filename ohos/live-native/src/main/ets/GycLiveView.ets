@@ -1,8 +1,10 @@
 import { KRAny, KuiklyRenderBaseView, KuiklyRenderCallback } from '@kuikly-open/render';
-import { GycLiveClient, NativeLiveSession, LiveNativeEvent } from './GycLiveClient';
+import { GycLiveClient, NativeLiveSession, LiveNativeEvent, LivePictureInPictureOwner } from './GycLiveClient';
 import { ErrorInfo } from '@tencentcloud/atomicxcore';
 import { ComponentContent } from '@ohos.arkui.node';
 import { createGycLiveView } from './LiveComponent';
+import PiPWindow from '@ohos.PiPWindow';
+import { common } from '@kit.AbilityKit';
 
 interface Command {
   generation?: number; liveId?: string; count?: number; message?: string; requestId?: string;
@@ -18,13 +20,19 @@ class PendingReply {
 
 /** 与现有 LiveVideo 协议同名注册；公共状态机在 Kotlin，原生节点只传输与渲染。 */
 @Observed
-export class GycLiveView extends KuiklyRenderBaseView {
+export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPictureOwner {
   static readonly VIEW_NAME: string = 'GycLiveView';
   private static nextViewId: number = 0;
   readonly surfaceViewId: string = `GycLiveVideo_${++GycLiveView.nextViewId}`;
   session: NativeLiveSession | null = null;
+  readonly surfaceController: XComponentController = new XComponentController();
   private surfaceReady: boolean = false;
+  private pipController: PiPWindow.PiPController | null = null;
+  private pipSession: NativeLiveSession | null = null;
+  private pipStarting: Promise<void> | null = null;
+  private pipPhase: string = 'idle';
   private room: string = '';
+  private roomClosed: boolean = false;
   private nativeCallback: KuiklyRenderCallback | null = null;
   private publicCallback: KuiklyRenderCallback | null = null;
   private attached: boolean = false;
@@ -43,25 +51,175 @@ export class GycLiveView extends KuiklyRenderBaseView {
     if (this.destroyed) return true;
     if (key === 'nativeLiveEvent') { this.nativeCallback = value as KuiklyRenderCallback; this.configure(); return true; }
     if (key === 'liveEvent') { this.publicCallback = value as KuiklyRenderCallback; return true; }
-    if (key === 'room') { this.room = typeof value === 'string' ? value : ''; this.configure(); return true; }
+    if (key === 'room') { this.roomClosed = false; this.room = typeof value === 'string' ? value : ''; this.configure(); return true; }
     return super.setProp(key, value);
   }
   private configure(): void {
     if (!this.room || !this.nativeCallback) return;
-    this.nativeCallback({ type: 'configuration', room: this.room, visible: this.attached && GycLiveClient.isForeground(), ready: GycLiveClient.isReady() });
+    this.nativeCallback({ type: 'configuration', room: this.room, visible: this.playbackVisible(), ready: GycLiveClient.isReady() });
   }
-  /** Ability 前后台与组件显隐均调用；完整观看退房后才允许恢复，预览离屏立即停止。 */
+  /** 完整观看保留已加入的房间；预览仍随前后台和显隐停止。 */
   setVisible(visible: boolean): void {
     if (this.destroyed) return;
     this.attached = visible;
-    this.nativeCallback?.({ type: 'visibility', visible: visible && GycLiveClient.isForeground(), ready: GycLiveClient.isReady() });
+    this.notifyVisibility();
   }
   attach(): void {
-    if (!this.stopReady) this.stopReady = GycLiveClient.observeReady(() => {
-      this.nativeCallback?.({ type: 'visibility', visible: this.attached && GycLiveClient.isForeground(), ready: GycLiveClient.isReady() });
-    });
+    if (!this.stopReady) {
+      let foreground = this.isForeground();
+      this.stopReady = GycLiveClient.observeReady(() => {
+        const currentForeground = this.isForeground();
+        const returned = !foreground && currentForeground;
+        foreground = currentForeground;
+        if (returned && this.pipPhase === 'started' && this.pipSession) {
+          const session = this.pipSession;
+          const controller = this.pipController;
+          this.restorePictureInPicture().catch(() => {
+            if (!this.pipCurrent(session) || this.pipController !== controller) return;
+            this.roomClosed = true;
+            this.emit({ type: 'playbackError', generation: session.generation, code: -1, message: 'Picture in picture restore failed' });
+            GycLiveClient.leave(session).catch(() => {});
+            this.notifyVisibility();
+          });
+        }
+        this.notifyVisibility();
+      });
+    }
     this.setVisible(true);
     this.configure();
+  }
+  private isForeground(): boolean {
+    return GycLiveClient.isForeground(this.getUIContext()?.getHostContext());
+  }
+  private playbackVisible(): boolean {
+    const session = this.session;
+    if (this.roomClosed || session?.closed) return false;
+    return session !== null && !session.preview && GycLiveClient.isReady() || this.attached && this.isForeground();
+  }
+  private notifyVisibility(): void {
+    // 系统可能先 STOPPED 再恢复前台或可见区域；二者都恢复后才撤销续播保护。
+    if (this.pipPhase === 'restoring' && !this.pipController && this.attached && this.isForeground()) {
+      this.pipPhase = 'idle'; this.pipSession = null; GycLiveClient.releasePictureInPicture(this);
+    }
+    this.nativeCallback?.({ type: 'visibility', visible: this.playbackVisible(), ready: GycLiveClient.isReady() });
+  }
+  private pipCurrent(session: NativeLiveSession): boolean {
+    return !this.destroyed && !session.closed && this.session === session && this.pipSession === session;
+  }
+  private reportPictureInPicture(enabled: boolean, closed: boolean = false): void {
+    const session = this.pipSession;
+    if (session) this.emit({ type: 'pictureInPictureChanged', generation: session.generation, enabled: enabled });
+    GycLiveClient.pictureInPictureChanged(this, enabled, closed);
+  }
+  private async enterPictureInPicture(): Promise<void> {
+    const session = this.session;
+    if (!session || session.closed || session.preview || !session.info || !this.surfaceReady ||
+      !this.isForeground() || !PiPWindow.isPiPEnabled() || this.pipPhase !== 'idle' || this.pipStarting !== null ||
+      !GycLiveClient.claimPictureInPicture(this)) throw new Error('Picture in picture is not ready');
+    this.pipSession = session;
+    this.pipPhase = 'starting';
+    const starting = this.startPictureInPicture(session);
+    this.pipStarting = starting;
+    try { await starting; }
+    finally { if (this.pipStarting === starting) this.pipStarting = null; }
+  }
+  private async startPictureInPicture(session: NativeLiveSession): Promise<void> {
+    let controller: PiPWindow.PiPController | null = null;
+    let startCalled = false;
+    try {
+      const context = this.getUIContext()?.getHostContext();
+      if (!context) throw new Error('Window context is unavailable');
+      controller = await PiPWindow.create({ context: context, componentController: this.surfaceController,
+        templateType: PiPWindow.PiPTemplateType.VIDEO_LIVE });
+      if (!this.pipCurrent(session)) throw new Error('Session released');
+      this.pipController = controller;
+      const currentController = controller;
+      controller.on('stateChange', (state: PiPWindow.PiPState, _reason: string) => {
+        if (!this.pipCurrent(session) || this.pipController !== currentController) return;
+        if (state === PiPWindow.PiPState.STARTED) {
+          // 仅本次请求首次启动时退到桌面；恢复/重复通知不能再次最小化宿主。
+          if (this.pipPhase === 'starting') {
+            this.pipPhase = 'started';
+            this.reportPictureInPicture(true);
+            this.moveToBackground(session, currentController, context as common.UIAbilityContext).catch(() => {});
+          }
+        } else if (state === PiPWindow.PiPState.ABOUT_TO_RESTORE) {
+          this.pipPhase = 'restoring';
+        } else if (state === PiPWindow.PiPState.STOPPED || state === PiPWindow.PiPState.ERROR) {
+          const restoring = this.pipPhase === 'restoring' && state !== PiPWindow.PiPState.ERROR;
+          this.pipPhase = restoring ? 'restoring' : 'idle';
+          if (!restoring && state === PiPWindow.PiPState.STOPPED) this.roomClosed = true;
+          this.reportPictureInPicture(false, !restoring && state === PiPWindow.PiPState.STOPPED);
+          currentController.off('stateChange');
+          this.pipController = null;
+          if (!restoring) {
+            this.pipSession = null; GycLiveClient.releasePictureInPicture(this);
+            if (state === PiPWindow.PiPState.STOPPED) GycLiveClient.leave(session).catch(() => {});
+          }
+        }
+        this.notifyVisibility();
+      });
+      controller.setAutoStartEnabled(false);
+      startCalled = true;
+      await controller.startPiP();
+      if (!this.pipCurrent(session)) throw new Error('Session released');
+    } catch (error) {
+      controller?.off('stateChange');
+      let stopped = true;
+      if (startCalled && this.pipController === controller) {
+        try { await controller?.stopPiP(); } catch (_) { stopped = false; }
+      }
+      if (stopped) {
+        this.pipController = null; this.pipSession = null; this.pipPhase = 'idle';
+        GycLiveClient.releasePictureInPicture(this);
+      }
+      // stop 失败仍保留 controller，后续会话清理须再结算，不能放行下一房间。
+      this.notifyVisibility();
+      throw error as Error;
+    }
+  }
+  private async moveToBackground(session: NativeLiveSession, controller: PiPWindow.PiPController,
+    context: common.UIAbilityContext): Promise<void> {
+    try {
+      if (!this.pipCurrent(session) || this.pipController !== controller || this.pipPhase !== 'started') return;
+      if (!this.isForeground()) return;
+      if (typeof context.moveAbilityToBackground !== 'function') throw new Error('Window context cannot move to background');
+      await context.moveAbilityToBackground();
+    } catch (_) {
+      // 迟到的拒绝不能收回已经退到后台的窗口；仍在前台时才恢复原 Surface。
+      if (!this.pipCurrent(session) || this.pipController !== controller || this.pipPhase !== 'started') return;
+      if (!this.isForeground()) return;
+      this.pipPhase = 'restoring';
+      try { await controller.stopPiP(); }
+      catch (_) {
+        if (this.pipCurrent(session) && this.pipController === controller) {
+          this.roomClosed = true;
+          this.emit({ type: 'playbackError', generation: session.generation, code: -1, message: 'Picture in picture restore failed' });
+          GycLiveClient.leave(session).catch(() => {});
+          this.notifyVisibility();
+        }
+      }
+    }
+  }
+  async restorePictureInPicture(): Promise<void> {
+    if (!this.isForeground() || !this.pipController || !this.pipSession) throw new Error('Picture in picture is not ready to restore');
+    const controller = this.pipController;
+    this.pipPhase = 'restoring';
+    try { await controller.stopPiP(); }
+    catch (error) { if (this.pipController === controller) this.pipPhase = 'started'; throw error as Error; }
+  }
+  private async stopPictureInPicture(session: NativeLiveSession): Promise<void> {
+    if (this.pipSession !== session) return;
+    try { await this.pipStarting; } catch (_) {}
+    const controller = this.pipController;
+    try {
+      controller?.off('stateChange');
+      if (controller) await controller.stopPiP();
+    } finally {
+      this.reportPictureInPicture(false);
+      this.pipController = null; this.pipSession = null; this.pipPhase = 'idle';
+      GycLiveClient.releasePictureInPicture(this);
+    }
   }
   private emit(event: LiveNativeEvent): void { if (!this.destroyed) this.nativeCallback?.(event); }
   setSurfaceReady(viewId: string, ready: boolean): void {
@@ -75,6 +233,13 @@ export class GycLiveView extends KuiklyRenderBaseView {
     let value: Command;
     try { value = JSON.parse(typeof params === 'string' ? params : '{}') as Command; }
     catch (_) { callback?.({ success: false, message: 'Invalid command' }); return null; }
+    if (method === 'enterPictureInPicture') {
+      this.enterPictureInPicture().then(() => callback?.({ success: true, accepted: true }))
+        .catch((error: Error) => callback?.({ success: false, accepted: false, message: error.message }));
+      return null;
+    }
+    // 宿主的预布局提示不是系统 PiP 状态，不能更新公共快照。
+    if (method === 'updatePictureInPicture') { callback?.({ success: true }); return null; }
     if (method === 'publish') {
       if (typeof value.generation === 'number' && value.generation >= this.publishedGeneration) {
         this.publishedGeneration = value.generation;
@@ -92,12 +257,13 @@ export class GycLiveView extends KuiklyRenderBaseView {
     if (method === 'sdkJoin' || method === 'sdkPreview') {
       const generation = value.generation;
       const id = value.liveId;
-      if (!Number.isSafeInteger(generation) || generation! < this.publishedGeneration || typeof id !== 'string' || !id.trim() ||
-        !this.attached || !GycLiveClient.isForeground() || !GycLiveClient.isReady()) {
+      if (this.roomClosed || !Number.isSafeInteger(generation) || generation! < this.publishedGeneration || typeof id !== 'string' || !id.trim() ||
+        !this.attached || !this.isForeground() || !GycLiveClient.isReady()) {
         callback?.({ success: false, message: 'Not ready' }); return null;
       }
       const old = this.session;
-      const session = new NativeLiveSession(id, generation!, method === 'sdkPreview', event => this.emit(event));
+      const session: NativeLiveSession = new NativeLiveSession(id, generation!, method === 'sdkPreview', event => this.emit(event),
+        () => this.stopPictureInPicture(session));
       this.session = session;
       if (this.surfaceReady) session.setSurfaceView(this.surfaceViewId);
       if (old) GycLiveClient.leave(old).catch(() => {});

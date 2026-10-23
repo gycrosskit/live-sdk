@@ -11,6 +11,7 @@ export interface LiveNativeEvent {
   state?: string;
   count?: number;
   disabled?: boolean;
+  enabled?: boolean;
   code?: number;
   message?: string;
   messages?: LiveMessage[];
@@ -26,6 +27,8 @@ export interface LiveMessage {
   senderAvatarUrl: string; content: string; businessId: string; data: string;
 }
 class LiveAccountObserver {}
+export interface LivePictureInPictureOwner { restorePictureInPicture(): Promise<void>; }
+interface LivePictureInPictureObserver { changed: (enabled: boolean) => void; closed: () => void; }
 
 /** 仅原生 SDK 操作串行；commonMain 仍负责观看排队和超时。未结算的 SDK Promise 不允许被下一房间越过。 */
 export class GycLiveClient {
@@ -38,18 +41,62 @@ export class GycLiveClient {
   private static accountRevision: number = 0;
   private static blocked: boolean = false;
   private static foreground: boolean = false;
+  private static abilityForeground: Map<string, boolean> = new Map();
   private static ownedUser: string = '';
   private static ownedApp: number = 0;
   private static accountObserver: LiveAccountObserver = new LiveAccountObserver();
   private static stopAccountEvents: (() => void) | null = null;
   private static context: common.Context | null = null;
+  private static pipOwner: LivePictureInPictureOwner | null = null;
+  private static pipEnabled: boolean = false;
+  private static pipObservers: Set<LivePictureInPictureObserver> = new Set();
 
-  /** 宿主 Ability 在 onForeground/onBackground 同步，后台默认停止观看与预览。 */
-  static setForeground(value: boolean): void { GycLiveClient.foreground = value; GycLiveClient.changed(); }
-  static isForeground(): boolean { return GycLiveClient.foreground; }
+  /** 无 Context 保留单 Ability 合同；metadata 作用域仅区分 singleton Ability，不区分同类多实例。 */
+  static setForeground(value: boolean, context?: common.Context): void {
+    const key = GycLiveClient.abilityKey(context);
+    if (key) GycLiveClient.abilityForeground.set(key, value);
+    else GycLiveClient.foreground = value;
+    GycLiveClient.changed();
+  }
+  static isForeground(context?: common.Context): boolean {
+    const key = GycLiveClient.abilityKey(context);
+    return key ? GycLiveClient.abilityForeground.get(key) ?? GycLiveClient.foreground : GycLiveClient.foreground;
+  }
+  private static abilityKey(context?: common.Context): string {
+    const info = (context as common.UIAbilityContext | undefined)?.abilityInfo;
+    return info?.bundleName && info.moduleName && info.name ? `${info.bundleName}/${info.moduleName}/${info.name}` : '';
+  }
   static mediaCloud(): TRTCCloud {
     if (!GycLiveClient.isReady() || !GycLiveClient.context) throw new Error('Live identity is not ready');
     return getTRTCShareInstance(GycLiveClient.context);
+  }
+
+  static observePictureInPicture(onChanged: (enabled: boolean) => void, onClosed: () => void): () => void {
+    const observer: LivePictureInPictureObserver = { changed: onChanged, closed: onClosed };
+    GycLiveClient.pipObservers.add(observer);
+    onChanged(GycLiveClient.pipEnabled);
+    return () => { GycLiveClient.pipObservers.delete(observer); };
+  }
+  static claimPictureInPicture(owner: LivePictureInPictureOwner): boolean {
+    if (GycLiveClient.pipOwner && GycLiveClient.pipOwner !== owner) return false;
+    GycLiveClient.pipOwner = owner;
+    return true;
+  }
+  static pictureInPictureChanged(owner: LivePictureInPictureOwner, enabled: boolean, closed: boolean = false): void {
+    if (GycLiveClient.pipOwner !== owner) return;
+    GycLiveClient.pipEnabled = enabled;
+    GycLiveClient.pipObservers.forEach(observer => {
+      try { observer.changed(enabled); if (closed) observer.closed(); } catch (_) {}
+    });
+  }
+  static releasePictureInPicture(owner: LivePictureInPictureOwner): void {
+    if (GycLiveClient.pipOwner !== owner) return;
+    if (GycLiveClient.pipEnabled) GycLiveClient.pictureInPictureChanged(owner, false);
+    GycLiveClient.pipOwner = null;
+  }
+  static async restorePictureInPicture(): Promise<void> {
+    if (!GycLiveClient.pipOwner) throw new Error('Picture in picture is not ready to restore');
+    await GycLiveClient.pipOwner.restorePictureInPicture();
   }
 
   static serial<T>(operation: () => Promise<T>): Promise<T> {
@@ -184,6 +231,7 @@ export class NativeLiveSession {
   private joined: boolean = false;
   private joinAttempted: boolean = false;
   private closing: Promise<void> | null = null;
+  private stopPresentation: () => Promise<void>;
   private timer: number = -1;
   private observing: boolean = false;
   private identity: string = GycLiveClient.currentUserId();
@@ -206,11 +254,13 @@ export class NativeLiveSession {
   private boundVideoUser: string = '';
   private boundVideoView: string = '';
 
-  constructor(liveId: string, generation: number, preview: boolean, emit: (event: LiveNativeEvent) => void) {
+  constructor(liveId: string, generation: number, preview: boolean, emit: (event: LiveNativeEvent) => void,
+    stopPresentation: () => Promise<void> = async () => {}) {
     this.liveId = liveId;
     this.generation = generation;
     this.preview = preview;
     this.emit = emit;
+    this.stopPresentation = stopPresentation;
     this.player = preview ? new AtomicPlayer() : null;
     this.view = preview ? new AtomicLiveView(AtomicLiveController.create(AtomicLiveViewType.playView)) : null;
     if (this.player && this.view) { this.player.setView(this.view); this.player.setVolume(0); }
@@ -369,6 +419,8 @@ export class NativeLiveSession {
   private async cleanup(): Promise<void> {
     if (this.timer >= 0) { clearInterval(this.timer); this.timer = -1; }
     let cleanupFailed = false;
+    // PiP 必须在共享房间退出前收尾，包括账号 logout 触发的直接会话释放。
+    try { await this.stopPresentation(); } catch (_) { cleanupFailed = true; }
     const cleanup: Array<() => void> = [
       () => this.cloud?.removeCallback(this.trtcCallback), () => this.stopVideo(),
       () => this.player?.removeListener(this.playerListener), () => this.player?.stopPlay(),

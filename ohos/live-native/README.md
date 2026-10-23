@@ -1,6 +1,6 @@
 # 鸿蒙观看接线（RC）
 
-`@gycrosskit/live-native@0.3.0-rc.3` 已上架 ohpm，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过。与 JitPack `live-core` / `live-kuikly:0.3.0-rc.2` 配套使用；不能只安装 HAR 就绕过 Kotlin 公共会话。声明最低 SDK API 12，已取得固定 SHA 的真实 Hvigor/ArkTS 编译证据；当前修订以 CI 回执为准，真机音画尚未验收。
+`@gycrosskit/live-native@0.3.0-rc.3` 已上架 ohpm，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过。与 JitPack `live-core` / `live-kuikly:0.3.0-rc.2` 配套使用；不能只安装 HAR 就绕过 Kotlin 公共会话。声明最低 SDK API 12。以上发布不包含当前本地修订：修复后的主 TRTC 观看包已通过 HAR/宿主编译，用户真机确认音画、退出重入和前后台恢复正常；新源码尚未发布，不能只安装旧 Registry 版本获得修复。
 
 原生层只处理腾讯 SDK、ArkUI 视频节点和事件转换。`LiveBridgeAudienceSession` 复用 `AtomicAudienceSession`、`AtomicAudienceSessionCoordinator`、`LiveAudienceSnapshotStore`、`LiveLikeBatcher`；预览复用 `AtomicLivePreviewController`。Renderer 与 SDK UI 主线程之间异步传输，禁止阻塞互等。原生 Promise 队列额外保证即使公共会话超时，未结束的 SDK join/leave 也不会被下一场 SDK 操作越过。
 
@@ -24,17 +24,32 @@ ViewsRegisterEntry.registerViewCreator(GycLiveView.VIEW_NAME, () => new GycLiveV
 
 宿主在已同意隐私后，把服务端 UserSig、业务用户与真实 Ability Context 交给 `await GycLiveClient.login(sdkAppId, userId, userSig, context, nickname, avatarUrl)`。组件核对 IM 实际用户、IM/AtomicX 登录状态和 SDKAppId；异步昵称/头像不参与认证，不在客户端生成 UserSig。
 
-在 Ability `onForeground()` / `onBackground()` 分别调用 `GycLiveClient.setForeground(true/false)`，默认 false，避免后台误播。ArkUI 组件另同步可见区域与移除事件。注销/切换账号先移除当前观看节点，再 `await GycLiveClient.logout()`；切换不同身份需先注销。借用的外部 IM 身份不会被本组件注销，外部账号必须由原 owner 清理；无法从 AtomicX 确认匹配 SDKAppId 的外部 IM 身份也拒绝借用。
+在 Ability `onForeground()` / `onBackground()` 分别调用 `GycLiveClient.setForeground(true/false, this.context)`，创建和销毁时也报告该 Context 为 false。默认 false，首次入房及列表预览必须在前台；本地修订的完整观看保留已建立的会话，不因普通后台重新退房。多宿主必须各自上报：主页面前台不能代表直播宿主前台。当前按 `bundleName/moduleName/Ability name` 区分 singleton；不保证同类多实例隔离。旧单 Ability 可继续使用无 Context 调用。ArkUI 组件另同步可见区域与移除事件。注销/切换账号先移除当前观看节点，再 `await GycLiveClient.logout()`；切换不同身份需先注销。借用的外部 IM 身份不会被本组件注销，外部账号必须由原 owner 清理；无法从 AtomicX 确认匹配 SDKAppId 的外部 IM 身份也拒绝借用。
 
 Kotlin 继续使用既有 `io.github.gycrosskit.livesdk.kuikly.LiveVideo(liveId, preview, active, onEvent, onController)` 或 raw DSL。业务 UI 和房间 ID 由宿主提供，完整观看支持弹幕、点赞、观众列表/人数、公告、关播、被踢和禁言事件。
 
 ## 预览与限制
 
-静音预览使用独立 `AtomicPlayer` 和 `livekit://liveid=<房间ID>`，不调用完整 `joinLive`。房间 ID 沿用腾讯接口原值，不自行改变编码。这一播放协议来自腾讯 [live-v2 官方播放器](https://github.com/Tencent-RTC/TUIKit_Android/blob/68fb94e5861bced0270ec881a084e78e48b8681d/live-v2/tuilivekit/src/main/java/com/trtc/uikit/livekit/player/PlayerViewImpl.kt#L142)，鸿蒙实机仍待验。完整观看先 `joinLive`，再绑定原生播放器；进房回执只证明 SDK 接受加入，不代表已看到首帧。
+静音预览使用独立 `AtomicPlayer` 和 `livekit://liveid=<房间ID>`，不调用完整 `joinLive`。房间 ID 沿用腾讯接口原值，不自行改变编码。这一播放协议来自腾讯 [live-v2 官方播放器](https://github.com/Tencent-RTC/TUIKit_Android/blob/68fb94e5861bced0270ec881a084e78e48b8681d/live-v2/tuilivekit/src/main/java/com/trtc/uikit/livekit/player/PlayerViewImpl.kt#L142)；Android 的示例不能证明鸿蒙同协议可用。当前房间的鸿蒙原生 AtomicPlayer 对照无音画，预览仍有风险，详见[腾讯反馈材料](../../docs/腾讯鸿蒙AtomicPlayer问题反馈.md)。完整观看候选使用 `joinLive` 的主 TRTC，通过公开 `startRemoteView` 绑定真实 owner 与 `liteavsdk` XComponent，不额外进房；进房回执仍不代表已显示首帧。
 
-腾讯 `5.2.2` 的 ArkUI 挂载要求使用内部导出的 `AtomicLiveViewImpl`，上游没有兼容性承诺，因此锁定精确版本。播放状态、人数与禁言的 `@Observed` 标量没有独立公开订阅入口，播放期间每 250ms 检查变化；消息和观众列表使用 SDK 数据源监听，停止时全部撤销。
+预览仍使用腾讯 `5.2.2` 内部导出的 `AtomicLiveViewImpl`，上游没有兼容性承诺，因此锁定精确版本；完整观看不使用该内部节点。预览播放状态、人数与禁言的 `@Observed` 标量没有独立公开订阅入口，播放期间每 250ms 检查变化；消息和观众列表使用 SDK 数据源监听，停止时全部撤销。
 
-本轮不开放连麦、PK、开播、关注/粉丝、业务点赞 reporter、独立 IM 业务群监听和系统 PiP。PiP 返回 `accepted=false`，不会伪造实际状态。播放器错误发布 `playbackError`，不把普通断流当作真实关播。
+本轮不开放连麦、PK、开播、关注/粉丝、业务点赞 reporter 和独立 IM 业务群监听。已发布 HAR 不支持系统 PiP；本地候选新增系统 PiP，编译与设备状态见功能文档。播放器错误发布 `playbackError`，不把普通断流当作真实关播。
+
+## 本地候选的系统 PiP 接线
+
+组件通过原视频节点的稳定 XComponentController 迁移同一 Surface，不新增媒体进房。宿主把
+`GycLiveClient.observePictureInPicture(onChanged, onClosed)` 转接到公共页面的真实状态/关闭观察入口，
+页面移除时执行返回的取消函数。可见前台页面的恢复命令调用 `await GycLiveClient.restorePictureInPicture()`；
+后台点击浮窗展开由系统恢复页面，组件不构造宿主 Ability Want。
+
+`enterPictureInPicture` 回执只表示系统启动请求受理；快照以真实 `STARTED/STOPPED` 回调为准。
+`updatePictureInPicture(true)` 是宿主预布局提示，不伪造已进入状态。普通后台保留完整观看会话、停止列表预览；系统确认 PiP 启动后还须把所属直播 Ability 移到后台，避免 Surface 迁走后露出纯视频黑页。
+注销及释放须先等待本会话 PiP 收尾，再完成原 `leaveLive`。系统拒绝、不支持或会话已失效时返回失败。
+
+若要求小窗期间首页及其他页面仍可操作，直播必须有独立窗口/宿主，或由应用内容器缩小并保留原 Renderer。
+单 UIAbility 下把整个 Ability 移到后台不满足这一要求。当前鸿蒙本地宿主已沿 Android 的独立直播 Activity 结构接入独立 AudienceAbility；
+用户已确认浮窗播放时主页及其他页面可操作、展开恢复、关闭停声、浮窗期间注销清理。准确安装包与边界见功能文档，不能沿用上一单 Ability 包的验收。SDK 和组件不负责创建业务主页面的 Want。
 
 SDK 离房失败会关闭账号门禁，避免声称 SDK 已空闲；自有账号须成功 logout 后重登，借用账号须交原 owner 恢复。未结算的 SDK Promise 会阻塞后续 SDK 操作，公共超时不代表 SDK 已停止。
 
@@ -45,6 +60,6 @@ SDK 离房失败会关闭账号门禁，避免声称 SDK 已空闲；自有账�
 3. A→B→A 快速切房，退出发生在 join 在途、离房回执迟到及弱网时；旧消息、旧画面不能进入新房间。
 4. 列表静音预览→完整观看→退出回列表，再切后台/前台、账号 A→注销→B；核对旧播放器释放及无后台声音。
 
-本轮没有测试直播间与观众凭据，不运行云端用例，不使用生产账号或在仓库保存 UserSig。替身测试、SDK 声明类型检查、Kotlin 编译、HAR 编译、远程公开消费和真机验收分别记录在 [开发与验证](../../docs/开发与验证.md)。
+本地真机参数保留在受控的忽略目录，不提交 UserSig、账号参数、签名或原始 SDK 日志。替身测试、SDK 声明类型检查、Kotlin 编译、HAR 编译、远程公开消费和真机验收分别记录，当前分项结果见[功能与平台差异](../../docs/功能与平台差异.md)，命令见[开发与验证](../../docs/开发与验证.md)。
 
 远程 HAR 编译由源码 CI 的 `ohos-har` job 执行；使用华为 Linux x64 CLT 直链 `OHOS_CLT_URL` 和对应 SHA-256 `OHOS_CLT_SHA256`，SDK 必须匹配 API 22。本轮已核对官方 `6.0.2.670` 工具链，实际编译结果见开发与验证记录；产物归档不会发布到 ohpm 或创建 Release。

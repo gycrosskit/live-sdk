@@ -47,12 +47,30 @@ function fixture() {
     startPlay(url) { calls.push(['play', url]); } stopPlay() { calls.push(['stop']); }
     getState() { return this.state; }
   }
-  class BaseView { setProp() { return false; } onDestroy() {} }
+  const ability = { moveError: null, moveWait: null };
+  const windowContext = { windowContext: true, async moveAbilityToBackground() { calls.push(['moveBackground']); if (ability.moveWait) await ability.moveWait.promise; if (ability.moveError) throw ability.moveError; } };
+  class BaseView { hostContext = windowContext; getUIContext() { return { getHostContext: () => this.hostContext }; } setProp() { return false; } onDestroy() {} }
   const sdk = { AtomicPlayer: Player, AtomicLiveController: { create() { return {}; } }, AtomicLiveView: class {}, AtomicLiveViewType: { playView: 0 },
     BarrageStore: { create: () => barrage }, BarrageType: { TEXT: 0 }, LikeStore: { create: () => likes }, LikeListener: class {},
     LiveAudienceStore: { create: () => audience }, LiveAudienceListener: class {}, LiveListStore: { shared: () => live }, LiveListListener: class {},
     LoginStore: { shared: () => login }, LoginStatus: { LOGINED: 1 }, PlayerListener: class {}, PlayerPlaybackStatus: { PLAYING: 2 }, UserProfile: class {},
     V2TIMManager: { getInstance: () => ({ getLoginUser: () => identity.user, getLoginStatus: () => identity.status }) } };
+  const pip = { supported: true, controllers: [], createWait: null, startWait: null,
+    PiPState: { ABOUT_TO_START: 1, STARTED: 2, ABOUT_TO_STOP: 3, STOPPED: 4, ABOUT_TO_RESTORE: 5, ERROR: 6 },
+    PiPTemplateType: { VIDEO_LIVE: 3 },
+    isPiPEnabled() { return this.supported; },
+    async create(config) {
+      calls.push(['createPiP', config]); if (this.createWait) await this.createWait.promise;
+      const controller = { listener: null,
+        on(type, callback) { this.listener = callback; }, off() { this.listener = null; },
+        setAutoStartEnabled(enabled) { calls.push(['autoPiP', enabled]); },
+        async startPiP() { calls.push(['startPiP']); this.emit(1); if (pip.startWait) await pip.startWait.promise; },
+        async stopPiP() { calls.push(['stopPiP']); this.emit(3); this.emit(4); },
+        emit(state) { this.listener?.(state, 'test'); },
+      };
+      this.controllers.push(controller); return controller;
+    },
+  };
   const cache = new Map();
   function load(name) {
     if (cache.has(name)) return cache.get(name);
@@ -65,16 +83,17 @@ function fixture() {
       if (name === '@tencentcloud/liteavsdk_professional') return { getTRTCShareInstance(context) { calls.push(['sharedCloud', context]); return cloud; }, TRTCVideoStreamType: { TRTCVideoStreamTypeBig: 0 } };
       if (name === '@kit.AbilityKit') return {};
       if (name === '@kuikly-open/render') return { KuiklyRenderBaseView: BaseView };
+      if (name === '@ohos.PiPWindow') return { default: pip };
       if (name === '@ohos.arkui.node') return { ComponentContent: class {} };
       if (name === './LiveComponent') return { createGycLiveView() {} };
       return load(name.replace('./', ''));
-    }, Observed: value => value, setInterval(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearInterval(id) { timers.delete(id); },
+    }, XComponentController: class {}, Observed: value => value, setInterval(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearInterval(id) { timers.delete(id); },
       setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); },
       Map, Set, Number, Promise, Error, encodeURIComponent }, { filename: name + '.ets' });
     cache.set(name, module.exports); return module.exports;
   }
   const { GycLiveClient: client, NativeLiveSession: Session } = load('GycLiveClient');
-  return { client, Session, View: load('GycLiveView').GycLiveView, calls, timers, identity, login, live, barrage, audience, cloud, accountExpired() { accountEvent?.(); } };
+  return { client, Session, View: load('GycLiveView').GycLiveView, calls, timers, identity, login, live, barrage, audience, cloud, pip, ability, windowContext, accountExpired() { accountEvent?.(); } };
 }
 
 test('owned login does not wait for user profile; owned logout cleans the actual identity', async () => {
@@ -356,4 +375,306 @@ test('media bind failure reports a playback error and permits a later availabili
   f.cloud.startRemoteView = start; f.cloud.video('host', 1);
   assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
   await f.client.leave(session);
+});
+
+
+async function joinedView(f) {
+  await f.client.login(123, 'viewer', 'sig', {}); f.client.setForeground(true);
+  const view = new f.View(); const events = []; view.setProp('nativeLiveEvent', e => events.push(e)); view.attach();
+  view.setSurfaceReady(view.surfaceViewId, true);
+  view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'A' }), null); await tick();
+  f.cloud.video('host', 1);
+  return { view, events };
+}
+
+test('PiP acceptance and layout hints do not impersonate actual state; original Surface controller is supplied', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f);
+  const changed = []; let closed = 0; const unsubscribe = f.client.observePictureInPicture(e => changed.push(e), () => closed++);
+  view.call('updatePictureInPicture', JSON.stringify({ enabled: true }), null);
+  let reply; view.call('enterPictureInPicture', '{}', r => reply = r); await tick();
+  assert.equal(reply.accepted, true);
+  assert.deepEqual(changed, [false]); assert.equal(events.some(e => e.type === 'pictureInPictureChanged'), false);
+  const config = f.calls.find(c => c[0] === 'createPiP')[1];
+  assert.equal(config.componentController, view.surfaceController); assert.equal(config.context.windowContext, true);
+  f.pip.controllers[0].emit(f.pip.PiPState.STARTED);
+  assert.deepEqual(changed, [false, true]);
+  assert.equal(events.filter(e => e.type === 'pictureInPictureChanged').at(-1).enabled, true);
+  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
+  assert.equal(f.calls.some(c => ['enterRoom', 'exitRoom', 'newPlayer', 'updateRemote'].includes(c[0])), false);
+  f.pip.controllers[0].emit(f.pip.PiPState.STOPPED);
+  assert.deepEqual(changed, [false, true, false]); assert.equal(closed, 1);
+  unsubscribe(); view.onDestroy(); await tick();
+});
+
+test('PiP protects entering and active background playback, but a real close drops that protection', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f); f.pip.startWait = deferred();
+  view.call('enterPictureInPicture', '{}', null); await tick(); view.setVisible(false); f.client.setForeground(false);
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  f.pip.startWait.resolve(); await tick(); f.pip.controllers[0].emit(f.pip.PiPState.STARTED);
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  f.pip.controllers[0].emit(f.pip.PiPState.STOPPED);
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, false);
+  view.onDestroy(); await tick();
+});
+
+test('system restore survives STOPPED before foreground and visible area restoration without reporting close', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f);
+  let closed = 0; f.client.observePictureInPicture(() => {}, () => closed++);
+  view.call('enterPictureInPicture', '{}', null); await tick(); const controller = f.pip.controllers[0]; controller.emit(2);
+  view.setVisible(false); f.client.setForeground(false);
+  await assert.rejects(f.client.restorePictureInPicture(), /not ready/);
+  controller.emit(5); controller.emit(4);
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  f.client.setForeground(true);
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  view.setVisible(true); assert.equal(closed, 0);
+  assert.equal(events.filter(e => e.type === 'pictureInPictureChanged').at(-1).enabled, false);
+  assert.equal(f.calls.some(c => c[0] === 'stopRemote'), false);
+  view.onDestroy(); await tick();
+});
+
+test('foreground restore stops PiP while keeping the current video and session; duplicate enter is rejected', async () => {
+  const f = fixture(); const { view } = await joinedView(f);
+  view.call('enterPictureInPicture', '{}', null); await tick(); f.pip.controllers[0].emit(2);
+  let duplicate; view.call('enterPictureInPicture', '{}', r => duplicate = r); await tick();
+  assert.equal(duplicate.accepted, false);
+  await f.client.restorePictureInPicture();
+  assert.equal(view.session.closed, false); assert.equal(f.calls.some(c => c[0] === 'leave' || c[0] === 'stopRemote'), false);
+  view.onDestroy(); await tick();
+});
+
+test('release during PiP creation prevents a late start and logout still settles the business leave', async () => {
+  const f = fixture(); const { view } = await joinedView(f); f.pip.createWait = deferred();
+  let reply; view.call('enterPictureInPicture', '{}', r => reply = r); await tick();
+  const loggingOut = f.client.logout(); await tick();
+  assert.equal(f.calls.some(c => c[0] === 'leave'), false);
+  f.pip.createWait.resolve(); await loggingOut; await tick();
+  assert.equal(reply.accepted, false); assert.equal(f.calls.some(c => c[0] === 'startPiP'), false);
+  assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1); assert.equal(f.pip.controllers[0].listener, null);
+  view.onDestroy(); await tick();
+});
+
+test('release waits for pending PiP start, then stops it before allowing the next room', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f); f.pip.startWait = deferred();
+  let reply; view.call('enterPictureInPicture', '{}', r => reply = r); await tick();
+  const oldCallback = f.pip.controllers[0].listener;
+  view.call('sdkLeave', JSON.stringify({ generation: 1 }), null);
+  view.call('sdkJoin', JSON.stringify({ generation: 2, liveId: 'B' }), null); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'join').length, 1);
+  f.pip.startWait.resolve(); await tick(); await tick();
+  assert.equal(reply.accepted, false);
+  const stop = f.calls.findIndex(c => c[0] === 'stopPiP'); const leave = f.calls.findIndex(c => c[0] === 'leave');
+  assert.ok(stop >= 0 && leave > stop); assert.equal(f.calls.filter(c => c[0] === 'join').length, 2);
+  const actualEvents = events.filter(e => e.type === 'pictureInPictureChanged').length;
+  oldCallback(2, 'late');
+  assert.equal(events.filter(e => e.type === 'pictureInPictureChanged').length, actualEvents);
+  view.setVisible(false); f.client.setForeground(false);
+  assert.equal(f.pip.controllers[0].listener, null);
+  view.onDestroy(); await tick();
+});
+
+test('unsupported or failed PiP start restores normal visibility gating and permits retry', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f); f.pip.supported = false;
+  let reply; view.call('enterPictureInPicture', '{}', r => reply = r); await tick(); assert.equal(reply.accepted, false);
+  f.pip.supported = true; f.pip.startWait = deferred();
+  view.call('enterPictureInPicture', '{}', r => reply = r); await tick();
+  f.pip.startWait.reject(new Error('denied')); await tick();
+  assert.equal(reply.accepted, false);
+  view.setVisible(false); assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  view.setVisible(true); f.pip.startWait = null;
+  view.call('enterPictureInPicture', '{}', r => reply = r); await tick(); assert.equal(reply.accepted, true);
+  view.onDestroy(); await tick();
+});
+
+
+test('a PiP stop failure still settles business leave, removes its listener, and blocks unsafe room reuse', async () => {
+  const f = fixture(); const { view } = await joinedView(f);
+  view.call('enterPictureInPicture', '{}', null); await tick(); const controller = f.pip.controllers[0]; controller.emit(2);
+  controller.stopPiP = async () => { throw new Error('stop failed'); };
+  let reply; view.call('sdkLeave', JSON.stringify({ generation: 1 }), r => reply = r); await tick();
+  assert.equal(reply.success, false); assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1);
+  assert.equal(controller.listener, null); assert.equal(f.client.isReady(), false);
+  view.onDestroy(); await tick();
+});
+
+
+test('late PiP start with failed stop cannot silently allow the next room', async () => {
+  const f = fixture(); const { view } = await joinedView(f); f.pip.startWait = deferred();
+  view.call('enterPictureInPicture', '{}', null); await tick();
+  const controller = f.pip.controllers[0]; controller.stopPiP = async () => { throw new Error('stop failed'); };
+  let reply; view.call('sdkLeave', JSON.stringify({ generation: 1 }), r => reply = r); await tick();
+  f.pip.startWait.resolve(); await tick(); await tick();
+  assert.equal(reply.success, false); assert.equal(f.client.isReady(), false);
+  assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1);
+  view.onDestroy(); await tick();
+});
+
+
+test('full watch retains one join through background and early foreground restoration, while preview still stops', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f); const session = view.session;
+  view.setVisible(false); f.client.setForeground(false); await tick();
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  assert.equal(f.calls.filter(c => c[0] === 'join').length, 1); assert.equal(f.calls.some(c => c[0] === 'leave'), false);
+  f.client.setForeground(true); await tick();
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  view.setVisible(true); assert.equal(view.session, session);
+  assert.equal(f.calls.filter(c => c[0] === 'join').length, 1);
+  view.onDestroy(); await tick(); assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1);
+  const preview = new f.View(); preview.attach(); const previewEvents = [];
+  preview.setProp('nativeLiveEvent', e => {
+    previewEvents.push(e);
+    if (e.type === 'visibility' && !e.visible && preview.session) preview.call('sdkStopPreview', JSON.stringify({ generation: 2 }), null);
+  });
+  preview.call('sdkPreview', JSON.stringify({ generation: 2, liveId: 'preview' }), null); await tick();
+  f.client.setForeground(false); await tick();
+  assert.equal(previewEvents.filter(e => e.type === 'visibility').at(-1).visible, false);
+  assert.equal(f.calls.filter(c => c[0] === 'stop').length, 1); assert.equal(preview.session, null);
+  let reply; preview.call('sdkJoin', JSON.stringify({ generation: 3, liveId: 'B' }), r => reply = r); await tick();
+  assert.equal(reply.success, false); assert.equal(f.calls.filter(c => c[0] === 'join').length, 1);
+  preview.onDestroy();
+});
+
+test('only the current first PiP STARTED backgrounds the ability and restore never backgrounds again', async () => {
+  const f = fixture(); const { view } = await joinedView(f);
+  const unsubscribe = f.client.observePictureInPicture(() => {}, () => {});
+  view.call('enterPictureInPicture', '{}', null); await tick(); const controller = f.pip.controllers[0];
+  assert.equal(f.calls.some(c => c[0] === 'moveBackground'), false);
+  controller.emit(2); controller.emit(2); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'moveBackground').length, 1);
+  controller.emit(5); controller.emit(2); controller.emit(4); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'moveBackground').length, 1);
+  assert.equal(view.session.closed, false); unsubscribe(); view.onDestroy(); await tick();
+});
+
+test('failure to background reclaims PiP as restoration without closing or rejoining the room', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f); f.ability.moveError = new Error('not supported');
+  let closed = 0; f.client.observePictureInPicture(() => {}, () => closed++);
+  view.call('enterPictureInPicture', '{}', null); await tick(); f.pip.controllers[0].emit(2); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 1);
+  assert.equal(closed, 0); assert.equal(view.session.closed, false);
+  assert.equal(events.filter(e => e.type === 'pictureInPictureChanged').at(-1).enabled, false);
+  assert.equal(f.calls.filter(c => c[0] === 'join').length, 1); assert.equal(f.calls.some(c => c[0] === 'leave'), false);
+  view.onDestroy(); await tick();
+});
+
+test('a late background rejection keeps PiP when the owner is already in background and Main is foreground', async () => {
+  const f = fixture(); const main = scopedContext(f, 'Main'); const live = scopedContext(f, 'Audience');
+  f.client.setForeground(true, live);
+  const { view } = await joinedView(f); view.hostContext = live; f.ability.moveWait = deferred();
+  view.call('enterPictureInPicture', '{}', null); await tick(); f.pip.controllers[0].emit(2);
+  f.client.setForeground(false, live); f.client.setForeground(true, main);
+  f.ability.moveWait.reject(new Error('owner is no longer foreground')); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 0);
+  assert.equal(view.session.closed, false); assert.equal(f.calls.some(c => c[0] === 'leave'), false);
+  view.onDestroy(); await tick();
+});
+
+test('real PiP close leaves once and cannot rejoin from stale visible or foreground callbacks before a new configuration', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f);
+  view.call('enterPictureInPicture', '{}', null); await tick(); const controller = f.pip.controllers[0]; controller.emit(2);
+  controller.emit(4); await tick();
+  view.call('sdkLeave', JSON.stringify({ generation: 1 }), null); await tick();
+  f.client.setForeground(false); f.client.setForeground(true); view.setVisible(true);
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, false);
+  let reply; view.call('sdkJoin', JSON.stringify({ generation: 2, liveId: 'A' }), r => reply = r); await tick();
+  assert.equal(reply.success, false); assert.equal(f.calls.filter(c => c[0] === 'join').length, 1);
+  assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1);
+  view.setProp('room', JSON.stringify({ liveId: 'B' }));
+  view.call('sdkJoin', JSON.stringify({ generation: 3, liveId: 'B' }), r => reply = r); await tick();
+  assert.equal(reply.success, true); view.onDestroy(); await tick();
+});
+
+
+test('returning through the app icon reclaims only its still-started PiP and a late background completion cannot repeat the move', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f); f.ability.moveWait = deferred();
+  let closed = 0; f.client.observePictureInPicture(() => {}, () => closed++);
+  view.call('enterPictureInPicture', '{}', null); await tick(); const controller = f.pip.controllers[0]; controller.emit(2);
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 0);
+  f.client.setForeground(false); view.setVisible(false); await tick();
+  f.client.setForeground(true); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 1);
+  assert.equal(events.filter(e => e.type === 'pictureInPictureChanged').at(-1).enabled, false);
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  f.ability.moveWait.resolve(); await tick(); view.setVisible(true); f.client.setForeground(true);
+  assert.equal(f.calls.filter(c => c[0] === 'moveBackground').length, 1);
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 1);
+  assert.equal(closed, 0); assert.equal(view.session.closed, false);
+  assert.equal(f.calls.filter(c => c[0] === 'join').length, 1); assert.equal(f.calls.some(c => c[0] === 'leave'), false);
+  view.onDestroy(); await tick();
+});
+
+
+test('a late restore rejection from an old PiP controller cannot close a newer PiP on the same room session', async () => {
+  const f = fixture(); const { view } = await joinedView(f);
+  view.call('enterPictureInPicture', '{}', null); await tick(); const old = f.pip.controllers[0]; old.emit(2);
+  const stopping = deferred(); old.stopPiP = () => stopping.promise;
+  f.client.setForeground(false); view.setVisible(false); f.client.setForeground(true); await tick();
+  old.emit(4); view.setVisible(true);
+  view.call('enterPictureInPicture', '{}', null); await tick(); const current = f.pip.controllers[1]; current.emit(2);
+  stopping.reject(new Error('old failure')); await tick();
+  assert.equal(view.session.closed, false); assert.equal(f.calls.some(c => c[0] === 'leave'), false);
+  view.onDestroy(); await tick();
+});
+
+
+function scopedContext(f, name) {
+  return { ...f.windowContext, abilityInfo: { bundleName: 'test.app', moduleName: 'entry', name } };
+}
+
+test('singleton Ability foreground is keyed by metadata and does not depend on Context object identity', () => {
+  const f = fixture(); const main = scopedContext(f, 'Main'); const live = scopedContext(f, 'Audience');
+  const liveWindowContext = scopedContext(f, 'Audience'); assert.notEqual(live, liveWindowContext);
+  f.client.setForeground(true, main);
+  assert.equal(f.client.isForeground(main), true); assert.equal(f.client.isForeground(live), false);
+  f.client.setForeground(true, live); f.client.setForeground(false, main);
+  assert.equal(f.client.isForeground(main), false); assert.equal(f.client.isForeground(liveWindowContext), true);
+  f.client.setForeground(true, main); f.client.setForeground(false, liveWindowContext);
+  assert.equal(f.client.isForeground(main), true); assert.equal(f.client.isForeground(live), false);
+});
+
+test('legacy foreground API still drives an unregistered single Ability and cannot override registered scopes', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  const live = scopedContext(f, 'Audience'); const view = new f.View(); view.hostContext = live; view.attach();
+  f.client.setForeground(true);
+  assert.equal(f.client.isForeground(), true); assert.equal(f.client.isForeground(live), true);
+  let reply; view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'A' }), r => reply = r); await tick();
+  assert.equal(reply.success, true);
+  f.client.setForeground(false, live); f.client.setForeground(true);
+  assert.equal(f.client.isForeground(), true); assert.equal(f.client.isForeground(live), false);
+  view.onDestroy(); await tick();
+});
+
+test('Main foreground leaves live PiP floating, and only the owner Ability returning to foreground restores it', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  const main = scopedContext(f, 'Main'); const live = scopedContext(f, 'Audience');
+  f.client.setForeground(false, main); f.client.setForeground(true, live);
+  const view = new f.View(); view.hostContext = scopedContext(f, 'Audience'); const events = [];
+  view.setProp('nativeLiveEvent', e => events.push(e)); view.attach(); view.setSurfaceReady(view.surfaceViewId, true);
+  let reply; view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'A' }), r => reply = r); await tick();
+  assert.equal(reply.success, true); assert.equal(f.client.isForeground(), false);
+  view.call('enterPictureInPicture', '{}', null); await tick(); const controller = f.pip.controllers[0]; controller.emit(2);
+  f.client.setForeground(false, live); view.setVisible(false); f.client.setForeground(true, main); await tick();
+  assert.equal(f.calls.some(c => c[0] === 'stopPiP'), false);
+  assert.equal(events.filter(e => e.type === 'pictureInPictureChanged').at(-1).enabled, true);
+  await assert.rejects(f.client.restorePictureInPicture(), /not ready/);
+  f.client.setForeground(false, main); await tick(); assert.equal(f.calls.some(c => c[0] === 'stopPiP'), false);
+  f.client.setForeground(true, live); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 1);
+  assert.equal(events.filter(e => e.type === 'pictureInPictureChanged').at(-1).enabled, false);
+  assert.equal(view.session.closed, false); assert.equal(f.calls.filter(c => c[0] === 'join').length, 1);
+  assert.equal(f.calls.some(c => c[0] === 'leave'), false);
+  view.onDestroy(); await tick();
+});
+
+
+test('static PiP restore delegates to its foreground owner even when the legacy global foreground is false', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  const live = scopedContext(f, 'Audience'); f.client.setForeground(true, live);
+  const view = new f.View(); view.hostContext = scopedContext(f, 'Audience'); view.attach(); view.setSurfaceReady(view.surfaceViewId, true);
+  view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'A' }), null); await tick();
+  view.call('enterPictureInPicture', '{}', null); await tick(); f.pip.controllers[0].emit(2);
+  assert.equal(f.client.isForeground(), false);
+  await f.client.restorePictureInPicture();
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 1); assert.equal(view.session.closed, false);
+  view.onDestroy(); await tick();
 });

@@ -2,9 +2,9 @@
 
 当前配套候选为 Maven `0.3.0-rc.3` / ohpm `@gycrosskit/live-native@0.3.0-rc.3`，发布与精确消费以 Release 收据为准。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
 
-2026-10-23 真机发现 Maven `0.3.0-rc.2` 的公共 View 在 `createEvent()` 中提前注册事件，进入直播时触发 `PagerNotFoundException`。`0.3.0-rc.3` 候选将注册移至挂载后，并用真实 Kuikly 的事件初始化过程补回归；Android/iOS 同样应升级此公共修复。HAR、原生 Pod 未改，沿用已发布版本。新 Maven 的 CI、公开消费及真机复验分别记录在本版本发布收据中。
+2026-10-23 真机发现 Maven `0.3.0-rc.2` 的公共 View 在 `createEvent()` 中提前注册事件，进入直播时触发 `PagerNotFoundException`。`0.3.0-rc.3` 候选将注册移至挂载后，并用真实 Kuikly 的事件初始化过程补回归；Android/iOS 同样应升级此公共修复。此后本地又修订鸿蒙 HAR 的媒体绑定和成员消息，并新增系统 PiP 候选；这些修订尚未发布，不能通过安装旧 HAR 获得。原生 Pod 保持不变。源码、CI、公开消费及真机复验分别记录。
 
-2026-10-22 鸿蒙观看RC：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；支持观看、弹幕、点赞、观众人数、退出换房和静音预览。不含连麦、PK、关注和系统 PiP。已取得固定 SHA 的远程 Kotlin/HAR 编译证据；ohpm `0.3.0-rc.3` 已上架，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过；JitPack 与 Registry 的公开消费状态以 [RC Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.3.0-rc.2) 收据为准，真机尚未验收，见[鸿蒙接线](ohos/live-native/README.md)与[验证边界](docs/开发与验证.md#2026-10-22鸿蒙观看源码候选)。
+2026-10-22 鸿蒙观看 RC（历史发布范围）：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；当时不含连麦、PK、关注和系统 PiP。ohpm `0.3.0-rc.3` 已上架，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过；JitPack 与 Registry 的公开消费状态以 [RC Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.3.0-rc.2) 收据为准，不能证明后续本地修订。当前修复包的完整观看音画、成员消息及分项验收见[功能与平台差异](docs/功能与平台差异.md)；AtomicPlayer 静音预览尚未验收，已整理[腾讯反馈材料](docs/腾讯鸿蒙AtomicPlayer问题反馈.md)。接线见[鸿蒙 README](ohos/live-native/README.md)。
 
 下列带日期的发布/验收段落属于历史，不能作为 `0.3.0-rc.3` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp)。
 

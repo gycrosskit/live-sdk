@@ -56,6 +56,7 @@ internal class KuiklyNativeLiveController(
             else -> {
                 if (event.optLong("generation") != generation) return
                 when (event.optString("type")) {
+                    "pictureInPictureChanged" -> observer?.pictureInPictureChanged(event.optBoolean("enabled"))
                     "ended" -> observer?.liveEnded()
                     "kickedOut" -> observer?.kickedOut()
                     "playbackError" -> publish(JSONObject(liveEventJson("playbackError", event.optInt("code", -1), event.optString("message"))))

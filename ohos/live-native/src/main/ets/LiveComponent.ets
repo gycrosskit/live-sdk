@@ -19,7 +19,7 @@ struct GycLiveHost {
         // shortcut: preview 保留 5.2.2 的 Atomic ArkUI 节点；升级腾讯 SDK 时核对兼容性。
         AtomicLiveViewImpl({ view: this.renderView.session.view })
       } else {
-        XComponent({ id: this.renderView.surfaceViewId, type: XComponentType.SURFACE, libraryname: 'liteavsdk' })
+        XComponent({ id: this.renderView.surfaceViewId, type: XComponentType.SURFACE, libraryname: 'liteavsdk', controller: this.renderView.surfaceController })
           .width('100%').height('100%')
           .onLoad(() => this.renderView.setSurfaceReady(this.renderView.surfaceViewId, true))
           .onDestroy(() => this.renderView.setSurfaceReady(this.renderView.surfaceViewId, false))

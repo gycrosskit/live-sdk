@@ -22,6 +22,7 @@ interface LiveAudiencePlatformObserver {
     fun memberChanged(user: LiveAudienceUserSnapshot, joined: Boolean, timestampSeconds: Double) {}
     fun audience(users: List<LiveAudienceUserSnapshot>, count: Int)
     fun likes(count: Int)
+    fun pictureInPictureChanged(enabled: Boolean) {}
     fun messageDisabled(disabled: Boolean)
 }
 
