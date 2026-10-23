@@ -3,7 +3,8 @@ import { AtomicPlayer, AtomicLiveController, AtomicLiveView, AtomicLiveViewType,
   LiveListStore, LiveListListener, LiveInfo, LiveUserInfo, LoginStore, LoginStatus,
   PlayerListener, PlayerPlaybackStatus, UserProfile, V2TIMManager } from '@tencentcloud/atomicxcore';
 import { common } from '@kit.AbilityKit';
-import { getTRTCShareInstance, TRTCCloud, TRTCCloudCallback, TRTCVideoStreamType } from '@tencentcloud/liteavsdk_professional';
+import { getTRTCShareInstance, TRTCCloud, TRTCCloudCallback, TRTCVideoStreamType,
+  TRTCRenderParams, TRTCVideoFillMode } from '@tencentcloud/liteavsdk_professional';
 
 export interface LiveNativeEvent {
   type: string;
@@ -322,6 +323,10 @@ export class NativeLiveSession {
     try {
       if (!owner || !this.surfaceViewId || !this.availableVideo.has(owner)) { this.stopVideo(); return; }
       if (this.boundVideoUser === owner && this.boundVideoView === this.surfaceViewId) return;
+      // 画布跟随房间横竖布局，源视频保持比例；比例不同时允许留边。
+      const params = new TRTCRenderParams();
+      params.fillMode = TRTCVideoFillMode.TRTCVideoFillMode_Fit;
+      cloud.setRemoteRenderParams(owner, TRTCVideoStreamType.TRTCVideoStreamTypeBig, params);
       if (this.boundVideoUser === owner) cloud.updateRemoteView(owner, TRTCVideoStreamType.TRTCVideoStreamTypeBig, this.surfaceViewId);
       else {
         this.stopVideo();

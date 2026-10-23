@@ -44,6 +44,8 @@ Kotlin 继续使用既有 `io.github.gycrosskit.livesdk.kuikly.LiveVideo(liveId,
 后台点击浮窗展开由系统恢复页面，组件不构造宿主 Ability Want。
 
 `enterPictureInPicture` 回执只表示系统启动请求受理；快照以真实 `STARTED/STOPPED` 回调为准。
+命令必须携带布尔 `wideContent`：横向画布为 1280×720（16:9），标准竖向画布为 720×1280（9:16），与 Android/iOS 的房间布局合同一致。它不是源视频分辨率；主 TRTC 使用 Fit 保留视频比例，比例不同时允许留边。不能省略内容尺寸，依赖临时 XComponent 大小决定浮窗比例。
+PiP 期间同一 XComponent 也保持目标比例；公共预布局会铺满原窗口，仅设置浮窗尺寸仍会把竖屏 Surface 压进横窗。展开后等待所属页面可见且前台恢复再解除比例约束，关闭、失败或会话释放时清理。
 `updatePictureInPicture(true)` 是宿主预布局提示，不伪造已进入状态。普通后台保留完整观看会话、停止列表预览；系统确认 PiP 启动后还须把所属直播 Ability 移到后台，避免 Surface 迁走后露出纯视频黑页。
 注销及释放须先等待本会话 PiP 收尾，再完成原 `leaveLive`。系统拒绝、不支持或会话已失效时返回失败。
 

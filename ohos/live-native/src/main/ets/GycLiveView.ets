@@ -8,7 +8,7 @@ import { common } from '@kit.AbilityKit';
 
 interface Command {
   generation?: number; liveId?: string; count?: number; message?: string; requestId?: string;
-  success?: boolean; accepted?: boolean; event?: KRAny;
+  success?: boolean; accepted?: boolean; event?: KRAny; wideContent?: boolean;
 }
 interface Result { success: boolean; code?: number; message?: string; liveName?: string;
   notice?: string; ownerId?: string; ownerName?: string; ownerAvatarUrl?: string; }
@@ -26,6 +26,7 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
   readonly surfaceViewId: string = `GycLiveVideo_${++GycLiveView.nextViewId}`;
   session: NativeLiveSession | null = null;
   readonly surfaceController: XComponentController = new XComponentController();
+  pictureInPictureAspect: number = -1;
   private surfaceReady: boolean = false;
   private pipController: PiPWindow.PiPController | null = null;
   private pipSession: NativeLiveSession | null = null;
@@ -99,7 +100,8 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
   private notifyVisibility(): void {
     // 系统可能先 STOPPED 再恢复前台或可见区域；二者都恢复后才撤销续播保护。
     if (this.pipPhase === 'restoring' && !this.pipController && this.attached && this.isForeground()) {
-      this.pipPhase = 'idle'; this.pipSession = null; GycLiveClient.releasePictureInPicture(this);
+      this.pipPhase = 'idle'; this.pipSession = null; this.pictureInPictureAspect = -1;
+      GycLiveClient.releasePictureInPicture(this);
     }
     this.nativeCallback?.({ type: 'visibility', visible: this.playbackVisible(), ready: GycLiveClient.isReady() });
   }
@@ -111,26 +113,28 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
     if (session) this.emit({ type: 'pictureInPictureChanged', generation: session.generation, enabled: enabled });
     GycLiveClient.pictureInPictureChanged(this, enabled, closed);
   }
-  private async enterPictureInPicture(): Promise<void> {
+  private async enterPictureInPicture(wideContent: boolean): Promise<void> {
     const session = this.session;
     if (!session || session.closed || session.preview || !session.info || !this.surfaceReady ||
       !this.isForeground() || !PiPWindow.isPiPEnabled() || this.pipPhase !== 'idle' || this.pipStarting !== null ||
       !GycLiveClient.claimPictureInPicture(this)) throw new Error('Picture in picture is not ready');
     this.pipSession = session;
     this.pipPhase = 'starting';
-    const starting = this.startPictureInPicture(session);
+    this.pictureInPictureAspect = wideContent ? 16 / 9 : 9 / 16;
+    const starting = this.startPictureInPicture(session, wideContent);
     this.pipStarting = starting;
     try { await starting; }
     finally { if (this.pipStarting === starting) this.pipStarting = null; }
   }
-  private async startPictureInPicture(session: NativeLiveSession): Promise<void> {
+  private async startPictureInPicture(session: NativeLiveSession, wideContent: boolean): Promise<void> {
     let controller: PiPWindow.PiPController | null = null;
     let startCalled = false;
     try {
       const context = this.getUIContext()?.getHostContext();
       if (!context) throw new Error('Window context is unavailable');
       controller = await PiPWindow.create({ context: context, componentController: this.surfaceController,
-        templateType: PiPWindow.PiPTemplateType.VIDEO_LIVE });
+        templateType: PiPWindow.PiPTemplateType.VIDEO_LIVE,
+        contentWidth: wideContent ? 1280 : 720, contentHeight: wideContent ? 720 : 1280 });
       if (!this.pipCurrent(session)) throw new Error('Session released');
       this.pipController = controller;
       const currentController = controller;
@@ -153,7 +157,7 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
           currentController.off('stateChange');
           this.pipController = null;
           if (!restoring) {
-            this.pipSession = null; GycLiveClient.releasePictureInPicture(this);
+            this.pipSession = null; this.pictureInPictureAspect = -1; GycLiveClient.releasePictureInPicture(this);
             if (state === PiPWindow.PiPState.STOPPED) GycLiveClient.leave(session).catch(() => {});
           }
         }
@@ -171,6 +175,7 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
       }
       if (stopped) {
         this.pipController = null; this.pipSession = null; this.pipPhase = 'idle';
+        this.pictureInPictureAspect = -1;
         GycLiveClient.releasePictureInPicture(this);
       }
       // stop 失败仍保留 controller，后续会话清理须再结算，不能放行下一房间。
@@ -218,6 +223,7 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
     } finally {
       this.reportPictureInPicture(false);
       this.pipController = null; this.pipSession = null; this.pipPhase = 'idle';
+      this.pictureInPictureAspect = -1;
       GycLiveClient.releasePictureInPicture(this);
     }
   }
@@ -234,7 +240,10 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
     try { value = JSON.parse(typeof params === 'string' ? params : '{}') as Command; }
     catch (_) { callback?.({ success: false, message: 'Invalid command' }); return null; }
     if (method === 'enterPictureInPicture') {
-      this.enterPictureInPicture().then(() => callback?.({ success: true, accepted: true }))
+      if (value === null || typeof value.wideContent !== 'boolean') {
+        callback?.({ success: false, accepted: false, message: 'Invalid picture in picture layout' }); return null;
+      }
+      this.enterPictureInPicture(value.wideContent).then(() => callback?.({ success: true, accepted: true }))
         .catch((error: Error) => callback?.({ success: false, accepted: false, message: error.message }));
       return null;
     }

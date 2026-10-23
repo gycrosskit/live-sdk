@@ -21,6 +21,8 @@ struct GycLiveHost {
       } else {
         XComponent({ id: this.renderView.surfaceViewId, type: XComponentType.SURFACE, libraryname: 'liteavsdk', controller: this.renderView.surfaceController })
           .width('100%').height('100%')
+          // 公共 PiP 布局会铺满原窗口，Surface 自身仍须保持目标比例，避免整张竖画布再次被压成横窗。
+          .aspectRatio(this.renderView.pictureInPictureAspect)
           .onLoad(() => this.renderView.setSurfaceReady(this.renderView.surfaceViewId, true))
           .onDestroy(() => this.renderView.setSurfaceReady(this.renderView.surfaceViewId, false))
       }
