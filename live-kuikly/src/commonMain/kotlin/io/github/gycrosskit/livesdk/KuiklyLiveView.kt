@@ -12,9 +12,14 @@ class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
     private var acceptingNativeEvents = true
     override fun viewName() = VIEW_NAME
     override fun createAttr() = KuiklyLiveAttr()
-    override fun createEvent() = KuiklyLiveEvent().apply {
+    override fun createEvent() = KuiklyLiveEvent()
+
+    override fun didMoveToParentView() {
+        acceptingNativeEvents = true
+        super.didMoveToParentView()
+        // createEvent 返回后 Kuikly 才注入 pagerId；挂载后才能注册需要访问 Pager 的事件。
         // 只有鸿蒙 HAR 发送此事件；Android/iOS 继续使用已有原生会话。
-        register("nativeLiveEvent") { value ->
+        getViewEvent().register("nativeLiveEvent") { value ->
             if (!this@KuiklyLiveView.acceptingNativeEvents) return@register
             val event = value as? JSONObject ?: return@register
             val controller = this@KuiklyLiveView.nativeController ?: KuiklyNativeLiveController(this@KuiklyLiveView.pagerId) { method, params, callback ->
@@ -31,11 +36,6 @@ class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
         nativeController?.release()
         nativeController = null
         super.willRemoveFromParentView()
-    }
-
-    override fun didMoveToParentView() {
-        acceptingNativeEvents = true
-        super.didMoveToParentView()
     }
 
     /**
