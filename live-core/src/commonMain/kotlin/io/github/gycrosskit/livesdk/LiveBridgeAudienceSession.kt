@@ -40,11 +40,20 @@ class LiveBridgeAudienceSession internal constructor(
         override fun messages(values: List<LiveAudienceMessageSnapshot>) {
             if (!released && session.isJoined) store.appendMessages(values)
         }
+        override fun memberChanged(user: LiveAudienceUserSnapshot, joined: Boolean, timestampSeconds: Double) {
+            if (!released && session.isJoined) store.appendMemberMessage(user, joined, timestampSeconds)
+        }
         override fun audience(users: List<LiveAudienceUserSnapshot>, count: Int) {
             if (!released && session.isJoined) store.updateAudience(users, count)
         }
         override fun likes(count: Int) {
             if (!released && session.isJoined && count > 0) store.emitLikeEffect()
+        }
+        override fun pictureInPictureChanged(enabled: Boolean) {
+            if (!released && session.isJoined) {
+                store.updatePictureInPicture(enabled)
+                callbacks.onPictureInPictureChanged(enabled)
+            }
         }
         override fun messageDisabled(disabled: Boolean) {
             if (!released && session.isJoined) callbacks.onCurrentUserMessageDisabled(disabled)
@@ -89,7 +98,7 @@ class LiveBridgeAudienceSession internal constructor(
     }
     override fun like() { if (!released && session.isJoined) likes.like() }
     override fun refreshAudience() { if (!released && session.isJoined) platform.refreshAudience() }
-    // shortcut: 首批鸿蒙观看不开放关注与系统 PiP，接入对应平台能力后再启用。
+    // 关注暂未接入；系统 PiP 请求由原生视频节点受理，快照只消费真实系统回调。
     override fun toggleFollow() = Unit
     override fun enterPictureInPicture(wideContent: Boolean) = false
     override fun updatePictureInPicture(enabled: Boolean) = Unit
@@ -100,6 +109,7 @@ class LiveBridgeAudienceSession internal constructor(
         // 仍持有 joined 令牌时冲刷尾批；其后所有互动立即失效。
         likes.release()
         released = true
+        store.updatePictureInPicture(false)
         store.updateInteractionReady(false)
         store.updateLoading(false)
     }

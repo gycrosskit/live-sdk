@@ -56,6 +56,7 @@ internal class KuiklyNativeLiveController(
             else -> {
                 if (event.optLong("generation") != generation) return
                 when (event.optString("type")) {
+                    "pictureInPictureChanged" -> observer?.pictureInPictureChanged(event.optBoolean("enabled"))
                     "ended" -> observer?.liveEnded()
                     "kickedOut" -> observer?.kickedOut()
                     "playbackError" -> publish(JSONObject(liveEventJson("playbackError", event.optInt("code", -1), event.optString("message"))))
@@ -67,6 +68,13 @@ internal class KuiklyNativeLiveController(
                                 item.optString("senderId"), item.optString("senderName"), item.optString("senderAvatarUrl"),
                                 item.optString("content"), item.optString("businessId"), item.optString("data"))
                         })
+                    }
+                    "memberChanged" -> {
+                        val user = event.optJSONObject("user") ?: return
+                        observer?.memberChanged(
+                            LiveAudienceUserSnapshot(user.optString("id"), user.optString("name"), user.optString("avatarUrl")),
+                            event.optBoolean("joined"), event.optDouble("timestampSeconds"),
+                        )
                     }
                     "audience" -> {
                         val list = event.optJSONArray("audience") ?: return

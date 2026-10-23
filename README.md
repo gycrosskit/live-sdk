@@ -1,10 +1,12 @@
 # GY CrossKit Live SDK
 
-当前配套候选为 Maven `0.3.0-rc.2` / ohpm `@gycrosskit/live-native@0.3.0-rc.3`，发布与精确消费以 Release 收据为准。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
+当前配套候选为 Maven `0.3.0-rc.3` / ohpm `@gycrosskit/live-native@0.3.0-rc.3`，发布与精确消费以 Release 收据为准。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
 
-2026-10-22 鸿蒙观看RC：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；支持观看、弹幕、点赞、观众人数、退出换房和静音预览。不含连麦、PK、关注和系统 PiP。已取得固定 SHA 的远程 Kotlin/HAR 编译证据；ohpm `0.3.0-rc.3` 已上架，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过；JitPack 与 Registry 的公开消费状态以 [RC Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.3.0-rc.2) 收据为准，真机尚未验收，见[鸿蒙接线](ohos/live-native/README.md)与[验证边界](docs/开发与验证.md#2026-10-22鸿蒙观看源码候选)。
+2026-10-23 真机发现 Maven `0.3.0-rc.2` 的公共 View 在 `createEvent()` 中提前注册事件，进入直播时触发 `PagerNotFoundException`。`0.3.0-rc.3` 候选将注册移至挂载后，并用真实 Kuikly 的事件初始化过程补回归；Android/iOS 同样应升级此公共修复。此后本地又修订鸿蒙 HAR 的媒体绑定和成员消息，并新增系统 PiP 候选；这些修订尚未发布，不能通过安装旧 HAR 获得。原生 Pod 保持不变。源码、CI、公开消费及真机复验分别记录。
 
-下列带日期的发布/验收段落属于历史，不能作为 `0.3.0-rc.2` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp)。
+2026-10-22 鸿蒙观看 RC（历史发布范围）：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；当时不含连麦、PK、关注和系统 PiP。ohpm `0.3.0-rc.3` 已上架，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过；JitPack 与 Registry 的公开消费状态以 [RC Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.3.0-rc.2) 收据为准，不能证明后续本地修订。当前修复包的完整观看音画、成员消息及分项验收见[功能与平台差异](docs/功能与平台差异.md)；AtomicPlayer 静音预览尚未验收，已整理[腾讯反馈材料](docs/腾讯鸿蒙AtomicPlayer问题反馈.md)。接线见[鸿蒙 README](ohos/live-native/README.md)。
+
+下列带日期的发布/验收段落属于历史，不能作为 `0.3.0-rc.3` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp)。
 
 > 2026-10-08 已发布预发行：Maven 0.2.1-rc.13 / Git Pod 0.2.1-rc.13。冻结归档与严格公开产物检查已通过；[精确版本 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.13)、[远程消费 CI](https://github.com/gycrosskit/live-sdk/actions/runs/37771441035)分别记录产物和 Android/Native 结果。真实设备、云账号与宿主业务尚未验收。
 
@@ -124,7 +126,7 @@ classDiagram
     AtomicAudienceSessionGate <|.. AtomicAudienceSessionCoordinator
 ```
 
-源码入口：[Android 原生会话](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveNativeSession.kt)、[AtomicAudienceView](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt)、[共用会话状态机](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt)、[会话排队与预览门禁](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSessionCoordinator.kt)、[预览生命周期](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt)、[唯一快照](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt)、[Android 账号门禁](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveSdkRuntime.kt)、[iOS 桥安装](live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveSdkRuntime.kt)。OHOS 源码候选经独立 HAR 与 Kuikly 桥接复用 core，固定 SHA 编译证据见开发与验证，未做真机验收；Kuikly PiP 请求与状态同步同样复用平台会话，`accepted` 仅表示平台受理。
+源码入口：[Android 原生会话](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveNativeSession.kt)、[AtomicAudienceView](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt)、[共用会话状态机](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt)、[会话排队与预览门禁](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSessionCoordinator.kt)、[预览生命周期](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt)、[唯一快照](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt)、[Android 账号门禁](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveSdkRuntime.kt)、[iOS 桥安装](live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveSdkRuntime.kt)。OHOS 源码候选经独立 HAR 与 Kuikly 桥接复用 core；编译、和合康 Kuikly 真机分项验收及未验收范围见[功能与平台差异](docs/功能与平台差异.md)，不代表旧 Registry 或通用原生宿主通过；Kuikly PiP 请求与状态同步同样复用平台会话，`accepted` 仅表示平台受理。
 
 ## 平台与模块
 
@@ -141,11 +143,11 @@ Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，�
 
 ## 安装
 
-Maven `0.3.0-rc.2` 使用以下两产品坐标，公开消费结果见本版本 Release 收据；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
+Maven `0.3.0-rc.3` 使用以下两产品坐标，公开消费结果见本版本 Release 收据；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
 
 ```kotlin
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.3.0-rc.2")
+    implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.3.0-rc.3")
 }
 ```
 
@@ -230,7 +232,7 @@ val outgoing = LiveEmojiProtocol.encode("你好😮‍💨❤️") // 你好[TUI
 val incoming = LiveEmojiProtocol.decode("[TUIEmoji_Heart][TUIEmoji_Unknown]") // ❤️[TUIEmoji_Unknown]
 ```
 
-发送前编码、展示前解码均由宿主调用；组件不会自动修改 IM 消息。组合字符优先最长匹配，已编码 token、未知 token、未支持表情与普通文本保持原文。此 API 位于 `commonMain`，`live-core` 的 Android/iOS/OHOS 变体共用同一映射；OHOS 宿主直接依赖 `live-core`，不会获取 AtomicX 会话、播放或 SDK 登录实现。历史 Maven `0.2.1-rc.13` 包含 root/core/Kuikly；当前 `0.3.0-rc.2` 仅保留 core/Kuikly，原生 Pod 不随本次调整升版。
+发送前编码、展示前解码均由宿主调用；组件不会自动修改 IM 消息。组合字符优先最长匹配，已编码 token、未知 token、未支持表情与普通文本保持原文。此 API 位于 `commonMain`，`live-core` 的 Android/iOS/OHOS 变体共用同一映射；OHOS 宿主直接依赖 `live-core`，不会获取 AtomicX 会话、播放或 SDK 登录实现。历史 Maven `0.2.1-rc.13` 包含 root/core/Kuikly；当前 `0.3.0-rc.3` 仅保留 core/Kuikly，原生 Pod 不随本次调整升版。
 
 ## 生命周期与能力边界
 

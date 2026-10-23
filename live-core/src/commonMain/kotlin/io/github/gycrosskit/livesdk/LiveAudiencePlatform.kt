@@ -18,8 +18,11 @@ interface LiveAudiencePlatformObserver {
     fun liveEnded()
     fun kickedOut()
     fun messages(values: List<LiveAudienceMessageSnapshot>)
+    /** 仅真实 SDK 成员事件；默认忽略以兼容只消费已有快照的 observer。 */
+    fun memberChanged(user: LiveAudienceUserSnapshot, joined: Boolean, timestampSeconds: Double) {}
     fun audience(users: List<LiveAudienceUserSnapshot>, count: Int)
     fun likes(count: Int)
+    fun pictureInPictureChanged(enabled: Boolean) {}
     fun messageDisabled(disabled: Boolean)
 }
 
