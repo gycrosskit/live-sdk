@@ -20,7 +20,10 @@ class PendingReply {
 @Observed
 export class GycLiveView extends KuiklyRenderBaseView {
   static readonly VIEW_NAME: string = 'GycLiveView';
+  private static nextViewId: number = 0;
+  readonly surfaceViewId: string = `GycLiveVideo_${++GycLiveView.nextViewId}`;
   session: NativeLiveSession | null = null;
+  private surfaceReady: boolean = false;
   private room: string = '';
   private nativeCallback: KuiklyRenderCallback | null = null;
   private publicCallback: KuiklyRenderCallback | null = null;
@@ -61,6 +64,11 @@ export class GycLiveView extends KuiklyRenderBaseView {
     this.configure();
   }
   private emit(event: LiveNativeEvent): void { if (!this.destroyed) this.nativeCallback?.(event); }
+  setSurfaceReady(viewId: string, ready: boolean): void {
+    if (this.destroyed || viewId !== this.surfaceViewId) return;
+    this.surfaceReady = ready;
+    this.session?.setSurfaceView(ready ? viewId : '');
+  }
 
   call(method: string, params: KRAny, callback: KuiklyRenderCallback | null): KRAny {
     if (this.destroyed) { callback?.({ success: false, message: 'View released' }); return null; }
@@ -91,6 +99,7 @@ export class GycLiveView extends KuiklyRenderBaseView {
       const old = this.session;
       const session = new NativeLiveSession(id, generation!, method === 'sdkPreview', event => this.emit(event));
       this.session = session;
+      if (this.surfaceReady) session.setSurfaceView(this.surfaceViewId);
       if (old) GycLiveClient.leave(old).catch(() => {});
       GycLiveClient.enter(session).then(() => {
         if (this.session !== session || this.destroyed || session.closed) throw new Error('Session released');
@@ -137,6 +146,7 @@ export class GycLiveView extends KuiklyRenderBaseView {
     if (this.destroyed) return;
     this.nativeCallback?.({ type: 'destroyed' });
     this.destroyed = true;
+    this.surfaceReady = false;
     this.stopReady?.(); this.stopReady = null;
     const session = this.session;
     this.session = null;

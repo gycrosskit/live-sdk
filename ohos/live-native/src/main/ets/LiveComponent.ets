@@ -15,9 +15,14 @@ struct GycLiveHost {
   aboutToDisappear(): void { this.renderView.setVisible(false); }
   build() {
     Stack() {
-      if (this.renderView.session) {
-        // shortcut: 5.2.2 必须用内部导出的 ArkUI 渲染节点；升级腾讯 SDK 时核对兼容性。
+      if (this.renderView.session?.preview === true && this.renderView.session.view) {
+        // shortcut: preview 保留 5.2.2 的 Atomic ArkUI 节点；升级腾讯 SDK 时核对兼容性。
         AtomicLiveViewImpl({ view: this.renderView.session.view })
+      } else {
+        XComponent({ id: this.renderView.surfaceViewId, type: XComponentType.SURFACE, libraryname: 'liteavsdk' })
+          .width('100%').height('100%')
+          .onLoad(() => this.renderView.setSurfaceReady(this.renderView.surfaceViewId, true))
+          .onDestroy(() => this.renderView.setSurfaceReady(this.renderView.surfaceViewId, false))
       }
     }.width('100%').height('100%')
     .onVisibleAreaChange([0, 1], (visible: boolean) => this.renderView.setVisible(visible))

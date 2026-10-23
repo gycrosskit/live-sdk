@@ -3,6 +3,7 @@ import { AtomicPlayer, AtomicLiveController, AtomicLiveView, AtomicLiveViewType,
   LiveListStore, LiveListListener, LiveInfo, LiveUserInfo, LoginStore, LoginStatus,
   PlayerListener, PlayerPlaybackStatus, UserProfile, V2TIMManager } from '@tencentcloud/atomicxcore';
 import { common } from '@kit.AbilityKit';
+import { getTRTCShareInstance, TRTCCloud, TRTCCloudCallback, TRTCVideoStreamType } from '@tencentcloud/liteavsdk_professional';
 
 export interface LiveNativeEvent {
   type: string;
@@ -15,6 +16,9 @@ export interface LiveNativeEvent {
   messages?: LiveMessage[];
   audience?: LiveUser[];
   ready?: boolean;
+  user?: LiveUser;
+  joined?: boolean;
+  timestampSeconds?: number;
 }
 export interface LiveUser { id: string; name: string; avatarUrl: string; }
 export interface LiveMessage {
@@ -38,10 +42,15 @@ export class GycLiveClient {
   private static ownedApp: number = 0;
   private static accountObserver: LiveAccountObserver = new LiveAccountObserver();
   private static stopAccountEvents: (() => void) | null = null;
+  private static context: common.Context | null = null;
 
   /** 宿主 Ability 在 onForeground/onBackground 同步，后台默认停止观看与预览。 */
   static setForeground(value: boolean): void { GycLiveClient.foreground = value; GycLiveClient.changed(); }
   static isForeground(): boolean { return GycLiveClient.foreground; }
+  static mediaCloud(): TRTCCloud {
+    if (!GycLiveClient.isReady() || !GycLiveClient.context) throw new Error('Live identity is not ready');
+    return getTRTCShareInstance(GycLiveClient.context);
+  }
 
   static serial<T>(operation: () => Promise<T>): Promise<T> {
     const result = GycLiveClient.queue.then(operation);
@@ -98,6 +107,7 @@ export class GycLiveClient {
       GycLiveClient.ownsLogin = !borrowed;
       if (!borrowed) { GycLiveClient.ownedUser = userId; GycLiveClient.ownedApp = sdkAppId; }
       // 即使登录回执已失效，也记录本组件实际取得的身份，供后续 logout 安全清理。
+      GycLiveClient.context = context;
       GycLiveClient.preparedUser = userId;
       GycLiveClient.preparedApp = sdkAppId;
       if (revision !== GycLiveClient.accountRevision) { GycLiveClient.preparedUser = ''; throw new Error('Login superseded'); }
@@ -120,6 +130,7 @@ export class GycLiveClient {
       GycLiveClient.ownsLogin = false;
       GycLiveClient.ownedUser = ''; GycLiveClient.ownedApp = 0;
       GycLiveClient.preparedApp = 0;
+      GycLiveClient.context = null;
       GycLiveClient.stopAccountEvents?.(); GycLiveClient.stopAccountEvents = null;
     });
   }
@@ -166,8 +177,8 @@ export class NativeLiveSession {
   readonly generation: number;
   readonly preview: boolean;
   private emit: (event: LiveNativeEvent) => void;
-  readonly player: AtomicPlayer = new AtomicPlayer();
-  readonly view: AtomicLiveView = new AtomicLiveView(AtomicLiveController.create(AtomicLiveViewType.playView));
+  readonly player: AtomicPlayer | null;
+  readonly view: AtomicLiveView | null;
   closed: boolean = false;
   info: LiveInfo | null = null;
   private joined: boolean = false;
@@ -178,6 +189,7 @@ export class NativeLiveSession {
   private identity: string = GycLiveClient.currentUserId();
   private lastState: string = '';
   private userDisabled: boolean = false;
+  private lastMessageDisabled: boolean = false;
   private barrage: BarrageStore | null = null;
   private audienceStore: LiveAudienceStore | null = null;
   private likeStore: LikeStore | null = null;
@@ -187,44 +199,94 @@ export class NativeLiveSession {
   private likeListener: LikeListener = new LikeListener();
   private audienceListener: LiveAudienceListener = new LiveAudienceListener();
   private playerListener: PlayerListener = new PlayerListener();
+  private cloud: TRTCCloud | null = null;
+  private trtcCallback: TRTCCloudCallback = {};
+  private surfaceViewId: string = '';
+  private availableVideo: Set<string> = new Set();
+  private boundVideoUser: string = '';
+  private boundVideoView: string = '';
 
   constructor(liveId: string, generation: number, preview: boolean, emit: (event: LiveNativeEvent) => void) {
     this.liveId = liveId;
     this.generation = generation;
     this.preview = preview;
     this.emit = emit;
-    this.player.setView(this.view);
-    this.player.setVolume(preview ? 0 : 100);
-    this.playerListener.playerError = (code, message) => {
-      if (preview) this.event({ type: 'previewState', state: 'FAILED', code: code, message: message });
-      else this.event({ type: 'playbackError', code: code, message: message });
+    this.player = preview ? new AtomicPlayer() : null;
+    this.view = preview ? new AtomicLiveView(AtomicLiveController.create(AtomicLiveViewType.playView)) : null;
+    if (this.player && this.view) { this.player.setView(this.view); this.player.setVolume(0); }
+    this.playerListener.playerError = (code, message) => this.event({ type: 'previewState', state: 'FAILED', code: code, message: message });
+    this.playerListener.liveEnded = () => this.event({ type: 'previewState', state: 'FAILED' });
+    this.playerListener.kickedOut = () => this.event({ type: 'previewState', state: 'FAILED' });
+    this.trtcCallback.onUserVideoAvailable = (userId, available) => {
+      if (!this.valid()) return;
+      if (available) this.availableVideo.add(userId);
+      else this.availableVideo.delete(userId);
+      this.bindVideo();
     };
-    this.playerListener.liveEnded = () => this.event({ type: preview ? 'previewState' : 'ended', state: 'FAILED' });
-    this.playerListener.kickedOut = () => this.event({ type: preview ? 'previewState' : 'kickedOut', state: 'FAILED' });
+    this.trtcCallback.onError = (code, message) => this.event({ type: 'playbackError', code: code, message: message });
     this.liveListener.onLiveEnded = (id) => { if (id === liveId) this.event({ type: 'ended' }); };
     this.liveListener.onKickedOutOfLive = (id) => { if (id === liveId) this.event({ type: 'kickedOut' }); };
     this.likeListener.onReceiveLikesMessage = (id, count) => { if (id === liveId) this.event({ type: 'likes', count: count }); };
+    this.audienceListener.onOwnerJoined = (user) => this.memberChanged(user, true);
+    this.audienceListener.onOwnerLeft = (user) => this.memberChanged(user, false);
+    this.audienceListener.onAdminJoined = (user) => this.memberChanged(user, true);
+    this.audienceListener.onAdminLeft = (user) => this.memberChanged(user, false);
+    this.audienceListener.onAudienceJoined = (user) => this.memberChanged(user, true);
+    this.audienceListener.onAudienceLeft = (user) => this.memberChanged(user, false);
     this.audienceListener.onAudienceMessageDisabled = (user, disabled) => {
       if (user.userID === this.identity) {
         this.userDisabled = disabled;
-        this.event({ type: 'messageDisabled', disabled: disabled || this.barrage?.barrageState.isMessageDisable === true });
+        this.stateChanged();
       }
     };
   }
 
   async open(): Promise<void> {
-    this.player.addListener(this.playerListener);
+    this.player?.addListener(this.playerListener);
     if (!this.preview) {
+      // joinLive 已建立主 TRTC；提前监听真实发布者，不能另拉仅适用于 feedback 混流的 AtomicPlayer。
+      this.cloud = GycLiveClient.mediaCloud();
+      this.cloud.addCallback(this.trtcCallback);
       LiveListStore.shared().addLiveListListener(this.liveListener);
       this.joinAttempted = true;
       this.info = await LiveListStore.shared().joinLive(this.liveId);
       this.joined = true;
     }
     if (this.closed) { await this.close(); throw new Error('Session released'); }
-    // 与腾讯 live-v2 官方播放器一致；preview 只拉流，不加入完整直播间。
-    this.player.startPlay(`livekit://liveid=${this.liveId}`);
-    if (!this.preview) this.observe();
+    // preview 保持只拉流、不加入完整直播间的既有合同。
+    this.player?.startPlay(`livekit://liveid=${this.liveId}`);
+    this.bindVideo();
+    // 完整观看等 common 确认 joined 后由 sdkObserve 启用，避免初始状态被提前丢弃。
     this.timer = setInterval(() => this.stateChanged(), 250);
+  }
+
+  setSurfaceView(viewId: string): void {
+    if (this.closed || this.preview || this.surfaceViewId === viewId) return;
+    this.surfaceViewId = viewId;
+    this.bindVideo();
+  }
+  private bindVideo(): void {
+    const owner = this.info?.liveOwner.userID || '';
+    const cloud = this.cloud;
+    if (!this.valid() || !this.joined || !cloud) return;
+    try {
+      if (!owner || !this.surfaceViewId || !this.availableVideo.has(owner)) { this.stopVideo(); return; }
+      if (this.boundVideoUser === owner && this.boundVideoView === this.surfaceViewId) return;
+      if (this.boundVideoUser === owner) cloud.updateRemoteView(owner, TRTCVideoStreamType.TRTCVideoStreamTypeBig, this.surfaceViewId);
+      else {
+        this.stopVideo();
+        cloud.startRemoteView(owner, TRTCVideoStreamType.TRTCVideoStreamTypeBig, this.surfaceViewId);
+      }
+      this.boundVideoUser = owner;
+      this.boundVideoView = this.surfaceViewId;
+    } catch (error) {
+      this.event({ type: 'playbackError', code: -1, message: (error as Error).message || 'Video binding failed' });
+    }
+  }
+  private stopVideo(): void {
+    const user = this.boundVideoUser;
+    this.boundVideoUser = ''; this.boundVideoView = '';
+    if (user) this.cloud?.stopRemoteView(user, TRTCVideoStreamType.TRTCVideoStreamTypeBig);
   }
 
   observe(): void {
@@ -253,6 +315,10 @@ export class NativeLiveSession {
     if (!this.valid()) throw new Error('Session released');
   }
   private valid(): boolean { return !this.closed && GycLiveClient.isReady() && this.identity === GycLiveClient.currentUserId(); }
+  private memberChanged(user: LiveUserInfo, joined: boolean): void {
+    this.event({ type: 'memberChanged', user: { id: user.userID, name: user.userName, avatarUrl: user.avatarURL },
+      joined: joined, timestampSeconds: Date.now() / 1000 });
+  }
   private event(event: LiveNativeEvent): void {
     if (this.valid()) { event.generation = this.generation; this.emit(event); }
   }
@@ -275,8 +341,8 @@ export class NativeLiveSession {
   private stateChanged(): void {
     if (this.closed) return;
     if (!this.valid()) { this.emit({ type: 'visibility', ready: false }); return; }
-    const state = this.player.getState().playbackStatus;
     if (this.preview) {
+      const state = this.player?.getState().playbackStatus;
       const name = state === PlayerPlaybackStatus.PLAYING ? 'PLAYING' : 'LOADING';
       if (name !== this.lastState) { this.lastState = name; this.event({ type: 'previewState', state: name }); }
     } else if (this.audienceStore && this.barrage) {
@@ -285,6 +351,10 @@ export class NativeLiveSession {
       const key = `${this.audienceStore.liveAudienceState.audienceCount}:${disabled}`;
       if (key !== this.lastState) {
         this.lastState = key; this.audience();
+      }
+      // 首次未禁言及人数变化只是快照，不能冒充一次解除禁言通知。
+      if (disabled !== this.lastMessageDisabled) {
+        this.lastMessageDisabled = disabled;
         this.event({ type: 'messageDisabled', disabled: disabled });
       }
     }
@@ -300,7 +370,8 @@ export class NativeLiveSession {
     if (this.timer >= 0) { clearInterval(this.timer); this.timer = -1; }
     let cleanupFailed = false;
     const cleanup: Array<() => void> = [
-      () => this.player.removeListener(this.playerListener), () => this.player.stopPlay(),
+      () => this.cloud?.removeCallback(this.trtcCallback), () => this.stopVideo(),
+      () => this.player?.removeListener(this.playerListener), () => this.player?.stopPlay(),
       () => LiveListStore.shared().removeLiveListListener(this.liveListener),
       () => this.barrage?.barrageState.messageList.unregisterDataChangeListener(this.messageChanges),
       () => this.audienceStore?.liveAudienceState.audienceList.unregisterDataChangeListener(this.audienceChanges),
@@ -308,6 +379,7 @@ export class NativeLiveSession {
       () => this.likeStore?.removeLikeListener(this.likeListener)
     ];
     cleanup.forEach(action => { try { action(); } catch (_) { cleanupFailed = true; } });
+    this.cloud = null; this.surfaceViewId = ''; this.availableVideo.clear();
     try {
       if (this.joinAttempted) await LiveListStore.shared().leaveLive();
       GycLiveClient.didClose(this, !cleanupFailed);

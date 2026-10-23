@@ -68,6 +68,13 @@ internal class KuiklyNativeLiveController(
                                 item.optString("content"), item.optString("businessId"), item.optString("data"))
                         })
                     }
+                    "memberChanged" -> {
+                        val user = event.optJSONObject("user") ?: return
+                        observer?.memberChanged(
+                            LiveAudienceUserSnapshot(user.optString("id"), user.optString("name"), user.optString("avatarUrl")),
+                            event.optBoolean("joined"), event.optDouble("timestampSeconds"),
+                        )
+                    }
                     "audience" -> {
                         val list = event.optJSONArray("audience") ?: return
                         observer?.audience((0 until list.length()).mapNotNull { index ->

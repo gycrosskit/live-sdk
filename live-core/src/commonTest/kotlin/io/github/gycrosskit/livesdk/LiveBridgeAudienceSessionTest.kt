@@ -99,6 +99,33 @@ class LiveBridgeAudienceSessionTest {
         }
     }
 
+    @Test
+    fun `member events reuse semantic snapshots and reject callbacks outside the joined session`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val platform = Platform()
+        val session = LiveBridgeAudienceSession("A", platform, LivePlaybackCallbacks(), Gate(), CoroutineScope(coroutineContext + SupervisorJob()))
+        val user = LiveAudienceUserSnapshot("member", "name", "avatar")
+        try {
+            runCurrent()
+            platform.observer.memberChanged(user, true, 1.0)
+            assertTrue(session.snapshot.messages.isEmpty())
+            platform.observer.joined(host("A"), "")
+            platform.observer.memberChanged(user, true, 2.0)
+            platform.observer.memberChanged(user, false, 3.0)
+            val messages = session.snapshot.messages
+            assertEquals(listOf(LiveAudienceMessageKind.MEMBER_JOINED, LiveAudienceMessageKind.MEMBER_LEFT), messages.map { it.kind })
+            assertTrue(messages.all { it.sequence < 0 && it.content.isEmpty() })
+            assertEquals(listOf("name", "name"), messages.map { it.senderName })
+            assertEquals(listOf(2.0, 3.0), messages.map { it.timestampSeconds })
+            session.release()
+            platform.observer.memberChanged(user, true, 4.0)
+            assertEquals(messages, session.snapshot.messages)
+        } finally {
+            session.release(); platform.leaveFinished(true, 0, "")
+            runCurrent(); Dispatchers.resetMain()
+        }
+    }
+
     private class Gate : AtomicAudienceSessionGate {
         private var owner: Any? = null
         private val waiting = ArrayDeque<Pair<Any, () -> Unit>>()

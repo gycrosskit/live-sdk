@@ -40,6 +40,9 @@ class LiveBridgeAudienceSession internal constructor(
         override fun messages(values: List<LiveAudienceMessageSnapshot>) {
             if (!released && session.isJoined) store.appendMessages(values)
         }
+        override fun memberChanged(user: LiveAudienceUserSnapshot, joined: Boolean, timestampSeconds: Double) {
+            if (!released && session.isJoined) store.appendMemberMessage(user, joined, timestampSeconds)
+        }
         override fun audience(users: List<LiveAudienceUserSnapshot>, count: Int) {
             if (!released && session.isJoined) store.updateAudience(users, count)
         }
