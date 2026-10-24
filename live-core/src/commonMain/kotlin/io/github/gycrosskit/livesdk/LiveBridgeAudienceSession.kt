@@ -10,16 +10,32 @@ class LiveBridgeAudienceSession internal constructor(
     private val callbacks: LivePlaybackCallbacks,
     gate: AtomicAudienceSessionGate,
     scope: kotlinx.coroutines.CoroutineScope,
+    private val likeReporter: LiveLikeReporter = LiveLikeReporter.None,
 ) : LiveAudienceCommands {
-    constructor(liveId: String, platform: LiveAudiencePlatform, callbacks: LivePlaybackCallbacks) : this(
+    constructor(liveId: String, platform: LiveAudiencePlatform, callbacks: LivePlaybackCallbacks,
+        likeReporter: LiveLikeReporter = LiveLikeReporter.None) : this(
         liveId, platform, callbacks, AtomicAudienceSessionCoordinator,
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate),
+        likeReporter,
     )
     private val store = LiveAudienceSnapshotStore(liveId)
     private var released = false
-    private val likes: LiveLikeBatcher = LiveLikeBatcher(send = { count, done ->
-        if (session.isJoined) platform.sendLike(count, done) else done(false)
-    })
+    private val follow = LiveHostFollowController(platform, scope, store::updateFollowState) {
+        AtomicAudienceRuntimeRegistry.showMessage("关注操作失败${it.takeIf(String::isNotBlank)?.let { detail -> "：$detail" }.orEmpty()}")
+    }
+    private val likes = LiveLikeBatcher(
+        send = { count, done ->
+            if (session.isJoined) {
+                val userId = platform.currentUserId
+                platform.sendLike(count) { succeeded ->
+                    if (succeeded) likeReporter.report(liveId, userId, count)
+                    done(succeeded)
+                }
+            } else done(false)
+        },
+        onRetryScheduled = { AtomicAudienceRuntimeRegistry.warning("鸿蒙 AtomicX 点赞发送失败，已保留批次等待重试，liveId=$liveId") },
+        onSendException = { AtomicAudienceRuntimeRegistry.error("鸿蒙 AtomicX 点赞调用异常，liveId=$liveId", it) },
+    )
     private val observer = object : LiveAudiencePlatformObserver {
         override fun joined(host: LiveAudienceHostSnapshot, introduction: String) {
             session.joined {
@@ -27,6 +43,7 @@ class LiveBridgeAudienceSession internal constructor(
                     store.updateHost(host)
                     store.updateIntroduction(introduction)
                     store.updateInteractionReady(true)
+                    follow.bind(host.owner?.id.orEmpty())
                 }
             }
         }
@@ -97,9 +114,9 @@ class LiveBridgeAudienceSession internal constructor(
         }
     }
     override fun like() { if (!released && session.isJoined) likes.like() }
-    override fun refreshAudience() { if (!released && session.isJoined) platform.refreshAudience() }
-    // 关注暂未接入；系统 PiP 请求由原生视频节点受理，快照只消费真实系统回调。
-    override fun toggleFollow() = Unit
+    override fun refreshAudience() { if (!released && session.isJoined) { platform.refreshAudience(); follow.refreshFans() } }
+    override fun toggleFollow() { if (!released && session.isJoined) follow.toggleFollow() }
+    // 系统 PiP 请求由原生视频节点受理，快照只消费真实系统回调。
     override fun enterPictureInPicture(wideContent: Boolean) = false
     override fun updatePictureInPicture(enabled: Boolean) = Unit
     override fun release() { finish(); session.release() }
@@ -109,6 +126,7 @@ class LiveBridgeAudienceSession internal constructor(
         // 仍持有 joined 令牌时冲刷尾批；其后所有互动立即失效。
         likes.release()
         released = true
+        follow.release()
         store.updatePictureInPicture(false)
         store.updateInteractionReady(false)
         store.updateLoading(false)

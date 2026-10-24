@@ -11,7 +11,7 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 /**
- * 双端共用的本地点赞合并策略。
+ * 三端共用的本地点赞合并策略。
  *
  * 首次点赞立即发送，后续连点在固定窗口合并；失败批次只在当前会话未释放时恢复。平台层
  * 只实现 SDK `sendLike` 调用，不再各自维护节流时序。

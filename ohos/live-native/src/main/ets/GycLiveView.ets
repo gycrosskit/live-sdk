@@ -9,9 +9,10 @@ import { common } from '@kit.AbilityKit';
 interface Command {
   generation?: number; liveId?: string; count?: number; message?: string; requestId?: string;
   success?: boolean; accepted?: boolean; event?: KRAny; wideContent?: boolean;
+  userId?: string; followed?: boolean;
 }
 interface Result { success: boolean; code?: number; message?: string; liveName?: string;
-  notice?: string; ownerId?: string; ownerName?: string; ownerAvatarUrl?: string; }
+  notice?: string; ownerId?: string; ownerName?: string; ownerAvatarUrl?: string; userId?: string; }
 class PendingReply {
   timer: number = -1;
   readonly callback: KuiklyRenderCallback;
@@ -32,6 +33,7 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
   private pipSession: NativeLiveSession | null = null;
   private pipStarting: Promise<void> | null = null;
   private pipPhase: string = 'idle';
+  private pictureInPictureHostManaged: boolean = false;
   private room: string = '';
   private roomClosed: boolean = false;
   private nativeCallback: KuiklyRenderCallback | null = null;
@@ -50,6 +52,7 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
 
   setProp(key: string, value: KRAny | KuiklyRenderCallback): boolean {
     if (this.destroyed) return true;
+    if (key === 'pictureInPictureHostManaged') { this.pictureInPictureHostManaged = value === true; return true; }
     if (key === 'nativeLiveEvent') { this.nativeCallback = value as KuiklyRenderCallback; this.configure(); return true; }
     if (key === 'liveEvent') { this.publicCallback = value as KuiklyRenderCallback; return true; }
     if (key === 'room') { this.roomClosed = false; this.room = typeof value === 'string' ? value : ''; this.configure(); return true; }
@@ -72,7 +75,7 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
         const currentForeground = this.isForeground();
         const returned = !foreground && currentForeground;
         foreground = currentForeground;
-        if (returned && this.pipPhase === 'started' && this.pipSession) {
+        if (returned && !this.pictureInPictureHostManaged && this.pipPhase === 'started' && this.pipSession) {
           const session = this.pipSession;
           const controller = this.pipController;
           this.restorePictureInPicture().catch(() => {
@@ -145,7 +148,10 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
           if (this.pipPhase === 'starting') {
             this.pipPhase = 'started';
             this.reportPictureInPicture(true);
-            this.moveToBackground(session, currentController, context as common.UIAbilityContext).catch(() => {});
+            // 单 Ability 容器自己切换首页与直播；默认仍保留独立窗口的退后台行为。
+            if (!this.pictureInPictureHostManaged) {
+              this.moveToBackground(session, currentController, context as common.UIAbilityContext).catch(() => {});
+            }
           }
         } else if (state === PiPWindow.PiPState.ABOUT_TO_RESTORE) {
           this.pipPhase = 'restoring';
@@ -280,7 +286,8 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
         if (this.session !== session || this.destroyed || session.closed) throw new Error('Session released');
         const info = session.info;
         const result: Result = { success: true, liveName: info?.liveName || '', notice: info?.notice || '',
-          ownerId: info?.liveOwner.userID || '', ownerName: info?.liveOwner.userName || '', ownerAvatarUrl: info?.liveOwner.avatarURL || '' };
+          ownerId: info?.liveOwner.userID || '', ownerName: info?.liveOwner.userName || '', ownerAvatarUrl: info?.liveOwner.avatarURL || '',
+          userId: GycLiveClient.currentUserId() };
         callback?.(result);
       }).catch((error: Error) => {
         const code = (error as ErrorInfo).code;
@@ -296,6 +303,16 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
         GycLiveClient.leave(session).then(() => callback?.({ success: true }))
           .catch((error: Error) => callback?.({ success: false, code: -1, message: error.message }));
       } else if (method === 'sdkObserve') session.observe();
+      else if (method === 'sdkCheckFollow') {
+        session.checkFollowed(value.userId || '').then(followed => callback?.({ success: true, followed }))
+          .catch((error: Error) => callback?.({ success: false, message: error.message }));
+      } else if (method === 'sdkFollow') {
+        session.updateFollow(value.userId || '', value.followed === true).then(() => callback?.({ success: true }))
+          .catch((error: Error) => callback?.({ success: false, message: error.message }));
+      } else if (method === 'sdkFans') {
+        session.fetchFans(value.userId || '').then(fansCount => callback?.({ success: true, fansCount }))
+          .catch((error: Error) => callback?.({ success: false, message: error.message }));
+      }
       else if (method === 'sdkSendBarrage' || method === 'sdkLike') {
         const result = method === 'sdkSendBarrage' ? session.sendBarrage(value.message || '') : session.sendLike(value.count || 0);
         result.then(() => callback?.({ success: true })).catch((error: Error) => callback?.({ success: false, message: error.message }));

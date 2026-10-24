@@ -111,8 +111,7 @@ jobs:
     runs-on: ${{ (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')) && 'macos-15' || 'ubuntu-24.04' }}
     timeout-minutes: 90
     env:
-      LIVE_NATIVE_TAG: 'native-0.2.1-rc.15'
-      LIVE_NATIVE_COMMIT: 'c9362a1df4c420fafd8f7b47865d34c598ccab1f'
+      LIVE_NATIVE_TAG: 'native-1.0.0'
     steps:
       - name: Require successful public verification
         run: |
@@ -157,6 +156,9 @@ jobs:
         if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.version != '')
         timeout-minutes: 35
         run: |
+          # 同版 Maven/Pod 必须指向同一提交；不沿用旧 RC 的固定 SHA。
+          git fetch --no-tags origin "refs/tags/$VERSION"
+          export LIVE_NATIVE_COMMIT="$(git rev-parse 'FETCH_HEAD^{commit}')"
           native_source="$RUNNER_TEMP/live-release-native"
           git clone --depth 1 --single-branch --branch "$LIVE_NATIVE_TAG" https://github.com/gycrosskit/live-sdk.git "$native_source"
           test "$(git -C "$native_source" rev-parse HEAD)" = "$LIVE_NATIVE_COMMIT"

@@ -6,7 +6,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** 平台 IM 关注接口；实现必须把回调派发到 UI 主线程。 */
-internal interface LiveHostFollowGateway {
+interface LiveHostFollowGateway {
     val currentUserId: String
 
     fun checkFollowed(userId: String, callback: (LiveFollowResult<Boolean>) -> Unit)
@@ -17,14 +17,14 @@ internal interface LiveHostFollowGateway {
 }
 
 /** 不把 Android V2TIM 或 Swift Result 类型带入共用关注状态机。 */
-internal sealed interface LiveFollowResult<out T> {
+sealed interface LiveFollowResult<out T> {
     data class Success<T>(val value: T) : LiveFollowResult<T>
 
     data class Failure(val message: String, val error: Throwable? = null) : LiveFollowResult<Nothing>
 }
 
 /**
- * 双端共用的主播关注状态机。
+ * 三端共用的主播关注状态机。
  *
  * ownerGeneration、followGeneration 与 fansGeneration 分别隔离切房、关注写入和粉丝数刷新；即使主播 ID
  * 再次相同或同一主播的请求乱序返回，旧结果也不会覆盖新状态。平台层只负责调用 IM API 并返回中立结果。

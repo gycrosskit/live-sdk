@@ -4,7 +4,7 @@ plugins {
  id("com.android.application") version "8.10.1"
 }
 val kuiklyRenderFrameworkDir = providers.gradleProperty("kuiklyRenderFrameworkDir").orNull
-val liveVersion = providers.gradleProperty("liveVersion").orElse("0.3.0-rc.4").get()
+val liveVersion = providers.gradleProperty("liveVersion").orElse("1.0.0").get()
 val verifyOhos = providers.gradleProperty("verifyOhos").isPresent
 val verifyEmoji = verifyOhos || providers.gradleProperty("verifyEmoji").isPresent
 val verifyLocalSource = providers.gradleProperty("verifyLocalSource").isPresent

@@ -12,8 +12,9 @@ workflow = json.loads(subprocess.check_output([
     str(ROOT / '.github/workflows/release-validation.yml'),
 ], text=True))
 job = workflow['jobs']['release-native']
-assert job['env'] == {'LIVE_NATIVE_TAG': 'native-0.2.1-rc.15',
-                      'LIVE_NATIVE_COMMIT': 'c9362a1df4c420fafd8f7b47865d34c598ccab1f'}
+assert job['env'] == {'LIVE_NATIVE_TAG': 'native-1.0.0'}
+paired_commit = 'c' * 40
+assert 'refs/tags/$VERSION' in ''.join(step.get('run', '') for step in job['steps'])
 for name in ('release-android', 'release-native'):
     consumers = [step['run'] for step in workflow['jobs'][name]['steps']
                  if '-p verification/consumer' in step.get('run', '')]
@@ -26,7 +27,7 @@ assert 'linkDebugFrameworkIosArm64' in link and 'bash scripts/verify-ios-native.
 assert '-PkuiklyRenderFrameworkDir=$LIVE_KUIKLY_IOS_FRAMEWORK_DIR' in link
 assert '"-PliveVersion=$VERSION"' in link and '-PverifyKuiklyCompose' in link
 
-for head, expected in [(job['env']['LIVE_NATIVE_COMMIT'], True), ('a' * 40, False)]:
+for head, expected in [(paired_commit, True), ('a' * 40, False)]:
     with TemporaryDirectory() as folder:
         root = Path(folder)
         (root / 'ci-diagnostics').mkdir()
@@ -55,7 +56,8 @@ case "$1" in
       printf '%s\\n' "$MOCK_HEAD"
     fi
     ;;
-  rev-parse) printf '%s\\n' "$GITHUB_SHA" ;;
+  fetch) exit 0 ;;
+  rev-parse) if [[ "${2:-}" = 'FETCH_HEAD^{commit}' ]]; then printf '%s\\n' "$PAIRED_COMMIT"; else printf '%s\\n' "$GITHUB_SHA"; fi ;;
   *) exit 1 ;;
 esac
 ''')
@@ -74,8 +76,8 @@ assert root.name == 'live-release-native'
 ''')
         (root / 'scripts/verify-live-renderer-ios.sh').write_text('''#!/usr/bin/env bash
 set -euo pipefail
-test "$LIVE_NATIVE_TAG" = native-0.2.1-rc.15
-test "$LIVE_NATIVE_COMMIT" = c9362a1df4c420fafd8f7b47865d34c598ccab1f
+test "$LIVE_NATIVE_TAG" = native-1.0.0
+test "$LIVE_NATIVE_COMMIT" = "$PAIRED_COMMIT"
 test "$(cat verification/renderer-ios/Podfile)" = current-remote-podfile
 test "$(cat verification/renderer-ios/RendererTests.swift)" = current-renderer-tests
 test "$(cat ios/Sources/Renderer/Fixture.swift)" = old-production
@@ -85,7 +87,7 @@ python3 verification/renderer-ios/test_contract.py
 ''')
         env = dict(os.environ, **job['env'], PATH=str(root / 'tools') + os.pathsep + os.environ['PATH'],
                    RUNNER_TEMP=str(root), GITHUB_WORKSPACE=str(root), GITHUB_SHA='b' * 40,
-                   GITHUB_ENV=str(root / 'github-env'), MOCK_HEAD=head)
+                   GITHUB_ENV=str(root / 'github-env'), MOCK_HEAD=head, PAIRED_COMMIT=paired_commit, VERSION='1.0.0')
         result = subprocess.run(['bash', '-euo', 'pipefail', '-c', build], cwd=root,
                                 env=env, capture_output=True, text=True)
         assert (result.returncode == 0) == expected, result.stdout + result.stderr
@@ -93,7 +95,7 @@ python3 verification/renderer-ios/test_contract.py
         assert proof_path.exists() == expected
         if expected:
             proof = json.loads(proof_path.read_text())
-            assert proof == {'checker': 'current-candidate', 'native_commit': job['env']['LIVE_NATIVE_COMMIT']}
+            assert proof == {'checker': 'current-candidate', 'native_commit': paired_commit}
             receipt = json.loads((root / 'ci-diagnostics/release-renderer-runner-proof.json').read_text())
             assert receipt['candidate_commit'] == env['GITHUB_SHA'] != receipt['native_commit']
             assert receipt['native_tag'] == job['env']['LIVE_NATIVE_TAG']
