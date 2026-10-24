@@ -1,6 +1,7 @@
 """Exercise retained Native identity handoff with fixtures, without SDK/network calls."""
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
@@ -108,4 +109,18 @@ python3 verification/renderer-ios/test_contract.py
                 f'{key}={root}/live-release-native/build/native-renderer-consumer/iphoneos'
                 for key in ('LIVE_RENDERER_IOS_FRAMEWORK_DIR', 'LIVE_KUIKLY_IOS_FRAMEWORK_DIR')]
 
-print('PASS: current candidate runner/Podfile/checker replace obsolete verification only; Native ROOT/HEAD/production stay at exact retained tag; wrong SHA fails before handoff. Fixture only.')
+for tag, allowed in [('', True), ('0.3.0-rc.2', True), ('1.0.0', True),
+                     ('har-1.0.0', True), ('har-1.0.0-rc.1', True),
+                     ('main', False), ('../1.0.0', False), ('har-main', False), ('1.0.0-rc.no', False)]:
+    with TemporaryDirectory() as folder:
+        root = Path(folder)
+        (root / 'scripts').mkdir()
+        shutil.copyfile(ROOT / 'scripts/verify-ohos-consumer.sh', root / 'scripts/verify-ohos-consumer.sh')
+        (root / 'scripts/prepare-ohos-clt.sh').write_text('touch "$TASK_ROOT/clt-reached"\nexit 73\n')
+        result = subprocess.run(['bash', str(root / 'scripts/verify-ohos-consumer.sh')],
+                                env=dict(os.environ, VERSION='1.0.0', RELEASE_HAR_TAG=tag),
+                                capture_output=True, text=True, timeout=10)
+        assert result.returncode == (73 if allowed else 2), (tag, result.returncode)
+        assert (root / 'clt-reached').exists() == allowed
+
+print('PASS: retained Native identity handoff and formal/RC HAR Tag boundary; invalid Tag fails before CLT or network. Fixture only.')
