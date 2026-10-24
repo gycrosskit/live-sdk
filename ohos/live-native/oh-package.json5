@@ -7,7 +7,7 @@
   "repository": "https://github.com/gycrosskit/live-sdk",
   "license": "Apache-2.0",
   "dependencies": {
-    "@kuikly-open/render": "2.28.0",
+    "@kuikly-open/render": "2.29.1",
     "@tencentcloud/atomicxcore": "5.2.2",
     "@tencentcloud/imsdk": "9.1.7818",
     "@tencentcloud/liteavsdk_professional": "13.5.9128"

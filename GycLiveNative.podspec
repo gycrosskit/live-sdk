@@ -20,6 +20,6 @@ Pod::Spec.new do |s|
   end
   s.subspec 'Renderer' do |renderer|
     renderer.source_files = 'ios/Sources/GycLiveRenderer/*.swift'
-    renderer.dependency 'OpenKuiklyIOSRender', '>= 2.28.0', '< 2.30.0'
+    renderer.dependency 'OpenKuiklyIOSRender', '2.29.1'
   end
 end
