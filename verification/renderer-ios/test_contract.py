@@ -161,7 +161,7 @@ class RendererContractTest(unittest.TestCase):
             ("AtomicXCore", "4.3.9"), ("RTCRoomEngine/Professional", "4.3.9"),
             ("TXIMSDK_Plus_iOS_XCFramework", "9.1.7818")])
         self.assertEqual(re.findall(r"(?:s|renderer).dependency '([^']+)'", spec), ["OpenKuiklyIOSRender"])
-        self.assertIn("'>= 2.28.0', '< 2.30.0'", renderer)
+        self.assertIn("renderer.dependency 'OpenKuiklyIOSRender', '2.29.1'", renderer)
         self.assertIn("ios/Sources/GycLiveRenderer/*.swift", renderer)
 
     def test_native_renderer_does_not_import_kotlin_or_host(self):

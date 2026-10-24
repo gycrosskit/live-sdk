@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 /** Renderer 只传输；公共观看状态仍在 Main，ArkTS 只持有原生 Store/View。 */
 internal class KuiklyNativeLiveController(
     private val pagerId: String,
+    private val likeReporter: LiveLikeReporter,
     private val call: (String, JSONObject, ((JSONObject) -> Unit)?) -> Unit,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -118,11 +119,13 @@ internal class KuiklyNativeLiveController(
         } else if (audience == null) {
             val token = ++generation
             val session = LiveBridgeAudienceSession(request.liveId, object : LiveAudiencePlatform {
+                override var currentUserId: String = ""
                 override fun join(liveId: String, observer: LiveAudiencePlatformObserver) {
                     this@KuiklyNativeLiveController.observer = observer
                     native("sdkJoin", token, { put("liveId", liveId) }) { result ->
                         // join 回调仍须交公共状态机结算；released 的旧实例不能更新当前快照。
                         if (result.optBoolean("success")) {
+                            currentUserId = result.optString("userId")
                             val host = LiveAudienceHostSnapshot(liveId, result.optString("liveName"),
                                 LiveAudienceUserSnapshot(result.optString("ownerId"), result.optString("ownerName"), result.optString("ownerAvatarUrl")),
                                 false, false, false, 0L)
@@ -141,7 +144,22 @@ internal class KuiklyNativeLiveController(
                     native("sdkLike", token, { put("count", count) }) { onFinished(it.optBoolean("success")) }
                 }
                 override fun refreshAudience() { native("sdkObserve", token) }
-            }, kuiklyLiveCallbacks { if (token == generation) publish(JSONObject(it)) })
+                override fun checkFollowed(userId: String, callback: (LiveFollowResult<Boolean>) -> Unit) {
+                    native("sdkCheckFollow", token, { put("userId", userId) }) {
+                        callback(if (it.optBoolean("success")) LiveFollowResult.Success(it.optBoolean("followed")) else LiveFollowResult.Failure(it.optString("message")))
+                    }
+                }
+                override fun updateFollow(userId: String, followed: Boolean, callback: (LiveFollowResult<Unit>) -> Unit) {
+                    native("sdkFollow", token, { put("userId", userId); put("followed", followed) }) {
+                        callback(if (it.optBoolean("success")) LiveFollowResult.Success(Unit) else LiveFollowResult.Failure(it.optString("message")))
+                    }
+                }
+                override fun fetchFans(userId: String, callback: (LiveFollowResult<Long>) -> Unit) {
+                    native("sdkFans", token, { put("userId", userId) }) {
+                        callback(if (it.optBoolean("success")) LiveFollowResult.Success(it.optLong("fansCount")) else LiveFollowResult.Failure(it.optString("message")))
+                    }
+                }
+            }, kuiklyLiveCallbacks { if (token == generation) publish(JSONObject(it)) }, likeReporter)
             audience = session
             snapshots = scope.launch { session.snapshots.collect {
                 if (token == generation) publish(JSONObject().put("type", "snapshot").put("snapshot", JSONObject(it.toKuiklyJson())))
@@ -159,7 +177,8 @@ internal class KuiklyNativeLiveController(
             "like" -> audience?.like()
             "refreshAudience" -> audience?.refreshAudience()
             "sendBarrage" -> audience?.sendBarrage(event.optString("message")) { ok, message -> complete(ok, message) } ?: complete(false, "Not ready")
-            "enterPictureInPicture", "toggleFollow" -> complete(false, "Unsupported on HarmonyOS")
+            "toggleFollow" -> audience?.toggleFollow()
+            "enterPictureInPicture" -> complete(false, "Picture in picture requires a native video node")
         }
     }
 

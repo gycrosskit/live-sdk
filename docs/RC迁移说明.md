@@ -1,8 +1,10 @@
 # 0.3.0-rc.4 RC 迁移说明
 
+> 当前迁移目标已统一为 Maven / iOS Pod / OHPM `1.0.0`（未发布），Kuikly 2.29.1。下文 RC 编号仅说明此前迁移边界，不是当前配套版本或新版本验收证明。
+
 本 RC 使用 Maven `0.3.0-rc.4` / ohpm `@gycrosskit/live-native@0.3.0-rc.4`；真实归档摘要、固定源码 SHA、远程 CI 与公开消费结果由本轮发布收据记录。没有新 checksum 时发布校验直接失败，不复用旧版本或填写占位摘要。
 
-本轮包含公共 `KuiklyLiveView` 挂载后注册事件、鸿蒙主 TRTC 观看绑定、成员消息及系统 PiP 修复。宿主需提供独立直播 Ability、根账号生命周期与每窗口策略；新 WebView HAR `0.2.0-rc.15` 提供窗口策略注入，Maven/iOS Pod 不随其空发版。Live iOS Native 源码不变，保留 `native-0.2.1-rc.15`。本地横向房间音画、PiP、主页操作与注销已有分项真机证据；新远程版本消费和升级后宿主回归仍分别验收。
+本轮包含公共 `KuiklyLiveView` 挂载后注册事件、鸿蒙主 TRTC 观看绑定、成员消息及系统 PiP 修复。宿主提供根账号生命周期和所属 WindowStage 策略；单 Ability 接入时保留 Root/Audience 双 Renderer，并设置 `pictureInPictureHostManaged=true`，不另启直播 Ability；新 WebView HAR `0.2.0-rc.15` 提供窗口策略注入，Maven/iOS Pod 不随其空发版。Live iOS Native 源码不变，保留 `native-0.2.1-rc.15`。单 Ability 分项包已有音画、PiP、主页操作与注销的用户验收；整套 Module 下沉候选设备回归待统一执行；新远程版本消费和升级后宿主回归仍分别验收。
 
 ## 从旧 CMP 产品迁移
 

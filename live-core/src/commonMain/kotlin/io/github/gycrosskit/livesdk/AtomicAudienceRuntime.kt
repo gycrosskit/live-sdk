@@ -1,6 +1,6 @@
 package io.github.gycrosskit.livesdk
 
-/** AtomicX 观看组件向双端宿主请求日志和短提示的最小桥接。 */
+/** AtomicX 观看组件向三端宿主请求日志和短提示的最小桥接。 */
 interface AtomicAudienceRuntime {
     /**
      * 记录组件运行信息；宿主负责持久化和 Release 环境输出策略。
@@ -45,6 +45,11 @@ object AtomicAudienceRuntimeRegistry {
      */
     fun install(value: AtomicAudienceRuntime) {
         runtime = value
+    }
+
+    /** 组件接线层统一通过已安装的宿主出口记录日志，不自行输出账号或凭据。 */
+    fun log(level: AtomicAudienceLogLevel, message: String, error: Throwable? = null) {
+        runtime?.log(level, message, error)
     }
 
     internal fun info(message: String) {
