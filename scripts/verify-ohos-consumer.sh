@@ -2,6 +2,10 @@
 # Registry 与 Release HAR 独立消费；Release 模式不能当作 Registry 验收。
 set -euo pipefail
 TASK_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Release Tag 与 HAR 版本独立配套；后续仍按冻结摘要和包身份核验。
+if [[ -n "${RELEASE_HAR_TAG:-}" ]]; then
+  [[ "$RELEASE_HAR_TAG" =~ ^(har-)?[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || exit 2
+fi
 # release 事件从已冻结的 consumer 读取独立 HAR 版本，dispatch 可显式指定。
 if [[ -z "${VERSION:-}" ]]; then
   VERSION="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["dependencies"]["@gycrosskit/live-native"])' "$TASK_ROOT/verification-ohos/consumer/oh-package.json5")"
@@ -18,7 +22,6 @@ manifest = json.loads(Path('consumer/oh-package.json5').read_text())
 assert manifest['dependencies']['@gycrosskit/live-native'] == sys.argv[1]
 PY
 if [[ -n "${RELEASE_HAR_TAG:-}" ]]; then
-  [[ "$RELEASE_HAR_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]] || exit 2
   curl --fail --location --proto '=https' --proto-redir '=https' --connect-timeout 30 --max-time 120 \
     "https://github.com/gycrosskit/live-sdk/releases/download/$RELEASE_HAR_TAG/GycLiveNative.har" -o consumer/LiveNative.har
   python3 - "$TASK_ROOT" "$VERSION" <<'PYTHON'
