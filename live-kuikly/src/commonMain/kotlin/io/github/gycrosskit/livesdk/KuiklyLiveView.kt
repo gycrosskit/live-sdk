@@ -8,6 +8,8 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 
 /** 视频层；账号、业务接口、房间页面和生命周期策略由宿主提供。 */
 class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
+    /** 鸿蒙桥的成功批次出口；宿主须在挂载前捕获可信房间/账号，Android/iOS 仍由原生工厂注入。 */
+    var likeReporter: LiveLikeReporter = LiveLikeReporter.None
     private var nativeController: KuiklyNativeLiveController? = null
     private var acceptingNativeEvents = true
     override fun viewName() = VIEW_NAME
@@ -22,7 +24,7 @@ class KuiklyLiveView : DeclarativeBaseView<KuiklyLiveAttr, KuiklyLiveEvent>() {
         getViewEvent().register("nativeLiveEvent") { value ->
             if (!this@KuiklyLiveView.acceptingNativeEvents) return@register
             val event = value as? JSONObject ?: return@register
-            val controller = this@KuiklyLiveView.nativeController ?: KuiklyNativeLiveController(this@KuiklyLiveView.pagerId) { method, params, callback ->
+            val controller = this@KuiklyLiveView.nativeController ?: KuiklyNativeLiveController(this@KuiklyLiveView.pagerId, likeReporter) { method, params, callback ->
                 val target = this@KuiklyLiveView.renderView
                 if (target == null) callback?.invoke(JSONObject().put("success", false).put("message", "View released"))
                 else target.callMethod(method, params.toString(), callback?.let { done -> { done(it as? JSONObject ?: JSONObject()) } })

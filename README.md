@@ -1,12 +1,18 @@
 # GY CrossKit Live SDK
 
-当前配套候选为 Maven `0.3.0-rc.4` / ohpm `@gycrosskit/live-native@0.3.0-rc.4`，发布与精确消费以 Release 收据为准。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留，原生版本与标签不变。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
+> 当前源码候选统一为 **1.0.0**：Maven（core/Kuikly）、iOS Pod 与 OHPM 使用同版；尚未发布，示例坐标须待发布后远程消费。本地验证使用显式源码/本地 HAR，Kuikly 基线为 2.29.1，真机与新版本远程消费另验。
+
+OHOS 未发布源码修订：`GycLiveView.setProp("pictureInPictureHostManaged", true)` 支持宿主在单 Ability 内管理直播与首页展示，不强制把整个应用退后台，默认不改变旧窗口策略。字段合同与验收边界见[功能与平台差异](docs/功能与平台差异.md)；不包含在现有冻结 RC，不涉及 Android/iOS 源码或发版。
+
+当前配套候选为 Maven `1.0.0` / ohpm `@gycrosskit/live-native@1.0.0`，发布与精确消费以 Release 收据为准。根工程仅聚合 `live-core` / `live-kuikly`，已移除 JetBrains CMP UI、根 Maven 产品和 CMP consumer。KuiklyCompose、原生会话及 iOS Pod 保留；Pod 同步为 1.0.0，Git 标签为 native-1.0.0（待发布）。旧 `0.2.*` 制品和校验值保留；重验旧版本时检出对应 tag，使用该 tag 的原 consumer / 脚本。当前脚本只验证新两产品、12 个 publication 合同。
 
 2026-10-23 真机发现 Maven `0.3.0-rc.2` 的公共 View 在 `createEvent()` 中提前注册事件，进入直播时触发 `PagerNotFoundException`。当前候选将注册移至挂载后，并用真实 Kuikly 的事件初始化过程补回归；Android/iOS 同样应升级此公共修复。此后本地又修订鸿蒙 HAR 的媒体绑定和成员消息，并新增系统 PiP 候选；这些修订纳入 rc.4，是否已可远程消费以该版本 Release 收据为准，旧 HAR 不包含修复。原生 Pod 保持不变。源码、CI、公开消费及真机复验分别记录。
 
+当前鸿蒙分支的未发布补齐候选：同账号准备复用、进房原始终态与清理分离、公共关注/粉丝状态机、SDK 点赞成功批次 reporter 及统一宿主诊断接线。Android/iOS 沿用既有平台实现；具体本地验证与未验收项见[功能与平台差异](docs/功能与平台差异.md#本地未发布候选观看行为补齐2026-10-23)，不代表远程版本已包含修复。
+
 2026-10-22 鸿蒙观看 RC（历史发布范围）：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；当时不含连麦、PK、关注和系统 PiP。ohpm `0.3.0-rc.3` 已上架，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过；JitPack 与 Registry 的公开消费状态以 [RC Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.3.0-rc.2) 收据为准，不能证明后续本地修订。当前修复包的完整观看音画、成员消息及分项验收见[功能与平台差异](docs/功能与平台差异.md)；AtomicPlayer 静音预览尚未验收，已整理[腾讯反馈材料](docs/腾讯鸿蒙AtomicPlayer问题反馈.md)。接线见[鸿蒙 README](ohos/live-native/README.md)。
 
-下列带日期的发布/验收段落属于历史，不能作为 `0.3.0-rc.4` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp)。
+下列带日期的发布/验收段落属于历史，不能作为 `1.0.0` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp)。
 
 > 2026-10-08 已发布预发行：Maven 0.2.1-rc.13 / Git Pod 0.2.1-rc.13。冻结归档与严格公开产物检查已通过；[精确版本 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.13)、[远程消费 CI](https://github.com/gycrosskit/live-sdk/actions/runs/37771441035)分别记录产物和 Android/Native 结果。真实设备、云账号与宿主业务尚未验收。
 
@@ -135,19 +141,19 @@ classDiagram
 | 根 `live-sdk` | Gradle 聚合工程 | 不发布 Maven 产品；统一两个子模块的 group/version 与 POM 许可 |
 | `live-core` | Android、iOS、OHOS | 公共观看/预览状态机、快照与互动；OHOS 经 `LiveAudiencePlatform` 接入原生 HAR，编译证据按固定 SHA 记录，未做设备验收 |
 | `live-kuikly` | Android、iOS、OHOS RC | Kuikly Native DSL、KuiklyCompose 与薄原生视频 View，无第二套 CMP UI |
-| `GycLiveNative` | iOS | 独立 Swift CocoaPod，AtomicX 账号/视频/互动/IM/RoomEngine 系统 PiP；Git Pod `0.2.1-rc.13` 已发布，登录资料门禁已修复；真实 SDK/App 最终链接已通过；`rc.6`/`rc.3` 历史验收保留 |
+| `GycLiveNative` | iOS | 独立 Swift CocoaPod，AtomicX 账号/视频/互动/IM/RoomEngine 系统 PiP；当前 Pod `1.0.0` / tag `native-1.0.0` 尚未发布；默认 Core、可选 Renderer；旧发布与真机分项结果不代表当前候选验收 |
 
-Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，应用同时遵循所选腾讯 SDK 的部署要求。已验证工具链为 Kotlin `2.2.21-1.0.0`、AGP `8.10.1`、Kuikly `2.28.0-2.0.21-ohos` / Render `2.28.0`。
+Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，应用同时遵循所选腾讯 SDK 的部署要求。已验证工具链为 Kotlin `2.2.21-1.0.0`、AGP `8.10.1`、当前源码 Kuikly `2.29.1-2.0.21-ohos` / Render `2.29.1`。
 
 **HarmonyOS 观看 RC 已发布，Registry 安装与消费编译通过；设备尚未验收**。OHOS KLIB 与 `@gycrosskit/live-native` HAR 必须配套使用，不能用协议 KLIB 编译或旧发布证明新音视频能力。
 
 ## 安装
 
-Maven `0.3.0-rc.4` 使用以下两产品坐标，公开消费结果见本版本 Release 收据；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
+Maven `1.0.0` 使用以下两产品坐标，公开消费结果见本版本 Release 收据；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
 
 ```kotlin
 commonMain.dependencies {
-    implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.3.0-rc.4")
+    implementation("com.github.gycrosskit.live-sdk:live-kuikly:1.0.0")
 }
 ```
 
@@ -181,11 +187,11 @@ dependencyResolutionManagement {
 
 Kuikly group 固定从腾讯 Maven 读取 metadata 和实际产物，避免其他镜像先返回 metadata、随后 AAR 缺失时 Gradle 无法切源。此规则只匹配 `com.tencent.kuikly-open`，保留其他 SDK 的仓库选择；本轮响应与边界见 [rc.5 验收记录](docs/0.2.1-rc.5远程发布验收.md)。
 
-以下已发布 `0.2.1-rc.13` Kuikly 坐标包含 `io.github.gycrosskit.livesdk.kuikly.LiveVideo` Composable。已发布同名Native DSL在 `io.github.gycrosskit.livesdk` 包。在 KMP 的 `commonMain.dependencies` 声明 Kuikly 依赖，同一应用全部模块固定同版本。当前 OHOS 宿主使用 Kotlin/Compose compiler `2.2.21-1.0.0`，`pluginManagement` 也配置上述受限 Eazytec 仓库；表情协议只需 `live-core`，Kuikly 播放模块不提供 OHOS 变体：
+当前未发布 `1.0.0` Kuikly 坐标包含 `io.github.gycrosskit.livesdk.kuikly.LiveVideo` Composable。已发布同名Native DSL在 `io.github.gycrosskit.livesdk` 包。在 KMP 的 `commonMain.dependencies` 声明 Kuikly 依赖，同一应用全部模块固定同版本。当前 OHOS 宿主使用 Kotlin/Compose compiler `2.2.21-1.0.0`，`pluginManagement` 也配置上述受限 Eazytec 仓库；表情协议只需 `live-core`；完整观看使用 `live-kuikly`，三端原生接线须分别安装配套 Pod/HAR：
 
 ```kotlin
 // Kuikly Native DSL
-implementation("com.github.gycrosskit.live-sdk:live-kuikly:0.2.1-rc.13")
+implementation("com.github.gycrosskit.live-sdk:live-kuikly:1.0.0")
 ```
 
 Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应用保留 `IosLiveSdkBridge` 的薄协议映射。原生 Pod `GycLiveNative` 承接 SDK 实现，独立于 `Shared.framework`，厂商版本固定为 AtomicXCore `4.3.9`、RTCRoomEngine/Professional `4.3.9` 和 IM `9.1.7818`；Kuikly 另外加入当前 Maven 标签 `0.2.1-rc.13` 的 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/0.2.1-rc.13/live-kuikly/ios/GycLiveView.swift) 与 `OpenKuiklyIOSRender`。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
@@ -195,7 +201,7 @@ Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应
 `GycLiveNative` 通过不可变 Git 标签安装。`0.2.1-rc.3` 的 JitPack 全变体下载、远程 Gradle 消费与 Git Pod UIKit 最终链接已通过，见 [M19 记录](docs/M19验证记录.md) 和[同版本预发布](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.3)。本仓库没有 Swift Package 或 CocoaPods Specs 发布。以下为已发布历史 `0.2.1-rc.13` 安装方式，真实 Git Pod/App 链接消费已通过：
 
 ```ruby
-pod 'GycLiveNative', :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => '0.2.1-rc.13'
+pod 'GycLiveNative', :git => 'https://github.com/gycrosskit/live-sdk.git', :tag => 'native-1.0.0'
 ```
 
 纯 UIKit 应用可 `import GycLiveNative` 后复用 `GycLiveClient.shared`。KMP 应用继续安装自己的 `IosLiveSdkBridge`，把 Shared 回调映射为组件的 Swift 协议。账号准备与 UserSig、观看排队与超时、业务 IM 解析、前台可拖动小窗和 UI 仍由宿主负责。完整 API、释放与系统 PiP 边界见 [接入指南](docs/接入指南.md#ios-原生-cocoapod)。当前固定组合为 Maven `0.2.1-rc.13` + Native Pod `0.2.1-rc.13`；各渠道结果见完整源码审查。
@@ -226,7 +232,7 @@ LiveVideo {
 ```kotlin
 import io.github.gycrosskit.livesdk.LiveEmojiProtocol
 
-// 三端纯协议宿主：implementation("com.github.gycrosskit.live-sdk:live-core:0.2.1-rc.13")
+// 三端纯协议宿主：implementation("com.github.gycrosskit.live-sdk:live-core:1.0.0")
 val catalog = LiveEmojiProtocol.items // 每项提供 display 展示字符和 token 收发原文
 val outgoing = LiveEmojiProtocol.encode("你好😮‍💨❤️") // 你好[TUIEmoji_Sigh][TUIEmoji_Heart]
 val incoming = LiveEmojiProtocol.decode("[TUIEmoji_Heart][TUIEmoji_Unknown]") // ❤️[TUIEmoji_Unknown]
@@ -271,3 +277,5 @@ GitHub-hosted runner 已提供官方 CLT 的 HAR 编译；JitPack、ohpm 精确�
 指定版本消费者按版本合同启用新表情 API 与 OHOS core 探针，并对公开 Kuikly Android AAR 执行 FRAME 布局与快照生命周期契约；OHOS core 编译不代表 OHOS 直播支持。
 
 公网核验同步组织 `templates/check-public-maven.py`：使用冻结归档给出的完整 publications 清单，核对 JitPack tag/commit、每个公开 POM/Module、全部声明变体字节大小和四类哈希、内部精确版本及 `available-at`；MD5/SHA-1 sidecar 必须匹配。SHA-256/SHA-512 sidecar 的 HTTP 404 单独输出为渠道缺失，不计为校验通过。
+
+当前未发布候选提供 Kotlin `LiveSdkModule` 与 HAR `GycLiveModule`，注册名为 `GycLiveSdk`；宿主注入当前 UIAbilityContext，账号复用既有 GycLiveClient。原始 IM 回调复用 LiveImObserver，业务消息解析、页面导航和窗口策略留宿主。Renderer 配套为 2.29.1，不能混用旧 HAR。

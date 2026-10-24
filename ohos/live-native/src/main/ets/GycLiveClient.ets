@@ -1,6 +1,6 @@
 import { AtomicPlayer, AtomicLiveController, AtomicLiveView, AtomicLiveViewType, BarrageStore,
   Barrage, BarrageType, LikeStore, LikeListener, LiveAudienceStore, LiveAudienceListener,
-  LiveListStore, LiveListListener, LiveInfo, LiveUserInfo, LoginStore, LoginStatus,
+  LiveListStore, LiveListListener, LiveInfo, LiveUserInfo, LoginStore, LoginStatus, ErrorInfo,
   PlayerListener, PlayerPlaybackStatus, UserProfile, V2TIMManager } from '@tencentcloud/atomicxcore';
 import { common } from '@kit.AbilityKit';
 import { getTRTCShareInstance, TRTCCloud, TRTCCloudCallback, TRTCVideoStreamType,
@@ -124,19 +124,38 @@ export class GycLiveClient {
     nickname: string = '', avatarUrl: string = ''): Promise<void> {
     if (!Number.isInteger(sdkAppId) || sdkAppId <= 0 || !userId.trim() || !userSig.trim()) throw new Error('Invalid live identity');
     const revision = ++GycLiveClient.accountRevision;
-    GycLiveClient.preparedUser = '';
-    GycLiveClient.changed();
     await GycLiveClient.serial(async () => {
       if (revision !== GycLiveClient.accountRevision) throw new Error('Login superseded');
       if (GycLiveClient.blocked) {
         if (!GycLiveClient.currentUserId() && LoginStore.shared().state.loginStatus !== LoginStatus.LOGINED) GycLiveClient.blocked = false;
         else throw new Error('Previous leave failed; logout the owning SDK before login');
       }
-      await GycLiveClient.owner?.close();
       const actual = GycLiveClient.currentUserId();
       const app = LoginStore.shared().sdkAppID;
-      if (actual && (actual !== userId || app !== sdkAppId)) throw new Error('Foreign IM identity or unknown SDKAppId; logout its owner first');
       const ownsActual = GycLiveClient.ownsLogin && actual === GycLiveClient.ownedUser && app === GycLiveClient.ownedApp;
+      if (actual && (actual !== userId || app !== sdkAppId) && !ownsActual) throw new Error('Foreign IM identity or unknown SDKAppId; logout its owner first');
+      // 与公共账号策略的 REUSE 一致：重复 prepare 不撤销正在观看的房间和 PiP。
+      if (GycLiveClient.isReady() && GycLiveClient.preparedUser === userId && GycLiveClient.preparedApp === sdkAppId) {
+        GycLiveClient.context = context;
+        const profile = new UserProfile(userId, nickname || userId, avatarUrl);
+        try { LoginStore.shared().setSelfInfo(profile).catch(() => {}); } catch (_) {}
+        return;
+      }
+      GycLiveClient.preparedUser = '';
+      GycLiveClient.changed();
+      await GycLiveClient.owner?.close();
+      if (revision !== GycLiveClient.accountRevision) throw new Error('Login superseded');
+      // leave 等待期间其他 SDK 也可能换号；旧的 ownsActual 不能授权注销新的外部身份。
+      if (GycLiveClient.currentUserId() !== actual || LoginStore.shared().sdkAppID !== app) {
+        throw new Error('Foreign IM identity or unknown SDKAppId; logout its owner first');
+      }
+      if (ownsActual && (actual !== userId || app !== sdkAppId)) {
+        await LoginStore.shared().logout();
+        GycLiveClient.ownsLogin = false;
+        GycLiveClient.ownedUser = ''; GycLiveClient.ownedApp = 0;
+        if (revision !== GycLiveClient.accountRevision) throw new Error('Login superseded');
+        if (GycLiveClient.currentUserId()) throw new Error('Foreign IM identity or unknown SDKAppId; logout its owner first');
+      }
       const borrowed = actual.length > 0 && !ownsActual;
       if (!GycLiveClient.stopAccountEvents) {
         GycLiveClient.stopAccountEvents = LoginStore.shared().loginEventEmitter.subscribe(GycLiveClient.accountObserver, () => {
@@ -189,8 +208,8 @@ export class GycLiveClient {
       if (GycLiveClient.owner !== session) await GycLiveClient.owner?.close();
       if (session.closed) throw new Error('Session released');
       GycLiveClient.owner = session;
-      try { await session.open(); }
-      catch (error) { await session.close(); throw error as Error; }
+      // 公共会话先交付原始 join 终态，再通过 sdkLeave 结算清理；清理错误不能覆盖进房错误。
+      await session.open();
     });
   }
   static leave(session: NativeLiveSession): Promise<void> {
@@ -367,7 +386,34 @@ export class NativeLiveSession {
   async sendLike(count: number): Promise<void> {
     if (!this.valid() || !this.likeStore || !Number.isInteger(count) || count <= 0) throw new Error('Not ready');
     await this.likeStore.sendLike(count);
-    if (!this.valid()) throw new Error('Session released');
+    // SDK 成功的离房尾批仍须按提交时的账号/房间上报；公共 batcher 不再重试已释放实例。
+  }
+  async checkFollowed(userId: string): Promise<boolean> {
+    this.requireFollowTarget(userId);
+    const results = await V2TIMManager.getFriendshipManager().checkFollowType([userId]);
+    const item = results.find(value => value.userID === userId);
+    if (!item || item.resultCode !== 0) throw new Error(item?.resultInfo || 'Follow state unavailable');
+    // IM 9.1 的 followType enum 未公开导出：1 为已关注，3 为互关。
+    return item.followType === 1 || item.followType === 3;
+  }
+  async updateFollow(userId: string, followed: boolean): Promise<void> {
+    this.requireFollowTarget(userId);
+    const manager = V2TIMManager.getFriendshipManager();
+    const results = followed ? await manager.followUser([userId]) : await manager.unfollowUser([userId]);
+    const item = results.find(value => value.userID === userId);
+    if (!item || item.resultCode !== 0) throw new Error(item?.resultInfo || 'Follow update failed');
+  }
+  async fetchFans(userId: string): Promise<number> {
+    this.requireFollowTarget(userId);
+    const results = await V2TIMManager.getFriendshipManager().getUserFollowInfo([userId]);
+    const item = results.find(value => value.userID === userId);
+    if (!item || item.resultCode !== 0 || !Number.isSafeInteger(item.followersCount) || item.followersCount < 0) {
+      throw new Error(item?.resultInfo || 'Fans count unavailable');
+    }
+    return item.followersCount;
+  }
+  private requireFollowTarget(userId: string): void {
+    if (!this.valid() || !this.joined || !userId || userId !== this.info?.liveOwner.userID) throw new Error('Invalid follow target');
   }
   private valid(): boolean { return !this.closed && GycLiveClient.isReady() && this.identity === GycLiveClient.currentUserId(); }
   private memberChanged(user: LiveUserInfo, joined: boolean): void {
@@ -438,7 +484,15 @@ export class NativeLiveSession {
     cleanup.forEach(action => { try { action(); } catch (_) { cleanupFailed = true; } });
     this.cloud = null; this.surfaceViewId = ''; this.availableVideo.clear();
     try {
-      if (this.joinAttempted) await LiveListStore.shared().leaveLive();
+      if (this.joinAttempted) {
+        try { await LiveListStore.shared().leaveLive(); }
+        catch (error) {
+          const failure = error as ErrorInfo;
+          // 5.2.2 对进房失败后的幂等 leave 报 -2；仅明确未进房且 SDK 当前无房间时视为清理完成。
+          if (this.joined || failure.code !== -2 || failure.message !== 'not in live room' ||
+            LiveListStore.shared().liveState.currentLive?.liveID !== '') throw error as Error;
+        }
+      }
       GycLiveClient.didClose(this, !cleanupFailed);
       if (cleanupFailed) throw new Error('SDK cleanup failed');
     } catch (error) { GycLiveClient.didClose(this, false); throw error as Error; }

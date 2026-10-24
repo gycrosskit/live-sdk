@@ -24,10 +24,17 @@ function fixture() {
   const barrage = { barrageState: { messageList: source(), isMessageDisable: false }, async sendTextMessage(message) { calls.push(['barrage', message]); if (barrage.pending) await barrage.pending.promise; } };
   const audience = { listeners: new Set(), liveAudienceState: { audienceCount: 0, audienceList: source(), messageBannedUserList: source() }, async fetchAudienceList() {},
     addLiveAudienceListener(value) { this.listeners.add(value); }, removeLiveAudienceListener(value) { this.listeners.delete(value); } };
-  const likes = { async sendLike(count) { calls.push(['like', count]); }, addLikeListener() {}, removeLikeListener() {} };
-  const live = { listeners: new Set(), join: null, leave: null,
-    async joinLive(id) { calls.push(['join', id]); if (this.join) await this.join.promise; return { liveName: id, notice: '', liveOwner: { userID: 'host', userName: '', avatarURL: '' } }; },
-    async leaveLive() { calls.push(['leave']); if (this.leave) await this.leave.promise; },
+  const likes = { async sendLike(count) { calls.push(['like', count]); if (likes.pending) await likes.pending.promise; }, addLikeListener() {}, removeLikeListener() {} };
+  const friendship = { followed: false, fans: 9, resultCode: 0,
+    async checkFollowType(ids) { calls.push(['checkFollow', ...ids]); return [{ userID: ids[0], resultCode: this.resultCode, followType: this.followed ? 3 : 2 }]; },
+    async followUser(ids) { calls.push(['follow', ...ids]); this.followed = true; return [{ userID: ids[0], resultCode: this.resultCode }]; },
+    async unfollowUser(ids) { calls.push(['unfollow', ...ids]); this.followed = false; return [{ userID: ids[0], resultCode: this.resultCode }]; },
+    async getUserFollowInfo(ids) { return [{ userID: ids[0], resultCode: this.resultCode, followersCount: this.fans }]; },
+  };
+  const live = { listeners: new Set(), join: null, leave: null, liveState: { currentLive: { liveID: '' } },
+    async joinLive(id) { calls.push(['join', id]); if (this.join) await this.join.promise;
+      return this.liveState.currentLive = { liveID: id, liveName: id, notice: '', liveOwner: { userID: 'host', userName: '', avatarURL: '' } }; },
+    async leaveLive() { calls.push(['leave']); if (this.leave) await this.leave.promise; this.liveState.currentLive = { liveID: '' }; },
     addLiveListListener(value) { this.listeners.add(value); }, removeLiveListListener(value) { this.listeners.delete(value); },
   };
   const cloud = { callbacks: new Set(),
@@ -55,7 +62,7 @@ function fixture() {
     BarrageStore: { create: () => barrage }, BarrageType: { TEXT: 0 }, LikeStore: { create: () => likes }, LikeListener: class {},
     LiveAudienceStore: { create: () => audience }, LiveAudienceListener: class {}, LiveListStore: { shared: () => live }, LiveListListener: class {},
     LoginStore: { shared: () => login }, LoginStatus: { LOGINED: 1 }, PlayerListener: class {}, PlayerPlaybackStatus: { PLAYING: 2 }, UserProfile: class {},
-    V2TIMManager: { getInstance: () => ({ getLoginUser: () => identity.user, getLoginStatus: () => identity.status }) } };
+    V2TIMManager: { getFriendshipManager: () => friendship, getInstance: () => ({ getLoginUser: () => identity.user, getLoginStatus: () => identity.status }) } };
   const pip = { supported: true, controllers: [], createWait: null, startWait: null,
     PiPState: { ABOUT_TO_START: 1, STARTED: 2, ABOUT_TO_STOP: 3, STOPPED: 4, ABOUT_TO_RESTORE: 5, ERROR: 6 },
     PiPTemplateType: { VIDEO_LIVE: 3 },
@@ -94,7 +101,7 @@ function fixture() {
     cache.set(name, module.exports); return module.exports;
   }
   const { GycLiveClient: client, NativeLiveSession: Session } = load('GycLiveClient');
-  return { client, Session, View: load('GycLiveView').GycLiveView, calls, timers, identity, login, live, barrage, audience, cloud, pip, ability, windowContext, accountExpired() { accountEvent?.(); } };
+  return { client, Session, View: load('GycLiveView').GycLiveView, calls, timers, identity, login, live, barrage, audience, cloud, pip, ability, windowContext, friendship, likes, accountExpired() { accountEvent?.(); } };
 }
 
 test('owned login does not wait for user profile; owned logout cleans the actual identity', async () => {
@@ -265,6 +272,8 @@ test('join failure still leaves; a throwing media cleanup does not skip SDK leav
   f.live.join = deferred(); const a = new f.Session('A', 1, false, () => {});
   const joining = f.client.enter(a); const failed = assert.rejects(joining, /bad room/);
   await tick(); f.live.join.reject(new Error('bad room')); await failed;
+  assert.equal(f.calls.some(c => c[0] === 'leave'), false);
+  await f.client.leave(a);
   assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1);
   f.live.join = null;
   const b = new f.Session('B', 2, false, () => {}); await f.client.enter(b);
@@ -272,6 +281,46 @@ test('join failure still leaves; a throwing media cleanup does not skip SDK leav
   f.cloud.stopRemoteView = () => { throw new Error('native stop'); };
   await assert.rejects(f.client.leave(b), /cleanup failed/);
   assert.equal(f.calls.filter(c => c[0] === 'leave').length, 2);
+});
+
+test('missing room keeps its original join error, settles leave, and permits login and a later live room', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {}); f.client.setForeground(true);
+  const events = []; const view = new f.View(); view.setProp('nativeLiveEvent', e => events.push(e)); view.attach();
+  f.live.join = deferred(); f.live.leave = deferred();
+  let result;
+  view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'ended' }), value => result = value);
+  await tick(); f.live.join.reject(Object.assign(new Error('room not exist'), { code: 100004 }));
+  await tick();
+  assert.equal(result.code, 100004); assert.equal(result.message, 'room not exist');
+  assert.equal(f.client.isReady(), true);
+  assert.equal(events.some(e => e.type === 'visibility' && e.ready === false), false);
+  let left; view.call('sdkLeave', JSON.stringify({ generation: 1 }), value => left = value); await tick();
+  f.live.leave.reject(Object.assign(new Error('not in live room'), { code: -2 })); await tick();
+  assert.equal(left.success, true); assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1);
+  f.live.join = null; f.live.leave = null;
+  await f.client.login(123, 'viewer', 'sig', {});
+  let next; view.call('sdkJoin', JSON.stringify({ generation: 2, liveId: 'running' }), value => next = value); await tick();
+  assert.equal(next.success, true); assert.equal(f.live.liveState.currentLive.liveID, 'running');
+  view.onDestroy(); await tick();
+});
+
+test('not-in-room is benign only for an unjoined session with an empty SDK room and no other cleanup failure', async () => {
+  for (const scenario of ['sdk-room-still-present', 'different-error', 'already-joined', 'local-cleanup-failed']) {
+    const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+    const session = new f.Session('A', 1, false, () => {});
+    if (scenario === 'already-joined') await f.client.enter(session);
+    else {
+      f.live.join = deferred(); const failed = assert.rejects(f.client.enter(session)); await tick();
+      f.live.join.reject(new Error('join failed')); await failed;
+      if (scenario === 'sdk-room-still-present') f.live.liveState.currentLive = { liveID: 'A' };
+      if (scenario === 'local-cleanup-failed') f.cloud.removeCallback = () => { throw new Error('local cleanup failed'); };
+    }
+    f.live.leave = deferred();
+    const failed = assert.rejects(f.client.leave(session)); await tick();
+    f.live.leave.reject(Object.assign(new Error(scenario === 'different-error' ? 'other SDK error' : 'not in live room'), { code: -2 })); await failed;
+    assert.equal(f.client.isReady(), false, scenario);
+    await assert.rejects(f.client.enter(new f.Session('B', 2, false, () => {})), /not ready/);
+  }
 });
 
 test('SDK view rejects a stale leave and suppresses old snapshot publication', async () => {
@@ -702,4 +751,82 @@ test('portrait PiP follows the shared 9 by 16 canvas and rejects missing or inva
   assert.equal(f.calls.filter(c => c[0] === 'join').length, 1);
   view.onDestroy(); await tick();
   assert.equal(view.pictureInPictureAspect, -1);
+});
+
+
+test('host-managed PiP keeps the one Ability usable and foreground returns do not restore the live page', async () => {
+  const f = fixture(), { view, events } = await joinedView(f);
+  assert.equal(view.setProp('pictureInPictureHostManaged', true), true);
+  view.call('enterPictureInPicture', '{"wideContent":true}', null); await tick();
+  const controller = f.pip.controllers[0]; controller.emit(f.pip.PiPState.STARTED); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'moveBackground').length, 0);
+  view.setVisible(false); f.client.setForeground(false); f.client.setForeground(true); await tick();
+  assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 0);
+  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
+  await f.client.restorePictureInPicture();
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 1);
+  view.onDestroy(); await tick();
+});
+
+
+test('same-account preparation preserves the joined room and PiP; owned account replacement resets safely', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {}); f.client.setForeground(true);
+  const view = new f.View(); view.setProp('nativeLiveEvent', () => {}); view.attach();
+  view.setSurfaceReady(view.surfaceViewId, true);
+  view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'running' }), () => {}); await tick();
+  const original = view.session;
+  view.call('enterPictureInPicture', JSON.stringify({ wideContent: true }), () => {}); await tick();
+  f.pip.controllers[0].emit(2);
+  await f.client.login(123, 'viewer', 'fresh-sig', {}); await tick();
+  assert.equal(original.closed, false);
+  assert.equal(f.calls.some(c => c[0] === 'leave' || c[0] === 'stopPiP'), false);
+  assert.equal(f.calls.filter(c => c[0] === 'login').length, 1);
+  await f.client.login(456, 'second', 'sig', {}); await tick();
+  assert.equal(original.closed, true); assert.equal(f.identity.user, 'second');
+  assert.equal(f.calls.filter(c => c[0] === 'logout').length, 1);
+  view.onDestroy();
+});
+
+test('original join failure reaches the common owner before genuine cleanup failure closes readiness', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {}); f.client.setForeground(true);
+  const sequence = []; const view = new f.View();
+  view.setProp('nativeLiveEvent', e => { if (e.type === 'visibility' && !e.ready) sequence.push('not-ready'); }); view.attach();
+  f.live.join = deferred(); f.live.leave = deferred();
+  view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'failed' }), result => sequence.push(result.code));
+  await tick(); f.live.join.reject(Object.assign(new Error('join rejected'), { code: 100005 })); await tick();
+  assert.deepEqual(sequence, [100005]); assert.equal(f.client.isReady(), true);
+  let left; view.call('sdkLeave', JSON.stringify({ generation: 1 }), result => left = result); await tick();
+  f.live.leave.reject(Object.assign(new Error('cleanup failed'), { code: -7 })); await tick();
+  assert.equal(sequence[0], 100005); assert.ok(sequence.includes('not-ready')); assert.equal(left.success, false);
+  await assert.rejects(f.client.login(123, 'viewer', 'sig', {}), /Previous leave failed/);
+  view.onDestroy();
+});
+
+test('follow gateway validates the actual owner and per-user SDK result; late SDK likes keep their success', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  const session = new f.Session('A', 1, false, () => {}); await f.client.enter(session); session.observe();
+  assert.equal(await session.checkFollowed('host'), false);
+  await session.updateFollow('host', true); assert.equal(await session.checkFollowed('host'), true);
+  assert.equal(await session.fetchFans('host'), 9);
+  await session.updateFollow('host', false);
+  await assert.rejects(session.updateFollow('foreign', true), /Invalid follow target/);
+  f.friendship.resultCode = 5; await assert.rejects(session.checkFollowed('host'), /unavailable/);
+  f.friendship.resultCode = 0; f.friendship.fans = -1; await assert.rejects(session.fetchFans('host'));
+  f.likes.pending = deferred(); const sending = session.sendLike(2); await tick();
+  await f.client.leave(session); f.likes.pending.resolve(); await sending;
+  await assert.rejects(session.updateFollow('host', true), /Invalid follow target/);
+});
+
+test('foreign identity takeover during an owned room cleanup cannot be logged out or replaced', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  const session = new f.Session('A', 1, false, () => {}); await f.client.enter(session);
+  f.live.leave = deferred();
+  const changing = f.client.login(456, 'second', 'sig', {});
+  const rejected = assert.rejects(changing, /Foreign|superseded/);
+  await tick(); f.identity.user = 'external'; f.login.sdkAppID = 789;
+  f.live.leave.resolve(); await rejected;
+  assert.equal(f.identity.user, 'external');
+  assert.equal(f.calls.filter(c => c[0] === 'logout').length, 0);
+  assert.equal(f.calls.filter(c => c[0] === 'login').length, 1);
 });
