@@ -126,7 +126,7 @@ public final class GycLiveClient: NSObject {
 
             let coreView = LiveCoreView(viewType: .playView)
             coreView.backgroundColor = .black
-            // 直播间清屏、连击点赞等手势统一由 shared CMP 处理，原生层不得抢占触摸。
+            // 直播间清屏、连击点赞等手势统一由宿主 UI 处理，原生层不得抢占触摸。
             coreView.isUserInteractionEnabled = false
             coreView.clipsToBounds = true
             self.activeAudienceView = coreView
