@@ -4,6 +4,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tarfile
@@ -81,6 +82,21 @@ class HarIdentityTest(unittest.TestCase):
                     else:
                         module.verify(source, source / 'result.har')
                         self.assertEqual((source / 'result.har').read_bytes(), (outputs / 'live.har').read_bytes())
+
+    def test_release_har_tag_rejects_invalid_input_before_clt(self):
+        for tag, allowed in [('', True), ('0.3.0-rc.2', True), ('1.0.0', True),
+                             ('har-1.0.0', True), ('har-1.0.0-rc.1', True),
+                             ('main', False), ('../1.0.0', False), ('har-main', False), ('1.0.0-rc.no', False)]:
+            with tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                (root / 'scripts').mkdir()
+                shutil.copyfile(ROOT / 'scripts/verify-ohos-consumer.sh', root / 'scripts/verify-ohos-consumer.sh')
+                (root / 'scripts/prepare-ohos-clt.sh').write_text('touch "$TASK_ROOT/clt-reached"\nexit 73\n')
+                result = subprocess.run(['bash', str(root / 'scripts/verify-ohos-consumer.sh')],
+                                        env=dict(os.environ, VERSION='1.0.0', RELEASE_HAR_TAG=tag),
+                                        capture_output=True, text=True, timeout=10)
+                assert result.returncode == (73 if allowed else 2), (tag, result.returncode)
+                assert (root / 'clt-reached').exists() == allowed
 
     def test_requires_compiler_output(self):
         with tempfile.TemporaryDirectory() as directory:

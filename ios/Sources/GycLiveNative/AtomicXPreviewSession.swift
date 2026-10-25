@@ -22,7 +22,7 @@ final class AtomicXPreviewSession {
 
         let coreView = LiveCoreView(viewType: .playView)
         coreView.backgroundColor = .black
-        // 列表点击由外层 CMP 处理，SDK View 只负责绘制媒体内容。
+        // 列表点击由宿主 UI 处理，SDK View 只负责绘制媒体内容。
         coreView.isUserInteractionEnabled = false
         coreView.clipsToBounds = true
         coreView.setLiveID(liveID)
