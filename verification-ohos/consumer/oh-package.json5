@@ -1,4 +1,4 @@
 {
   "name": "live-remote-consumer", "version": "0.3.0-rc.4", "main": "Index.ets",
-  "dependencies": { "@gycrosskit/live-native": "1.0.0", "@kuikly-open/render": "2.29.1" }
+  "dependencies": { "@gycrosskit/live-native": "1.0.1", "@kuikly-open/render": "2.29.1" }
 }
