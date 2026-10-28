@@ -203,6 +203,100 @@ raise 'Invalid deployment normalization' unless configs.map { |c| c.build_settin
         self.assertNotIn("pendingEvents", adapter)
 
 
+class OwnedSimulatorTest(unittest.TestCase):
+    device = "AAAAAAAA-AAAA-4AAA-AAAA-AAAAAAAAAAAA"
+    owner = "BBBBBBBB-BBBB-4BBB-BBBB-BBBBBBBBBBBB"
+    foreign = "CCCCCCCC-CCCC-4CCC-CCCC-CCCCCCCCCCCC"
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.directory = Path(self.temporary.name)
+        self.record = self.directory / "test.device"
+        self.calls = self.directory / "calls.jsonl"
+        xcrun = self.directory / "xcrun"
+        xcrun.write_text('''#!/usr/bin/env python3
+import json, os, sys
+a = sys.argv[1:]
+with open(os.environ['CALL_LOG'], 'a') as f: f.write(json.dumps(a)+'\\n')
+if a[1] == 'list':
+    print(json.dumps({'devices': {} if os.environ.get('NO_DEVICES') else {
+        'com.apple.CoreSimulator.SimRuntime.iOS-26-0': [{'name': 'iPhone old', 'deviceTypeIdentifier': 'old-type'}],
+        'com.apple.CoreSimulator.SimRuntime.iOS-27-1': [{'name': 'iPhone other task', 'deviceTypeIdentifier': 'new-type', 'udid': os.environ['FOREIGN_ID']}]
+    }}))
+if a[1] == 'create': print(os.environ['OWNED_ID'])
+sys.exit(int(os.environ.get(a[1].upper()+'_EXIT', '0')))
+''')
+        xcrun.chmod(0o700)
+        publish = self.directory / "ln"
+        publish.write_text('''#!/usr/bin/env python3
+import os, subprocess, sys
+sys.exit(1 if os.environ.get('FAIL_PUBLISH') else subprocess.call(['/bin/ln', *sys.argv[1:]]))
+''')
+        publish.chmod(0o700)
+        self.env = dict(os.environ, PATH=str(self.directory) + os.pathsep + os.environ['PATH'],
+                        CALL_LOG=str(self.calls), OWNED_ID=self.device, FOREIGN_ID=self.foreign)
+
+    def run_script(self, mode, **environment):
+        return subprocess.run(['bash', str(ROOT / 'verification/owned-ios-test-simulator.sh'),
+                               mode, str(self.record), self.owner],
+                              env=dict(self.env, **environment), capture_output=True, text=True)
+
+    def recorded_calls(self):
+        return [json.loads(line) for line in self.calls.read_text().splitlines()] if self.calls.exists() else []
+
+    def test_create_uses_only_type_and_runtime_then_cleans_its_id(self):
+        self.assertEqual(self.run_script('create').returncode, 0)
+        self.assertEqual(self.record.read_text().splitlines(), [self.device, self.owner])
+        self.assertEqual(self.recorded_calls()[1], ['simctl', 'create', 'GYC Live KGP ' + self.owner,
+                                                   'new-type', 'com.apple.CoreSimulator.SimRuntime.iOS-27-1'])
+        self.assertEqual(self.run_script('cleanup', SHUTDOWN_EXIT='1').returncode, 0)
+        self.assertFalse(self.record.exists())
+        self.assertEqual(self.recorded_calls()[-2:], [['simctl', 'shutdown', self.device], ['simctl', 'delete', self.device]])
+        self.assertFalse(any(self.foreign in call for call in self.recorded_calls()))
+
+    def test_failed_create_with_receipt_cleans_unrecorded_device(self):
+        self.assertNotEqual(self.run_script('create', CREATE_EXIT='1').returncode, 0)
+        self.assertEqual(self.recorded_calls()[-1], ['simctl', 'delete', self.device])
+        self.assertFalse(list(self.directory.glob('test.device*')))
+
+    def test_failed_record_publication_cleans_unrecorded_device(self):
+        self.assertNotEqual(self.run_script('create', FAIL_PUBLISH='1').returncode, 0)
+        self.assertEqual(self.recorded_calls()[-1], ['simctl', 'delete', self.device])
+        self.assertFalse(list(self.directory.glob('test.device*')))
+
+    def test_failed_delete_retains_record_and_propagates_failure(self):
+        self.assertEqual(self.run_script('create').returncode, 0)
+        self.assertNotEqual(self.run_script('cleanup', DELETE_EXIT='1').returncode, 0)
+        self.assertEqual(self.record.read_text().splitlines(), [self.device, self.owner])
+        self.assertEqual(self.run_script('cleanup').returncode, 0)
+        self.assertFalse(self.record.exists())
+
+    def test_unrecorded_delete_failure_keeps_recovery_receipt(self):
+        self.assertNotEqual(self.run_script('create', FAIL_PUBLISH='1', DELETE_EXIT='1').returncode, 0)
+        pending = list(self.directory.glob('test.device.pending.*'))
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending[0].read_text().splitlines(), [self.device, self.owner])
+        self.assertEqual(self.recorded_calls()[-1], ['simctl', 'delete', self.device])
+
+    def test_existing_or_foreign_record_is_never_overwritten_or_cleaned(self):
+        original = self.foreign + '\n' + self.foreign + '\n'
+        self.record.write_text(original)
+        self.assertNotEqual(self.run_script('create').returncode, 0)
+        self.assertNotEqual(self.run_script('cleanup').returncode, 0)
+        self.assertEqual(self.record.read_text(), original)
+        self.assertEqual(self.recorded_calls(), [])
+
+    def test_missing_record_does_not_touch_devices(self):
+        self.assertEqual(self.run_script('cleanup').returncode, 0)
+        self.assertEqual(self.recorded_calls(), [])
+
+    def test_no_available_type_fails_before_creating_a_device(self):
+        self.assertNotEqual(self.run_script('create', NO_DEVICES='1').returncode, 0)
+        self.assertEqual(self.recorded_calls(), [['simctl', 'list', 'devices', 'available', '--json']])
+        self.assertFalse(list(self.directory.glob('test.device*')))
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 3 and os.environ.get("LIVE_NATIVE_TAG"):
         product = "GycLiveNative" if sys.argv[1] == "--core-lock" else "GycLiveRenderer"
