@@ -143,7 +143,7 @@ class RendererContractTest(unittest.TestCase):
 
     def test_renderer_simulator_is_owned_and_cleaned_after_failure(self):
         script = (ROOT / "scripts/verify-live-renderer-ios.sh").read_text()
-        block = script.split("# 每次验证独占一个新模拟器", 1)[1].split("\nxcodebuild -workspace", 1)[0]
+        block = script.split("# 每次验证独占一个新模拟器", 1)[1].split("\n", 1)[1].split("\nxcodebuild -workspace", 1)[0]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             xcrun = root / "xcrun"
