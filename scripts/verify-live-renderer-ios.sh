@@ -30,15 +30,23 @@ scheme.save_as(project.path, 'LiveRendererTests')
 RUBY
 pod install --project-directory="$consumer"
 python3 verification/renderer-ios/test_contract.py --lock "$consumer/Podfile.lock"
-device="$(xcrun simctl list devices available --json | python3 -c '
-import json, sys
-for runtime, devices in json.load(sys.stdin)["devices"].items():
+# 每次验证独占一个新模拟器，避免启动或迁移其他任务的设备。
+read -r device_type runtime <<< "$(xcrun simctl list devices available --json | python3 -c '
+import json, re, sys
+runtimes = json.load(sys.stdin)["devices"]
+for runtime in sorted(runtimes, key=lambda value: tuple(map(int, re.findall(r"[0-9]+", value))), reverse=True):
     if "iOS" in runtime:
-        for device in devices:
-            if device["name"].startswith("iPhone"):
-                print(device["udid"])
+        for item in runtimes[runtime]:
+            if item["name"].startswith("iPhone"):
+                print(item["deviceTypeIdentifier"], runtime)
                 sys.exit(0)
-sys.exit("No available iPhone Simulator")')"
+sys.exit("No available iPhone Simulator type")')"
+device="$(xcrun simctl create "GYC Live Renderer $$" "$device_type" "$runtime")"
+cleanup_simulator() {
+  xcrun simctl shutdown "$device" >/dev/null 2>&1 || true
+  xcrun simctl delete "$device"
+}
+trap cleanup_simulator EXIT
 xcodebuild -workspace "$consumer/LiveRendererConsumer.xcworkspace" \
   -scheme LiveRendererTests -configuration Debug -sdk iphonesimulator \
   -destination "id=$device" -derivedDataPath "$consumer/DerivedData" \

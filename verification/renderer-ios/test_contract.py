@@ -141,6 +141,22 @@ class RendererContractTest(unittest.TestCase):
                 verify_installed_swift(root, expected, {name})
 
 
+    def test_renderer_simulator_is_owned_and_cleaned_after_failure(self):
+        script = (ROOT / "scripts/verify-live-renderer-ios.sh").read_text()
+        block = script.split("# 每次验证独占一个新模拟器", 1)[1].split("\nxcodebuild -workspace", 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            xcrun = root / "xcrun"
+            xcrun.write_text("#!/usr/bin/env python3\nimport json, os, sys\na=sys.argv[1:]\nwith open(os.environ['CALL_LOG'], 'a') as f: f.write(json.dumps(a)+'\\n')\nif a[1]=='list': print(json.dumps({'devices':{'com.apple.CoreSimulator.SimRuntime.iOS-27-1':[{'name':'iPhone existing task','deviceTypeIdentifier':'com.apple.CoreSimulator.SimDeviceType.iPhone-Duo','udid':'OTHER-TASK'}]}}))\nif a[1]=='create': print('OWNED-SIMULATOR')\n")
+            xcrun.chmod(0o700)
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'], CALL_LOG=str(root/'calls'))
+            result = subprocess.run(['bash', '-euc', block + '\nfalse'], env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            calls = [json.loads(line) for line in (root/'calls').read_text().splitlines()]
+            self.assertEqual(calls[-2:], [['simctl','shutdown','OWNED-SIMULATOR'], ['simctl','delete','OWNED-SIMULATOR']])
+            self.assertFalse(any('OTHER-TASK' in call for call in calls))
+            self.assertEqual(calls[1][1], 'create')
+
     def test_pod_default_keeps_core_and_renderer_does_not_depend_on_core(self):
         spec = (ROOT / "GycLiveNative.podspec").read_text()
         self.assertIn("s.default_subspecs = 'Core'", spec)
