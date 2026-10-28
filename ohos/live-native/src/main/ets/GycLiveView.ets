@@ -1,6 +1,6 @@
 import { KRAny, KuiklyRenderBaseView, KuiklyRenderCallback } from '@kuikly-open/render';
 import { GycLiveClient, NativeLiveSession, LiveNativeEvent, LivePictureInPictureOwner } from './GycLiveClient';
-import { ErrorInfo } from '@tencentcloud/atomicxcore';
+import { AtomicLiveView, ErrorInfo } from '@tencentcloud/atomicxcore';
 import { ComponentContent } from '@ohos.arkui.node';
 import { createGycLiveView } from './LiveComponent';
 import PiPWindow from '@ohos.PiPWindow';
@@ -13,6 +13,10 @@ interface Command {
 }
 interface Result { success: boolean; code?: number; message?: string; liveName?: string;
   notice?: string; ownerId?: string; ownerName?: string; ownerAvatarUrl?: string; userId?: string; }
+export interface AtomicPlaybackViewParameters {
+  view: AtomicLiveView;
+  mixSurfaceController: XComponentController;
+}
 class PendingReply {
   timer: number = -1;
   readonly callback: KuiklyRenderCallback;
@@ -23,12 +27,9 @@ class PendingReply {
 @Observed
 export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPictureOwner {
   static readonly VIEW_NAME: string = 'GycLiveView';
-  private static nextViewId: number = 0;
-  readonly surfaceViewId: string = `GycLiveVideo_${++GycLiveView.nextViewId}`;
   session: NativeLiveSession | null = null;
   readonly surfaceController: XComponentController = new XComponentController();
   pictureInPictureAspect: number = -1;
-  private surfaceReady: boolean = false;
   private pipController: PiPWindow.PiPController | null = null;
   private pipSession: NativeLiveSession | null = null;
   private pipStarting: Promise<void> | null = null;
@@ -118,7 +119,7 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
   }
   private async enterPictureInPicture(wideContent: boolean): Promise<void> {
     const session = this.session;
-    if (!session || session.closed || session.preview || !session.info || !this.surfaceReady ||
+    if (!session || session.closed || session.preview || !session.info || !this.playerSurfaceReady() ||
       !this.isForeground() || !PiPWindow.isPiPEnabled() || this.pipPhase !== 'idle' || this.pipStarting !== null ||
       !GycLiveClient.claimPictureInPicture(this)) throw new Error('Picture in picture is not ready');
     this.pipSession = session;
@@ -153,6 +154,9 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
               this.moveToBackground(session, currentController, context as common.UIAbilityContext).catch(() => {});
             }
           }
+        } else if (state === PiPWindow.PiPState.ABOUT_TO_STOP) {
+          // 系统关闭尚未 STOPPED 时回前台，不能再以恢复名义重复 stopPiP。
+          if (this.pipPhase !== 'restoring') this.pipPhase = 'stopping';
         } else if (state === PiPWindow.PiPState.ABOUT_TO_RESTORE) {
           this.pipPhase = 'restoring';
         } else if (state === PiPWindow.PiPState.STOPPED || state === PiPWindow.PiPState.ERROR) {
@@ -234,10 +238,13 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
     }
   }
   private emit(event: LiveNativeEvent): void { if (!this.destroyed) this.nativeCallback?.(event); }
-  setSurfaceReady(viewId: string, ready: boolean): void {
-    if (this.destroyed || viewId !== this.surfaceViewId) return;
-    this.surfaceReady = ready;
-    this.session?.setSurfaceView(ready ? viewId : '');
+  playerViewParameters(session: NativeLiveSession): AtomicPlaybackViewParameters {
+    // shortcut: 5.2.2 的内部 ArkUI 节点接收同一 Surface controller；公开 PiP 接口可用后移除此参数适配。
+    return { view: session.view, mixSurfaceController: this.surfaceController };
+  }
+  private playerSurfaceReady(): boolean {
+    try { return this.surfaceController.getXComponentSurfaceId().length > 0; }
+    catch (_) { return false; }
   }
 
   call(method: string, params: KRAny, callback: KuiklyRenderCallback | null): KRAny {
@@ -280,7 +287,6 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
       const session: NativeLiveSession = new NativeLiveSession(id, generation!, method === 'sdkPreview', event => this.emit(event),
         () => this.stopPictureInPicture(session));
       this.session = session;
-      if (this.surfaceReady) session.setSurfaceView(this.surfaceViewId);
       if (old) GycLiveClient.leave(old).catch(() => {});
       GycLiveClient.enter(session).then(() => {
         if (this.session !== session || this.destroyed || session.closed) throw new Error('Session released');
@@ -338,7 +344,6 @@ export class GycLiveView extends KuiklyRenderBaseView implements LivePictureInPi
     if (this.destroyed) return;
     this.nativeCallback?.({ type: 'destroyed' });
     this.destroyed = true;
-    this.surfaceReady = false;
     this.stopReady?.(); this.stopReady = null;
     const session = this.session;
     this.session = null;
