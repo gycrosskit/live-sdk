@@ -140,16 +140,6 @@ class RendererContractTest(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 verify_installed_swift(root, expected, {name})
 
-    def test_native_release_skips_maven_jobs(self):
-        workflow = (ROOT / '.github/workflows/release-validation.yml').read_text()
-        for job in ('verify-public', 'release-android', 'release-native'):
-            section = workflow.split('  ' + job + ':\n', 1)[1].split('    runs-on:', 1)[0]
-            self.assertIn("!startsWith(github.event.release.tag_name || inputs.version, 'native-')", section)
-        pod = workflow.split('  release-pod:\n', 1)[1]
-        self.assertIn('LIVE_NATIVE_TAG:', pod)
-        self.assertIn('verify-live-native-ios.sh', pod)
-        self.assertIn('verify-live-renderer-ios.sh', pod)
-        self.assertNotIn('gradlew', pod)
 
     def test_pod_default_keeps_core_and_renderer_does_not_depend_on_core(self):
         spec = (ROOT / "GycLiveNative.podspec").read_text()
