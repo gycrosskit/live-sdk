@@ -29,36 +29,52 @@ class GycLiveView(context: Context) : FrameLayout(context), IKuiklyRenderViewExp
     private var snapshotJob: Job? = null
     private var lifecycle: Lifecycle? = null
     private var explicitRelease = false
+    private var destroyed = false
+    private var playbackReady = false
     private var generation = 0L
     private val pendingEvents = ArrayDeque<String>()
     private val observer = LifecycleEventObserver { _, _ -> reconcile() }
+    private val applyRoom = Runnable {
+        if (!destroyed && isAttachedToWindow) {
+            playbackReady = true
+            reconcile()
+        }
+    }
 
     /** 业务点赞上报使用宿主注入的 reporter。 */
     var likeReporter: LiveLikeReporter = LiveLikeReporter.None
 
-    override fun setProp(propKey: String, propValue: Any): Boolean = when (propKey) {
-        "liveEvent" -> {
-            event = propValue as KuiklyRenderCallback
-            while (pendingEvents.isNotEmpty()) emit(pendingEvents.removeFirst())
-            true
+    override fun setProp(propKey: String, propValue: Any): Boolean {
+        if (destroyed) return true
+        return when (propKey) {
+            "liveEvent" -> {
+                event = propValue as KuiklyRenderCallback
+                while (pendingEvents.isNotEmpty()) emit(pendingEvents.removeFirst())
+                true
+            }
+            "room" -> {
+                try {
+                    val next = KuiklyLiveRoom.parse(propValue as String)
+                    if (room?.liveId != next.liveId || room?.preview != next.preview) stop()
+                    room = next
+                    explicitRelease = false
+                    schedulePlayback()
+                } catch (_: Exception) { emit(liveEventJson("joinFailed", -1, "Invalid room configuration")) }
+                true
+            }
+            // Render 从 0×0 开始，FRAME/透明度等通用属性必须交还 SDK 的 CSS 实现。
+            else -> super<IKuiklyRenderViewExport>.setProp(propKey, propValue)
         }
-        "room" -> {
-            try {
-                val next = KuiklyLiveRoom.parse(propValue as String)
-                if (room?.liveId != next.liveId || room?.preview != next.preview) stop()
-                room = next
-                explicitRelease = false
-                reconcile()
-            } catch (_: Exception) { emit(liveEventJson("joinFailed", -1, "Invalid room configuration")) }
-            true
-        }
-        // Render 从 0×0 开始，FRAME/透明度等通用属性必须交还 SDK 的 CSS 实现。
-        else -> super<IKuiklyRenderViewExport>.setProp(propKey, propValue)
     }
 
     override fun call(method: String, params: String?, callback: KuiklyRenderCallback?): Any? {
         when (method) {
-            "release" -> { explicitRelease = true; stop() }
+            "release" -> {
+                explicitRelease = true
+                playbackReady = false
+                removeCallbacks(applyRoom)
+                stop()
+            }
             "like" -> audience?.like()
             "toggleFollow" -> audience?.toggleFollow()
             "refreshAudience" -> audience?.refreshAudience()
@@ -87,27 +103,51 @@ class GycLiveView(context: Context) : FrameLayout(context), IKuiklyRenderViewExp
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        if (destroyed || scope != null) return
         // STARTED 的 owner 在 addObserver 内同步回调，必须先准备快照订阅的 scope。
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         lifecycle = findViewTreeLifecycleOwner()?.lifecycle
         lifecycle?.addObserver(observer)
         scope?.launch { AndroidLiveSdkRuntime.sessionReadyFlow.collect { reconcile() } }
-        reconcile()
+        schedulePlayback()
     }
 
     override fun onDetachedFromWindow() {
+        releaseAttachedSession()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onDestroy() {
+        if (destroyed) return
+        destroyed = true
+        releaseAttachedSession()
+        room = null
+        event = null
+        super<IKuiklyRenderViewExport>.onDestroy()
+    }
+
+    private fun releaseAttachedSession() {
+        playbackReady = false
+        removeCallbacks(applyRoom)
         lifecycle?.removeObserver(observer)
         lifecycle = null
         stop()
         scope?.cancel()
         scope = null
-        super.onDetachedFromWindow()
+    }
+
+    private fun schedulePlayback() {
+        playbackReady = false
+        removeCallbacks(applyRoom)
+        // 父 View 的 onAttached 先于子渲染目标；同步 Lifecycle/ready 回调也必须等完整 attach 派发结束。
+        if (isAttachedToWindow) post(applyRoom)
     }
 
     private fun reconcile() {
         val request = room ?: return
-        if (!isAttachedToWindow || explicitRelease) return
+        if (destroyed || !isAttachedToWindow || explicitRelease) return
         if (!AndroidLiveSdkRuntime.isSessionReady) { stop(); return }
+        if (!playbackReady) return
         if (request.preview) {
             if (preview == null) {
                 val player = AndroidLivePreviewSession(context, request.liveId) { state ->
@@ -139,6 +179,7 @@ class GycLiveView(context: Context) : FrameLayout(context), IKuiklyRenderViewExp
     }
 
     private fun emit(value: String) {
+        if (destroyed) return
         val callback = event
         if (callback != null) callback.invoke(org.json.JSONObject(value).toMap())
         else {
