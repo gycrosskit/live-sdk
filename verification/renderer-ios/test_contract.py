@@ -157,6 +157,27 @@ class RendererContractTest(unittest.TestCase):
             self.assertFalse(any('OTHER-TASK' in call for call in calls))
             self.assertEqual(calls[1][1], 'create')
 
+    def test_renderer_pods_raise_only_unsupported_deployment_targets(self):
+        ruby = r"""
+require 'ostruct'
+class Probe
+  attr_reader :hook
+  def platform(*) end
+  def source(*) end
+  def use_frameworks!(*) end
+  def target(*) yield end
+  def pod(*) end
+  def post_install(&block) @hook = block end
+end
+probe = Probe.new
+file = ARGV.fetch(0)
+probe.instance_eval(File.read(file), file)
+configs = ['12.0', '15.0', '18.2'].map { |value| OpenStruct.new(build_settings: {'IPHONEOS_DEPLOYMENT_TARGET' => value}) }
+probe.hook.call(OpenStruct.new(pods_project: OpenStruct.new(targets: [OpenStruct.new(build_configurations: configs)])))
+raise 'Invalid deployment normalization' unless configs.map { |c| c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] } == ['15.0', '15.0', '18.2']
+"""
+        subprocess.run(['ruby', '-e', ruby, str(ROOT / 'verification/renderer-ios/Podfile')], check=True)
+
     def test_pod_default_keeps_core_and_renderer_does_not_depend_on_core(self):
         spec = (ROOT / "GycLiveNative.podspec").read_text()
         self.assertIn("s.default_subspecs = 'Core'", spec)
