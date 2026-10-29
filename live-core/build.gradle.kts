@@ -18,6 +18,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.atomicx.core)
             implementation(libs.tencent.imsdk.plus)
+            // AtomicX AAR 使用 Gson，但其 POM 未声明运行时依赖。
+            implementation(libs.gson)
             implementation(libs.kotlinx.coroutines.android)
         }
         commonTest.dependencies {
