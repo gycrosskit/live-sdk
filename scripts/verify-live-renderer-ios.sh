@@ -30,6 +30,9 @@ scheme.save_as(project.path, 'LiveRendererTests')
 RUBY
 pod install --project-directory="$consumer"
 python3 verification/renderer-ios/test_contract.py --lock "$consumer/Podfile.lock"
+# CI 负责专有设备的创建与清理，组件只消费已注入的目标。
+device="${KUIKLY_MODULE_SIMULATOR:-}"
+if [[ -z "$device" ]]; then
 device="$(xcrun simctl list devices available --json | python3 -c '
 import json, sys
 for runtime, devices in json.load(sys.stdin)["devices"].items():
@@ -39,6 +42,11 @@ for runtime, devices in json.load(sys.stdin)["devices"].items():
                 print(device["udid"])
                 sys.exit(0)
 sys.exit("No available iPhone Simulator")')"
+fi
+[[ "$device" =~ ^[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}$ ]] || {
+  echo 'Invalid Renderer Simulator target' >&2
+  exit 1
+}
 xcodebuild -workspace "$consumer/LiveRendererConsumer.xcworkspace" \
   -scheme LiveRendererTests -configuration Debug -sdk iphonesimulator \
   -destination "id=$device" -derivedDataPath "$consumer/DerivedData" \

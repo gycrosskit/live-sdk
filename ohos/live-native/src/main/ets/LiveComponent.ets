@@ -1,6 +1,7 @@
 import { KuiklyRenderBaseView } from '@kuikly-open/render';
 import { AtomicLiveViewImpl } from '@tencentcloud/atomicxcore';
 import { GycLiveView } from './GycLiveView';
+import { NativeLiveSession } from './GycLiveClient';
 
 @Builder
 export function createGycLiveView(view: KuiklyRenderBaseView) {
@@ -15,17 +16,11 @@ struct GycLiveHost {
   aboutToDisappear(): void { this.renderView.setVisible(false); }
   build() {
     Stack() {
-      if (this.renderView.session?.preview === true && this.renderView.session.view) {
-        // shortcut: preview 保留 5.2.2 的 Atomic ArkUI 节点；升级腾讯 SDK 时核对兼容性。
-        AtomicLiveViewImpl({ view: this.renderView.session.view })
-      } else {
-        XComponent({ id: this.renderView.surfaceViewId, type: XComponentType.SURFACE, libraryname: 'liteavsdk', controller: this.renderView.surfaceController })
+      ForEach(this.renderView.session ? [this.renderView.session] : [], (session: NativeLiveSession) => {
+        AtomicLiveViewImpl(this.renderView.playerViewParameters(session))
           .width('100%').height('100%')
-          // 公共 PiP 布局会铺满原窗口，Surface 自身仍须保持目标比例，避免整张竖画布再次被压成横窗。
           .aspectRatio(this.renderView.pictureInPictureAspect)
-          .onLoad(() => this.renderView.setSurfaceReady(this.renderView.surfaceViewId, true))
-          .onDestroy(() => this.renderView.setSurfaceReady(this.renderView.surfaceViewId, false))
-      }
+      }, (session: NativeLiveSession) => `${session.generation}`)
     }.width('100%').height('100%')
     .onVisibleAreaChange([0, 1], (visible: boolean) => this.renderView.setVisible(visible))
   }

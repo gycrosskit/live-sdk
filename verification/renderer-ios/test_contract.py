@@ -141,6 +141,45 @@ class RendererContractTest(unittest.TestCase):
                 verify_installed_swift(root, expected, {name})
 
 
+    def test_renderer_consumes_ci_target_without_device_operations(self):
+        script = (ROOT / 'scripts/verify-live-renderer-ios.sh').read_text()
+        block = script.split('# CI 负责专有设备的创建与清理，组件只消费已注入的目标。\n', 1)[1].split('\nxcodebuild -workspace', 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            xcrun = root / 'xcrun'
+            xcrun.write_text('#!/bin/sh\necho unexpected-device-operation >&2\nexit 77\n')
+            xcrun.chmod(0o700)
+            expected = '11111111-2222-3333-4444-555555555555'
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'], KUIKLY_MODULE_SIMULATOR=expected)
+            result = subprocess.run(['bash','-euc',block+'\nprintf "%s" "$device"'], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, expected)
+            env['KUIKLY_MODULE_SIMULATOR'] = 'invalid-device'
+            result = subprocess.run(['bash','-euc',block], env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('Invalid Renderer Simulator target', result.stderr)
+
+    def test_renderer_pods_raise_only_unsupported_deployment_targets(self):
+        ruby = r"""
+require 'ostruct'
+class Probe
+  attr_reader :hook
+  def platform(*) end
+  def source(*) end
+  def use_frameworks!(*) end
+  def target(*) yield end
+  def pod(*) end
+  def post_install(&block) @hook = block end
+end
+probe = Probe.new
+file = ARGV.fetch(0)
+probe.instance_eval(File.read(file), file)
+configs = ['12.0', '15.0', '18.2'].map { |value| OpenStruct.new(build_settings: {'IPHONEOS_DEPLOYMENT_TARGET' => value}) }
+probe.hook.call(OpenStruct.new(pods_project: OpenStruct.new(targets: [OpenStruct.new(build_configurations: configs)])))
+raise 'Invalid deployment normalization' unless configs.map { |c| c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] } == ['15.0', '15.0', '18.2']
+"""
+        subprocess.run(['ruby', '-e', ruby, str(ROOT / 'verification/renderer-ios/Podfile')], check=True)
+
     def test_pod_default_keeps_core_and_renderer_does_not_depend_on_core(self):
         spec = (ROOT / "GycLiveNative.podspec").read_text()
         self.assertIn("s.default_subspecs = 'Core'", spec)

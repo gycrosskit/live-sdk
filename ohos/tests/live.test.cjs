@@ -32,25 +32,16 @@ function fixture() {
     async getUserFollowInfo(ids) { return [{ userID: ids[0], resultCode: this.resultCode, followersCount: this.fans }]; },
   };
   const live = { listeners: new Set(), join: null, leave: null, liveState: { currentLive: { liveID: '' } },
-    async joinLive(id) { calls.push(['join', id]); if (this.join) await this.join.promise;
-      return this.liveState.currentLive = { liveID: id, liveName: id, notice: '', liveOwner: { userID: 'host', userName: '', avatarURL: '' } }; },
-    async leaveLive() { calls.push(['leave']); if (this.leave) await this.leave.promise; this.liveState.currentLive = { liveID: '' }; },
-    addLiveListListener(value) { this.listeners.add(value); }, removeLiveListListener(value) { this.listeners.delete(value); },
+    async fetchLiveInfo(id) { calls.push(['fetchInfo', id]); if (this.infoError) throw this.infoError; return { liveID: id, liveName: id, notice: '', liveOwner: { userID: 'host', userName: '', avatarURL: '' } }; },
   };
-  const cloud = { callbacks: new Set(),
-    addCallback(value) { calls.push(['addCallback']); this.callbacks.add(value); },
-    removeCallback(value) { calls.push(['removeCallback']); this.callbacks.delete(value); },
-    setRemoteRenderParams(user, type, params) { calls.push(['renderParams', user, type, params]); },
-    startRemoteView(user, type, view) { calls.push(['startRemote', user, type, view]); },
-    updateRemoteView(user, type, view) { calls.push(['updateRemote', user, type, view]); },
-    stopRemoteView(user, type) { calls.push(['stopRemote', user, type]); },
-    enterRoom() { calls.push(['enterRoom']); }, exitRoom() { calls.push(['exitRoom']); }, destroySharedInstance() { calls.push(['destroyShared']); },
-    video(user, available) { for (const callback of this.callbacks) callback.onUserVideoAvailable?.(user, available); },
-  };
+
   class Player {
     constructor() { calls.push(['newPlayer']); }
     state = { playbackStatus: 0 }; listener = null;
-    setView() {} setVolume(value) { this.volume = value; }
+    setView(view) { this.view = view; }
+    async joinChannel(id) { calls.push(['join', id]); if (live.join) await live.join.promise; if (live.joinError) throw live.joinError; }
+    leaveChannel() { throw new Error('void leave must not bypass settlement'); }
+    setVolume(value) { this.volume = value; }
     addListener(value) { this.listener = value; } removeListener() { this.listener = null; }
     startPlay(url) { calls.push(['play', url]); } stopPlay() { calls.push(['stop']); }
     getState() { return this.state; }
@@ -88,20 +79,22 @@ function fixture() {
     const module = { exports: {} };
     vm.runInNewContext(result.outputText, { module, exports: module.exports, require(name) {
       if (name === '@tencentcloud/atomicxcore') return sdk;
-      if (name === '@tencentcloud/liteavsdk_professional') return { getTRTCShareInstance(context) { calls.push(['sharedCloud', context]); return cloud; }, TRTCVideoStreamType: { TRTCVideoStreamTypeBig: 0 }, TRTCRenderParams: class {}, TRTCVideoFillMode: { TRTCVideoFillMode_Fit: 1 } };
+      if (name === '@tencentcloud/liteavsdk_professional') throw new Error('manual TRTC must not be loaded');
+      if (name.endsWith('/engine/EngineBridge')) return { EngineBridge: { async call(method, data, id) { assert.equal(method, 'AtomicPlayer.leaveChannel'); assert.equal(data, '{}'); calls.push(['leave', id]); if (live.leave) await live.leave.promise; } } };
+      if (name.endsWith('/impl/common/StoreFactory')) return { StoreFactory: { shared: { didLeaveRoom(id) { calls.push(['didLeave', id]); } } } };
       if (name === '@kit.AbilityKit') return {};
       if (name === '@kuikly-open/render') return { KuiklyRenderBaseView: BaseView };
       if (name === '@ohos.PiPWindow') return { default: pip };
       if (name === '@ohos.arkui.node') return { ComponentContent: class {} };
       if (name === './LiveComponent') return { createGycLiveView() {} };
       return load(name.replace('./', ''));
-    }, XComponentController: class {}, Observed: value => value, setInterval(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearInterval(id) { timers.delete(id); },
+    }, XComponentController: class { surfaceId = ''; getXComponentSurfaceId() { return this.surfaceId; } }, Observed: value => value, setInterval(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearInterval(id) { timers.delete(id); },
       setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); },
       Map, Set, Number, Promise, Error, encodeURIComponent }, { filename: name + '.ets' });
     cache.set(name, module.exports); return module.exports;
   }
   const { GycLiveClient: client, NativeLiveSession: Session } = load('GycLiveClient');
-  return { client, Session, View: load('GycLiveView').GycLiveView, calls, timers, identity, login, live, barrage, audience, cloud, pip, ability, windowContext, friendship, likes, accountExpired() { accountEvent?.(); } };
+  return { client, Session, View: load('GycLiveView').GycLiveView, calls, timers, identity, login, live, barrage, audience, pip, ability, windowContext, friendship, likes, accountExpired() { accountEvent?.(); } };
 }
 
 test('owned login does not wait for user profile; owned logout cleans the actual identity', async () => {
@@ -171,9 +164,9 @@ test('released barrage cannot report success and old events stop reaching the ob
   const events = []; const session = new f.Session('A', 1, false, event => events.push(event));
   await f.client.enter(session); session.observe();
   f.barrage.pending = deferred(); const sending = session.sendBarrage('hello'); const failed = assert.rejects(sending, /released/);
-  const listener = [...f.live.listeners][0]; const mediaCallback = [...f.cloud.callbacks][0];
+  const listener = session.player.listener;
   await f.client.leave(session); const count = events.length;
-  listener.onLiveEnded('A'); mediaCallback.onError(-1, 'late'); f.barrage.pending.resolve(); await failed;
+  listener.liveEnded(0); listener.playerError(-1, 'late'); f.barrage.pending.resolve(); await failed;
   assert.equal(events.length, count); assert.equal(f.barrage.barrageState.messageList.listeners.size, 0);
 });
 
@@ -277,8 +270,7 @@ test('join failure still leaves; a throwing media cleanup does not skip SDK leav
   assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1);
   f.live.join = null;
   const b = new f.Session('B', 2, false, () => {}); await f.client.enter(b);
-  b.setSurfaceView('video-B'); f.cloud.video('host', 1);
-  f.cloud.stopRemoteView = () => { throw new Error('native stop'); };
+  b.player.stopPlay = () => { throw new Error('native stop'); };
   await assert.rejects(f.client.leave(b), /cleanup failed/);
   assert.equal(f.calls.filter(c => c[0] === 'leave').length, 2);
 });
@@ -300,20 +292,19 @@ test('missing room keeps its original join error, settles leave, and permits log
   f.live.join = null; f.live.leave = null;
   await f.client.login(123, 'viewer', 'sig', {});
   let next; view.call('sdkJoin', JSON.stringify({ generation: 2, liveId: 'running' }), value => next = value); await tick();
-  assert.equal(next.success, true); assert.equal(f.live.liveState.currentLive.liveID, 'running');
+  assert.equal(next.success, true); assert.equal(f.calls.some(c => c[0] === 'play' && c[1] === 'livekit://liveid=running'), true);
   view.onDestroy(); await tick();
 });
 
-test('not-in-room is benign only for an unjoined session with an empty SDK room and no other cleanup failure', async () => {
-  for (const scenario of ['sdk-room-still-present', 'different-error', 'already-joined', 'local-cleanup-failed']) {
+test('exact not-in-room is benign only for an unjoined channel; other leave and local errors block reuse', async () => {
+  for (const scenario of ['different-error', 'already-joined', 'local-cleanup-failed']) {
     const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
     const session = new f.Session('A', 1, false, () => {});
     if (scenario === 'already-joined') await f.client.enter(session);
     else {
       f.live.join = deferred(); const failed = assert.rejects(f.client.enter(session)); await tick();
       f.live.join.reject(new Error('join failed')); await failed;
-      if (scenario === 'sdk-room-still-present') f.live.liveState.currentLive = { liveID: 'A' };
-      if (scenario === 'local-cleanup-failed') f.cloud.removeCallback = () => { throw new Error('local cleanup failed'); };
+      if (scenario === 'local-cleanup-failed') session.player.stopPlay = () => { throw new Error('local cleanup failed'); };
     }
     f.live.leave = deferred();
     const failed = assert.rejects(f.client.leave(session)); await tick();
@@ -347,93 +338,46 @@ test('public command timeout settles once and ignores the late completion', asyn
 });
 
 
-test('watch caches real availability before join acknowledgement and binds only the reported owner after Surface readiness', async () => {
-  const f = fixture(); const context = {}; await f.client.login(123, 'viewer', 'sig', context);
-  f.live.join = deferred();
-  const session = new f.Session('A', 1, false, () => {}); const entering = f.client.enter(session);
-  await tick();
-  assert.equal(f.calls.find(c => c[0] === 'sharedCloud')[1], context);
-  assert.ok(f.calls.findIndex(c => c[0] === 'addCallback') < f.calls.findIndex(c => c[0] === 'join'));
-  f.cloud.video('unrelated', 1); f.cloud.video('host', 1);
-  session.setSurfaceView('video-A');
-  assert.equal(f.calls.some(c => c[0] === 'startRemote'), false);
-  f.live.join.resolve(); await entering;
-  assert.deepEqual(f.calls.filter(c => c[0] === 'startRemote'), [['startRemote', 'host', 0, 'video-A']]);
-  f.cloud.video('host', 1); f.cloud.video('unrelated', 0);
-  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
-  assert.equal(session.player, null); assert.equal(session.view, null);
-  assert.equal(f.calls.some(c => ['newPlayer', 'play', 'enterRoom', 'exitRoom', 'destroyShared'].includes(c[0])), false);
-  await f.client.leave(session);
-});
-
-test('watch handles callback after join, Surface detach and replacement, and owner becoming unavailable', async () => {
-  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
-  const session = new f.Session('A', 1, false, () => {}); await f.client.enter(session);
-  f.cloud.video('unrelated', 1); session.setSurfaceView('video-A');
-  assert.equal(f.calls.some(c => c[0] === 'startRemote'), false);
-  f.cloud.video('host', 1); session.setSurfaceView('video-B');
-  assert.deepEqual(f.calls.filter(c => c[0] === 'updateRemote'), [['updateRemote', 'host', 0, 'video-B']]);
-  session.setSurfaceView(''); f.cloud.video('host', 1);
-  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
-  session.setSurfaceView('video-C'); f.cloud.video('host', 0); session.setSurfaceView('video-D');
-  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 2);
-  f.cloud.video('host', 1);
-  assert.deepEqual(f.calls.filter(c => c[0] === 'startRemote').at(-1), ['startRemote', 'host', 0, 'video-D']);
-  await f.client.leave(session);
-  assert.equal(f.calls.filter(c => c[0] === 'stopRemote').length, 3);
-});
-
-test('release removes only its media callback, suppresses late callbacks, and never owns the shared room lifecycle', async () => {
-  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
-  const foreign = {}; f.cloud.addCallback(foreign);
-  const events = []; const session = new f.Session('A', 1, false, e => events.push(e));
-  session.setSurfaceView('video-A'); await f.client.enter(session); f.cloud.video('host', 1);
-  const callback = [...f.cloud.callbacks].find(c => c !== foreign);
-  await f.client.leave(session); const count = events.length; const starts = f.calls.filter(c => c[0] === 'startRemote').length;
-  callback.onUserVideoAvailable('host', 1); callback.onError(-1, 'late'); session.setSurfaceView('late');
-  assert.equal(events.length, count); assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, starts);
-  assert.equal(f.cloud.callbacks.size, 1); assert.equal(f.cloud.callbacks.has(foreign), true);
-  assert.deepEqual(f.calls.filter(c => c[0] === 'stopRemote'), [['stopRemote', 'host', 0]]);
-  assert.equal(f.calls.some(c => ['enterRoom', 'exitRoom', 'destroyShared', 'play', 'stop'].includes(c[0])), false);
-});
-
-test('renderer retains a unique ready Surface across room sessions and ignores readiness after destruction', async () => {
-  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {}); f.client.setForeground(true);
-  const view = new f.View(); const other = new f.View(); view.attach();
-  assert.notEqual(view.surfaceViewId, other.surfaceViewId);
-  view.setSurfaceReady(other.surfaceViewId, true);
-  view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'A' }), null); await tick(); f.cloud.video('host', 1);
-  assert.equal(f.calls.some(c => c[0] === 'startRemote'), false);
-  view.setSurfaceReady(view.surfaceViewId, true);
-  view.call('sdkLeave', JSON.stringify({ generation: 1 }), null); await tick();
-  view.call('sdkJoin', JSON.stringify({ generation: 2, liveId: 'B' }), null); await tick();
-  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
-  f.cloud.video('host', 1);
-  assert.deepEqual(f.calls.filter(c => c[0] === 'startRemote').at(-1), ['startRemote', 'host', 0, view.surfaceViewId]);
-  view.onDestroy(); await tick(); const count = f.calls.length;
-  view.setSurfaceReady(view.surfaceViewId, true); f.cloud.video('host', 1);
-  assert.equal(f.calls.length, count); other.onDestroy();
-});
-
-test('media bind failure reports a playback error and permits a later availability callback to retry', async () => {
+test('full watch uses one AtomicPlayer channel with sound and the same view, without manual TRTC', async () => {
   const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
   const events = []; const session = new f.Session('A', 1, false, e => events.push(e));
-  await f.client.enter(session); session.setSurfaceView('video-A');
-  const start = f.cloud.startRemoteView;
-  f.cloud.startRemoteView = () => { throw new Error('render failed'); }; f.cloud.video('host', 1);
-  assert.deepEqual(events.map(e => e.type), ['playbackError']); assert.equal(events[0].generation, 1);
-  f.cloud.startRemoteView = start; f.cloud.video('host', 1);
-  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
-  await f.client.leave(session);
+  await f.client.enter(session); session.observe();
+  assert.equal(session.player.volume, 100); assert.equal(session.player.view, session.view);
+  assert.deepEqual(f.calls.filter(c => ['join', 'fetchInfo', 'play'].includes(c[0])), [['join', 'A'], ['fetchInfo', 'A'], ['play', 'livekit://liveid=A']]);
+  session.player.listener.playerError(-1001, 'play failed');
+  session.player.listener.liveEnded(0); session.player.listener.kickedOut(0, 'kicked');
+  assert.deepEqual(events.filter(e => ['playbackError', 'ended', 'kickedOut'].includes(e.type)).map(e => e.type), ['playbackError', 'ended']);
+  const oldListener = session.player.listener;
+  await f.client.leave(session); const count = events.length; oldListener.liveEnded(0);
+  assert.equal(events.length, count);
+  assert.deepEqual(f.calls.filter(c => c[0] === 'didLeave'), [['didLeave', 'A']]);
 });
 
+test('AtomicPlayer leave waits for the real SDK result before releasing room stores and next room', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  const a = new f.Session('A', 1, false, () => {}); await f.client.enter(a);
+  f.live.leave = deferred(); const leaving = f.client.leave(a);
+  const b = new f.Session('B', 2, false, () => {}); const entering = f.client.enter(b);
+  await tick(); assert.equal(f.calls.filter(c => c[0] === 'join').length, 1);
+  assert.equal(f.calls.some(c => c[0] === 'didLeave'), false);
+  f.live.leave.resolve(); await leaving; await entering;
+  assert.ok(f.calls.findIndex(c => c[0] === 'didLeave') < f.calls.findIndex(c => c[0] === 'join' && c[1] === 'B'));
+  await f.client.leave(b);
+});
+
+test('player view parameters preserve the exact SDK view and PiP Surface controller', async () => {
+  const f = fixture(); const { view } = await joinedView(f);
+  const parameters = view.playerViewParameters(view.session);
+  assert.equal(parameters.view, view.session.view);
+  assert.equal(parameters.mixSurfaceController, view.surfaceController);
+  view.onDestroy(); await tick();
+});
 
 async function joinedView(f) {
   await f.client.login(123, 'viewer', 'sig', {}); f.client.setForeground(true);
   const view = new f.View(); const events = []; view.setProp('nativeLiveEvent', e => events.push(e)); view.attach();
-  view.setSurfaceReady(view.surfaceViewId, true);
+  view.surfaceController.surfaceId = 'surface';
   view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'A' }), null); await tick();
-  f.cloud.video('host', 1);
   return { view, events };
 }
 
@@ -448,12 +392,12 @@ test('PiP acceptance and layout hints do not impersonate actual state; original 
   assert.equal(config.componentController, view.surfaceController); assert.equal(config.context.windowContext, true);
   assert.equal(config.contentWidth, 1280); assert.equal(config.contentHeight, 720);
   assert.equal(view.pictureInPictureAspect, 16 / 9);
-  assert.equal(f.calls.find(c => c[0] === 'renderParams')[3].fillMode, 1);
+  assert.equal(view.playerViewParameters(view.session).mixSurfaceController, view.surfaceController);
   f.pip.controllers[0].emit(f.pip.PiPState.STARTED);
   assert.deepEqual(changed, [false, true]);
   assert.equal(events.filter(e => e.type === 'pictureInPictureChanged').at(-1).enabled, true);
-  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
-  assert.equal(f.calls.some(c => ['enterRoom', 'exitRoom', 'newPlayer', 'updateRemote'].includes(c[0])), false);
+  assert.equal(f.calls.filter(c => c[0] === 'play').length, 1);
+  assert.equal(f.calls.some(c => ['enterRoom', 'exitRoom', 'updateRemote'].includes(c[0])), false);
   f.pip.controllers[0].emit(f.pip.PiPState.STOPPED);
   assert.equal(view.pictureInPictureAspect, -1);
   assert.deepEqual(changed, [false, true, false]); assert.equal(closed, 1);
@@ -585,7 +529,7 @@ test('full watch retains one join through background and early foreground restor
   preview.call('sdkPreview', JSON.stringify({ generation: 2, liveId: 'preview' }), null); await tick();
   f.client.setForeground(false); await tick();
   assert.equal(previewEvents.filter(e => e.type === 'visibility').at(-1).visible, false);
-  assert.equal(f.calls.filter(c => c[0] === 'stop').length, 1); assert.equal(preview.session, null);
+  assert.equal(f.calls.filter(c => c[0] === 'stop').length, 2); assert.equal(preview.session, null);
   let reply; preview.call('sdkJoin', JSON.stringify({ generation: 3, liveId: 'B' }), r => reply = r); await tick();
   assert.equal(reply.success, false); assert.equal(f.calls.filter(c => c[0] === 'join').length, 1);
   preview.onDestroy();
@@ -706,7 +650,7 @@ test('Main foreground leaves live PiP floating, and only the owner Ability retur
   const main = scopedContext(f, 'Main'); const live = scopedContext(f, 'Audience');
   f.client.setForeground(false, main); f.client.setForeground(true, live);
   const view = new f.View(); view.hostContext = scopedContext(f, 'Audience'); const events = [];
-  view.setProp('nativeLiveEvent', e => events.push(e)); view.attach(); view.setSurfaceReady(view.surfaceViewId, true);
+  view.setProp('nativeLiveEvent', e => events.push(e)); view.attach(); view.surfaceController.surfaceId = 'surface';
   let reply; view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'A' }), r => reply = r); await tick();
   assert.equal(reply.success, true); assert.equal(f.client.isForeground(), false);
   view.call('enterPictureInPicture', '{"wideContent":true}', null); await tick(); const controller = f.pip.controllers[0]; controller.emit(2);
@@ -727,7 +671,7 @@ test('Main foreground leaves live PiP floating, and only the owner Ability retur
 test('static PiP restore delegates to its foreground owner even when the legacy global foreground is false', async () => {
   const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
   const live = scopedContext(f, 'Audience'); f.client.setForeground(true, live);
-  const view = new f.View(); view.hostContext = scopedContext(f, 'Audience'); view.attach(); view.setSurfaceReady(view.surfaceViewId, true);
+  const view = new f.View(); view.hostContext = scopedContext(f, 'Audience'); view.attach(); view.surfaceController.surfaceId = 'surface';
   view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'A' }), null); await tick();
   view.call('enterPictureInPicture', '{"wideContent":true}', null); await tick(); f.pip.controllers[0].emit(2);
   assert.equal(f.client.isForeground(), false);
@@ -763,7 +707,7 @@ test('host-managed PiP keeps the one Ability usable and foreground returns do no
   view.setVisible(false); f.client.setForeground(false); f.client.setForeground(true); await tick();
   assert.equal(events.filter(e => e.type === 'visibility').at(-1).visible, true);
   assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 0);
-  assert.equal(f.calls.filter(c => c[0] === 'startRemote').length, 1);
+  assert.equal(f.calls.filter(c => c[0] === 'play').length, 1);
   await f.client.restorePictureInPicture();
   assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 1);
   view.onDestroy(); await tick();
@@ -773,7 +717,7 @@ test('host-managed PiP keeps the one Ability usable and foreground returns do no
 test('same-account preparation preserves the joined room and PiP; owned account replacement resets safely', async () => {
   const f = fixture(); await f.client.login(123, 'viewer', 'sig', {}); f.client.setForeground(true);
   const view = new f.View(); view.setProp('nativeLiveEvent', () => {}); view.attach();
-  view.setSurfaceReady(view.surfaceViewId, true);
+  view.surfaceController.surfaceId = 'surface';
   view.call('sdkJoin', JSON.stringify({ generation: 1, liveId: 'running' }), () => {}); await tick();
   const original = view.session;
   view.call('enterPictureInPicture', JSON.stringify({ wideContent: true }), () => {}); await tick();
@@ -829,4 +773,46 @@ test('foreign identity takeover during an owned room cleanup cannot be logged ou
   assert.equal(f.identity.user, 'external');
   assert.equal(f.calls.filter(c => c[0] === 'logout').length, 0);
   assert.equal(f.calls.filter(c => c[0] === 'login').length, 1);
+});
+
+
+test('a terminal while join is pending cannot restart playback; exact already-left completion settles once', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  f.live.join = deferred(); const events = [];
+  const session = new f.Session('A', 1, false, e => events.push(e));
+  const joining = f.client.enter(session); const failed = assert.rejects(joining, /ended while joining/);
+  await tick(); session.player.listener.liveEnded(0); f.live.join.resolve(); await failed;
+  assert.equal(f.calls.some(c => c[0] === 'play'), false);
+  f.live.leave = deferred(); const leaving = f.client.leave(session); await tick();
+  f.live.leave.reject(Object.assign(new Error('not in live room'), { code: -2 })); await leaving;
+  assert.equal(f.client.isReady(), true);
+  assert.equal(events.filter(e => e.type === 'ended').length, 1);
+});
+
+test('metadata failure preserves the error and still settles the acquired channel before another room', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  f.live.infoError = new Error('metadata unavailable');
+  const session = new f.Session('A', 1, false, () => {});
+  await assert.rejects(f.client.enter(session), /metadata unavailable/);
+  assert.equal(f.calls.some(c => c[0] === 'play'), false);
+  await f.client.leave(session); assert.equal(f.client.isReady(), true);
+  f.live.infoError = null;
+  const next = new f.Session('B', 2, false, () => {}); await f.client.enter(next); await f.client.leave(next);
+  assert.deepEqual(f.calls.filter(c => c[0] === 'didLeave').map(c => c[1]), ['A', 'B']);
+});
+
+
+test('returning to foreground during system PiP close waits for STOPPED without repeating stop', async () => {
+  const f = fixture(); const { view, events } = await joinedView(f);
+  let closed = 0; f.client.observePictureInPicture(() => {}, () => closed++);
+  view.call('enterPictureInPicture', '{"wideContent":true}', null); await tick();
+  const controller = f.pip.controllers[0]; controller.emit(2); f.client.setForeground(false);
+  controller.emit(3); f.client.setForeground(true); await tick();
+  assert.equal(f.calls.filter(c => c[0] === 'stopPiP').length, 0);
+  assert.equal(f.calls.filter(c => c[0] === 'leave').length, 0);
+  assert.equal(events.some(e => e.type === 'playbackError'), false);
+  controller.emit(4); await tick();
+  assert.equal(closed, 1); assert.equal(f.client.isReady(), true);
+  assert.equal(f.calls.filter(c => c[0] === 'leave').length, 1);
+  view.onDestroy(); await tick();
 });

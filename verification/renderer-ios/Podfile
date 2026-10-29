@@ -11,3 +11,15 @@ target 'LiveRendererTests' do
   ENV['KUIKLY_VERSION'] = '2.29.1'
   pod 'OpenKuiklyIOSRender', :git => 'https://github.com/Tencent-TDS/KuiklyUI.git', :tag => '2.29.1'
 end
+
+# Xcode 27 的 Simulator 测试不再接受上游 Render Pod 的 iOS 12 默认值。
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] || '0'
+      if Gem::Version.new(current) < Gem::Version.new('15.0')
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
+    end
+  end
+end
