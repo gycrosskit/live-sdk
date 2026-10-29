@@ -4,7 +4,7 @@ plugins {
  id("com.android.application") version "8.10.1"
 }
 val kuiklyRenderFrameworkDir = providers.gradleProperty("kuiklyRenderFrameworkDir").orNull
-val liveVersion = providers.gradleProperty("liveVersion").orElse("1.1.0").get()
+val liveVersion = providers.gradleProperty("liveVersion").orElse("1.1.1").get()
 val verifyOhos = providers.gradleProperty("verifyOhos").isPresent
 val verifyEmoji = verifyOhos || providers.gradleProperty("verifyEmoji").isPresent
 val verifyLocalSource = providers.gradleProperty("verifyLocalSource").isPresent
@@ -67,6 +67,12 @@ android {
  namespace = "io.github.gycrosskit.liveconsumer"
  compileSdk = 36
  defaultConfig { applicationId = "io.github.gycrosskit.liveconsumer"; minSdk = 24; targetSdk = 36 }
+ buildTypes {
+  getByName("release") {
+   isMinifyEnabled = true
+   proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+  }
+ }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_11; targetCompatibility = JavaVersion.VERSION_11 }
 }
 tasks.register("verifyNoCmpUi") {
@@ -109,5 +115,8 @@ tasks.register("verifySingleSdk") {
   }
   println("Exact Live components: " + liveArtifacts.joinToString())
   check(deps.count { it.name == "atomicx-core" } == 1)
+  check(deps.count { it.group == "com.google.code.gson" && it.name == "gson" } == 1) {
+   "AtomicX requires Gson at runtime; the consumer must receive it through Live"
+  }
  }
 }
