@@ -1,15 +1,15 @@
 # 鸿蒙观看接线（RC）
 
-> 当前源码候选：Maven（core/Kuikly）与鸿蒙 HAR/OHPM `1.1.0`，iOS 原生 Pod 沿用已发布 `native-1.0.1`，Kuikly 基线 2.29.1。新版本发布及精确远程消费尚待完成；本地源码验证和历史设备结果不替代本轮公开消费验收。
+> 当前渠道版本：Maven（core/Kuikly）`1.1.2`、HAR/OHPM `1.1.1`、iOS Git Pod `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。渠道状态以精确 Release/Registry 及消费收据为准，历史标签和设备验收保持原范围。
 
-当前候选 `@gycrosskit/live-native@1.1.0` 配套 JitPack `live-core` / `live-kuikly:1.1.0`，完整观看和静音预览统一由 AtomicPlayer 播放，成员事件及同会话 PiP 保留。Registry 查询、精确安装及编译结果以本版本 Release 收据为准，不能沿用旧 rc.3 的发布结果。源码已完成宿主本地编译与横向房间真机分项验收；旧 Registry rc.3 不包含这些修复。
+当前 `@gycrosskit/live-native@1.1.1` 配套 Maven `live-core` / `live-kuikly:1.1.2`，完整观看和静音预览统一由 AtomicPlayer 播放，成员事件及同会话 PiP 保留。Registry 查询、精确安装及编译结果以本版本 Release 收据为准，不能沿用旧 rc.3 的发布结果。源码已完成宿主本地编译与横向房间真机分项验收；旧 Registry rc.3 不包含这些修复。
 
 原生层只处理腾讯 SDK、ArkUI 视频节点和事件转换。`LiveBridgeAudienceSession` 复用 `AtomicAudienceSession`、`AtomicAudienceSessionCoordinator`、`LiveAudienceSnapshotStore`、`LiveLikeBatcher`；预览复用 `AtomicLivePreviewController`。Renderer 与 SDK UI 主线程之间异步传输，禁止阻塞互等。原生 Promise 队列额外保证即使公共会话超时，未结束的 SDK join/leave 也不会被下一场 SDK 操作越过。
 
 ## 依赖与注册
 
 ```bash
-ohpm install @gycrosskit/live-native@1.1.0
+ohpm install @gycrosskit/live-native@1.1.1
 ```
 
 

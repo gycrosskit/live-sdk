@@ -1,5 +1,11 @@
 # 更新记录
 
+## Maven 1.1.2 / Native 1.0.2 / HAR 1.1.1
+
+- Android/OHOS 累计 SDK 消息列表按身份键去重并提取新增消息，保留有界快照、重连复用与成员事件。
+- Renderer Pod/HAR 改为宿主可选 Kuikly 范围；构建基线仍为 2.29.1。Pod Core/Renderer 同用 `native-1.0.2`，Maven 与 HAR 独立版本化。
+- 各渠道状态以精确 Release/Registry 及消费收据为准；历史标签、checksum 与设备验收记录保持原范围。
+
 ## 1.1.0（发布候选）
 
 - 鸿蒙完整观看与静音预览统一使用 AtomicPlayer，保留进离房结算、关播释放和同会话小窗。
