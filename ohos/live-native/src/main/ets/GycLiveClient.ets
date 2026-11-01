@@ -255,6 +255,7 @@ export class NativeLiveSession {
   private audienceStore: LiveAudienceStore | null = null;
   private likeStore: LikeStore | null = null;
   private messageChanges: LiveDataListener = new LiveDataListener(() => this.messages());
+  private barrageKeys: Set<string> = new Set();
   private audienceChanges: LiveDataListener = new LiveDataListener(() => this.audience());
   private likeListener: LikeListener = new LikeListener();
   private audienceListener: LiveAudienceListener = new LiveAudienceListener();
@@ -379,7 +380,16 @@ export class NativeLiveSession {
         senderId: item.sender.userID, senderName: item.sender.userName, senderAvatarUrl: item.sender.avatarURL,
         content: item.messageType === BarrageType.TEXT ? item.textContent : '', businessId: item.businessID, data: item.data };
     });
-    this.event({ type: 'messages', messages: messages });
+    const keys: Set<string> = new Set();
+    const delta = messages.filter(item => {
+      const key = JSON.stringify([item.senderId, item.sequence, item.timestampSeconds, item.content, item.businessId, item.data]);
+      const duplicate = this.barrageKeys.has(key) || keys.has(key);
+      keys.add(key);
+      return !duplicate;
+    });
+    // 与 SDK 当前列表同寿命；UI 淘汰及成员消息不影响源列表去重，重连新身份仍可进入。
+    this.barrageKeys = keys;
+    if (delta.length > 0) this.event({ type: 'messages', messages: delta });
   }
   private audience(): void {
     if (!this.valid() || !this.audienceStore) return;

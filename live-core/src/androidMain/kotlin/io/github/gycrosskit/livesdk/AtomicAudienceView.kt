@@ -397,7 +397,7 @@ class AtomicAudienceView(
     }
 
     private fun appendNewBarrages(incoming: List<Barrage>) {
-        snapshotStore.appendMessages(incoming.map(Barrage::toAudienceMessageSnapshot))
+        snapshotStore.appendBarrageSnapshot(incoming.map(Barrage::toAudienceMessageSnapshot))
     }
 
     /**
