@@ -54,6 +54,42 @@ class LiveAudienceSnapshotStoreTest {
     }
 
     @Test
+    fun `cumulative barrage snapshot cannot replay messages evicted by member events`() {
+        val store = LiveAudienceSnapshotStore("live-1")
+        val incoming = (1L..200L).map { message(sequence = it) }
+        assertEquals(200, store.appendBarrageSnapshot(incoming))
+        store.appendMemberMessage(LiveAudienceUserSnapshot("member", "Member", ""), true, 2.0)
+        val afterMember = store.snapshot().messages
+
+        assertEquals(0, store.appendBarrageSnapshot(incoming))
+        assertSame(afterMember, store.snapshot().messages)
+        val next = message(sequence = 201)
+        assertEquals(1, store.appendBarrageSnapshot(incoming + listOf(next, next)))
+        assertEquals(200, store.snapshot().messages.size)
+        assertEquals(listOf(-1L, 201L), store.snapshot().messages.takeLast(2).map { it.sequence })
+        assertFalse(incoming.first() in store.snapshot().messages)
+        store.appendBarrageSnapshot(emptyList())
+        assertEquals(1, store.appendBarrageSnapshot(listOf(incoming.first())))
+        assertEquals(incoming.first(), store.snapshot().messages.last())
+    }
+
+    @Test
+    fun `barrage snapshot preserves composite identity and source reset on reconnect`() {
+        val store = LiveAudienceSnapshotStore("live-1")
+        val first = message(sequence = 1)
+        val changed = listOf(
+            first.copy(senderId = "other"), first.copy(timestampSeconds = 2.0),
+            first.copy(content = "changed"), first.copy(businessId = "business|id"), first.copy(data = "payload|data"),
+        )
+        assertEquals(1, store.appendBarrageSnapshot(listOf(first)))
+        assertEquals(changed.size, store.appendBarrageSnapshot(listOf(first) + changed))
+        assertEquals(0, store.appendBarrageSnapshot(emptyList()))
+        val reconnected = first.copy(timestampSeconds = 3.0)
+        assertEquals(1, store.appendBarrageSnapshot(listOf(reconnected)))
+        assertEquals(reconnected, store.snapshot().messages.last())
+    }
+
+    @Test
     fun `message list stays bounded and evicted identity can be received again`() {
         val store = LiveAudienceSnapshotStore("live-1")
         val first = message(sequence = 0)
