@@ -190,7 +190,7 @@ raise 'Invalid deployment normalization' unless configs.map { |c| c.build_settin
             ("AtomicXCore", "4.3.9"), ("RTCRoomEngine/Professional", "4.3.9"),
             ("TXIMSDK_Plus_iOS_XCFramework", "9.1.7818")])
         self.assertEqual(re.findall(r"(?:s|renderer).dependency '([^']+)'", spec), ["OpenKuiklyIOSRender"])
-        self.assertIn("renderer.dependency 'OpenKuiklyIOSRender', '2.29.1'", renderer)
+        self.assertIn("renderer.dependency 'OpenKuiklyIOSRender', '>= 2.29.1', '< 3.0'", renderer)
         self.assertIn("ios/Sources/GycLiveRenderer/*.swift", renderer)
 
     def test_native_renderer_does_not_import_kotlin_or_host(self):
