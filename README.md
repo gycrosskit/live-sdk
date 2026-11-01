@@ -1,5 +1,7 @@
 # GY CrossKit Live SDK
 
+Kuikly 由宿主统一选择版本；组件构建基线、允许范围及消费验证边界见[功能与平台差异](docs/功能与平台差异.md#kuikly-版本与宿主选择)。
+
 > 当前源码候选：Maven（core/Kuikly）`1.1.1`，补齐 Android AtomicX 的 Gson 运行时依赖。鸿蒙 HAR/OHPM 保持 `1.1.0`，iOS 原生 Pod 保持 `native-1.0.1`，Kuikly 基线 2.29.1。源码 R8 已通过，Maven `1.1.1` 尚待生产、发布与精确公开消费；其他渠道状态沿用各自原收据。
 
 OHOS 未发布源码修订：`GycLiveView.setProp("pictureInPictureHostManaged", true)` 支持宿主在单 Ability 内管理直播与首页展示，不强制把整个应用退后台，默认不改变旧窗口策略。字段合同与验收边界见[功能与平台差异](docs/功能与平台差异.md)；不包含在现有冻结 RC，不涉及 Android/iOS 源码或发版。

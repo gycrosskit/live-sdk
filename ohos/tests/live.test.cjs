@@ -159,6 +159,39 @@ test('SDK dataset callbacks publish updated barrage contents', async () => {
   await f.client.leave(session); assert.equal(source.listeners.size, 0);
 });
 
+test('cumulative barrage datasets emit only new identities across member events and reconnects', async () => {
+  const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
+  const events = []; const session = new f.Session('A', 1, false, event => events.push(event));
+  await f.client.enter(session); session.observe();
+  const source = f.barrage.barrageState.messageList;
+  const listener = [...source.listeners][0];
+  const message = sequence => ({ sequence, timestampInSecond: sequence, sender: { userID: 'u', userName: 'viewer', avatarURL: '' },
+    messageType: 0, textContent: `message-${sequence}`, businessID: '', data: '' });
+  source.values = Array.from({ length: 200 }, (_, index) => message(index + 1));
+  listener.onDataReloaded();
+  const batches = () => events.filter(event => event.type === 'messages');
+  assert.equal(batches().at(-1).messages.length, 200);
+  [...f.audience.listeners][0].onAudienceJoined({ userID: 'member', userName: 'Member', avatarURL: '' });
+  const count = batches().length;
+  listener.onDatasetChange([]); session.observe();
+  assert.equal(batches().length, count, 'an unchanged dataset must not replay messages evicted from the UI window');
+  assert.equal(events.filter(event => event.type === 'memberChanged').length, 1);
+  source.values.push(message(201), message(201)); listener.onDataAdded(200);
+  assert.equal(batches().at(-1).messages.length, 1);
+  assert.equal(batches().at(-1).messages[0].sequence, 201);
+  source.values = []; listener.onDataReloaded();
+  source.values = [message(201)]; listener.onDataReloaded();
+  assert.equal(batches().length, count + 2, 'a reset source can emit an identity from its previous list again');
+  source.values = [{ ...message(1), timestampInSecond: 202, businessID: 'business|id', data: 'payload|data' }];
+  listener.onDataReloaded();
+  assert.equal(batches().at(-1).messages[0].timestampSeconds, 202, 'reused sequence after reconnect remains a new identity');
+  const current = source.values[0];
+  source.values.push({ ...current, businessID: 'business', data: 'id|payload|data' });
+  listener.onDataAdded(1);
+  assert.equal(batches().at(-1).messages.length, 1, 'structured identity must keep business and payload fields distinct');
+  await f.client.leave(session);
+});
+
 test('released barrage cannot report success and old events stop reaching the observer', async () => {
   const f = fixture(); await f.client.login(123, 'viewer', 'sig', {});
   const events = []; const session = new f.Session('A', 1, false, event => events.push(event));

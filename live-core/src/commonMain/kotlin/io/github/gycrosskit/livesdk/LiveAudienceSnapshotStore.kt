@@ -14,6 +14,7 @@ internal class LiveAudienceSnapshotStore(
     // 内部去重队列不直接暴露给 UI，只发布不可变快照。
     private val messages = ArrayDeque<LiveAudienceMessageSnapshot>()
     private val knownMessageKeys = linkedSetOf<LiveAudienceMessageIdentity>()
+    private val barrageKeys = mutableSetOf<LiveAudienceMessageIdentity>()
     private var syntheticMessageSequence = -1L
 
     // 两端 SDK 回调统一在主线程更新；快照只由这个 StateFlow 持有。
@@ -69,6 +70,12 @@ internal class LiveAudienceSnapshotStore(
 
     fun updateAudience(users: List<LiveAudienceUserSnapshot>, count: Int) {
         snapshots.value = snapshot().copy(audience = users.toList(), audienceCount = maxOf(count, users.size))
+    }
+
+    /** SDK 累计列表独立去重，不能因 UI 的 200 条窗口淘汰而重放旧弹幕。 */
+    fun appendBarrageSnapshot(incoming: List<LiveAudienceMessageSnapshot>): Int {
+        barrageKeys.retainAll(incoming.mapTo(mutableSetOf()) { it.identityKey })
+        return appendMessages(incoming.filter { barrageKeys.add(it.identityKey) })
     }
 
     /**
