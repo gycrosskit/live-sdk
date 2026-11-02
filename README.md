@@ -2,11 +2,11 @@
 
 Kuikly 由宿主统一选择版本；组件构建基线、允许范围及消费验证边界见[功能与平台差异](docs/功能与平台差异.md#kuikly-版本与宿主选择)。
 
-> 当前渠道版本：Maven（core/Kuikly）`1.1.2`、HAR/OHPM `1.1.1`、iOS Git Pod `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。渠道状态以精确 Release/Registry 及消费收据为准，历史标签和设备验收保持原范围。
+> 当前渠道版本：Maven（core/Kuikly）`1.1.2`、HAR/OHPM 候选 `1.1.2`、iOS Git Pod `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。渠道状态以精确 Release/Registry 及消费收据为准，历史标签和设备验收保持原范围。
 
 OHOS 单 Ability 接入：`GycLiveView.setProp("pictureInPictureHostManaged", true)` 支持宿主在单 Ability 内管理直播与首页展示，不强制把整个应用退后台，默认不改变旧窗口策略。字段合同与验收边界见[功能与平台差异](docs/功能与平台差异.md)；历史冻结 RC 不包含此字段；本页渠道版本的交付范围以对应 Release 为准。
 
-Maven、HAR 与 Pod 独立版本化：当前分别为 `1.1.2`、`1.1.1` 和 `native-1.0.2`。Pod 的 Core/Renderer 共用同一 Git Tag，默认 Core 不变；Renderer 允许宿主选择 `>= 2.29.1, < 3.0`。旧制品、标签和校验值保持不变。
+Maven、HAR 与 Pod 独立版本化：当前分别为 `1.1.2`、`1.1.2` 和 `native-1.0.2`。Pod 的 Core/Renderer 共用同一 Git Tag，默认 Core 不变；Renderer 允许宿主选择 `>= 2.29.1, < 3.0`。旧制品、标签和校验值保持不变。
 
 2026-10-23 真机发现 Maven `0.3.0-rc.2` 的公共 View 在 `createEvent()` 中提前注册事件，进入直播时触发 `PagerNotFoundException`。当前候选将注册移至挂载后，并用真实 Kuikly 的事件初始化过程补回归；Android/iOS 同样应升级此公共修复。此后本地又修订鸿蒙 HAR 的历史媒体绑定和成员消息，并新增系统 PiP 候选；这些修订纳入 rc.4，是否已可远程消费以该版本 Release 收据为准，旧 HAR 不包含修复。原生 Pod 保持不变。源码、CI、公开消费及真机复验分别记录。
 
