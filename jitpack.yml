@@ -1,4 +1,4 @@
 jdk:
-  - openjdk17
+  - openjdk21
 install:
   - bash scripts/jitpack-install-prebuilt.sh live-sdk
