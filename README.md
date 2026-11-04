@@ -1,5 +1,7 @@
 # GY CrossKit Live SDK
 
+新增 Maven 候选 `1.1.3-rc.1`：独立 `live-room-core` 提供 SDK 中立的配置快照与弹层队列，仅依赖 serialization JSON，保持既有包名/语义；不引入腾讯 SDK，不改变既有原生渠道。候选尚未发布，接入和验证合同见[直播房间配置与弹层](docs/直播房间配置与弹层.md)。
+
 Kuikly 由宿主统一选择版本；组件构建基线、允许范围及消费验证边界见[功能与平台差异](docs/功能与平台差异.md#kuikly-版本与宿主选择)。
 
 > 当前渠道版本：Maven（core/Kuikly）`1.1.2`、HAR/OHPM 候选 `1.1.2`、iOS Git Pod `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。渠道状态以精确 Release/Registry 及消费收据为准，历史标签和设备验收保持原范围。

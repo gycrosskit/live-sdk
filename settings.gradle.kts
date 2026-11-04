@@ -33,4 +33,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "live-sdk"
 
-include(":live-core", ":live-kuikly")
+include(":live-core", ":live-kuikly", ":live-room-core")
