@@ -6,7 +6,7 @@ plugins {
 }
 
 group = providers.environmentVariable("GROUP").orElse("com.github.gycrosskit.live-sdk").get()
-version = providers.environmentVariable("VERSION").orElse("1.1.3-rc.1").get()
+version = providers.environmentVariable("VERSION").orElse("1.1.3").get()
 
 
 allprojects {

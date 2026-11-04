@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-export VERSION="${VERSION:-1.1.3-rc.1}"
+export VERSION="${VERSION:-1.1.3}"
 bash gradlew :live-core:compileKotlinOhosArm64 :live-kuikly:compileKotlinOhosArm64 :live-core:compileDebugKotlinAndroid :live-core:compileKotlinIosArm64 :live-core:compileKotlinIosSimulatorArm64 :live-kuikly:compileDebugKotlinAndroid :live-kuikly:compileKotlinIosArm64 :live-kuikly:compileKotlinIosSimulatorArm64 :live-core:testDebugUnitTest :live-kuikly:testDebugUnitTest :live-room-core:compileKotlinOhosArm64 :live-room-core:compileDebugKotlinAndroid :live-room-core:compileKotlinIosArm64 :live-room-core:compileKotlinIosSimulatorArm64 :live-room-core:testDebugUnitTest :live-room-core:jvmTest --max-workers=2
 for module in ':live-core' ':live-kuikly' ':live-room-core'; do
   bash gradlew "${module}:publishKotlinMultiplatformPublicationToStagingRepository" "${module}:publishAndroidReleasePublicationToStagingRepository" "${module}:publishIosSimulatorArm64PublicationToStagingRepository" "${module}:publishIosArm64PublicationToStagingRepository" --max-workers=2

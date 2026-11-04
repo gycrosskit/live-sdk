@@ -1,6 +1,6 @@
 # 鸿蒙观看接线（RC）
 
-> 当前渠道版本：Maven（core/Kuikly）`1.1.2`、HAR/OHPM `1.1.2`、iOS Git Pod `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。渠道状态以精确 Release/Registry 及消费收据为准，历史标签和设备验收保持原范围。
+> 当前渠道版本：Maven 下一正式版 `1.1.3` 待发布（既有公开版 `1.1.2`）、HAR/OHPM `1.1.2`、iOS Git Pod `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。渠道状态以精确 Release/Registry 及消费收据为准，历史标签和设备验收保持原范围。
 
 当前 `@gycrosskit/live-native@1.1.2` 配套 Maven `live-core` / `live-kuikly:1.1.2`，完整观看和静音预览统一由 AtomicPlayer 播放，成员事件及同会话 PiP 保留。Registry 查询、精确安装及编译结果以本版本 Release 收据为准，不能沿用旧 rc.3 的发布结果。源码已完成宿主本地编译与横向房间真机分项验收；旧 Registry rc.3 不包含这些修复。
 
