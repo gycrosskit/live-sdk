@@ -1,14 +1,14 @@
 # GY CrossKit Live SDK
 
-下一 Maven 正式版本 `1.1.3` 待发布：独立 `live-room-core` 提供 SDK 中立的配置快照与弹层队列，仅依赖 serialization JSON，保持既有包名/语义；不引入腾讯 SDK，不改变既有原生渠道。接入和验证合同见[直播房间配置与弹层](docs/直播房间配置与弹层.md)。
+Maven 正式版本 [1.1.3](https://github.com/gycrosskit/live-sdk/releases/tag/1.1.3) 已发布：独立 `live-room-core` 提供 SDK 中立的配置快照与弹层队列，仅依赖 serialization JSON，保持既有包名/语义；不引入腾讯 SDK，不改变既有原生渠道。接入和验证合同见[直播房间配置与弹层](docs/直播房间配置与弹层.md)。
 
 Kuikly 由宿主统一选择版本；组件构建基线、允许范围及消费验证边界见[功能与平台差异](docs/功能与平台差异.md#kuikly-版本与宿主选择)。
 
-> 当前渠道版本：Maven 下一正式版 `1.1.3` 待发布（既有公开版 `1.1.2`）、HAR/OHPM 候选 `1.1.2`、iOS Git Pod `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。渠道状态以精确 Release/Registry 及消费收据为准，历史标签和设备验收保持原范围。
+> 当前渠道版本：Maven `1.1.3` 已正式发布，已通过公开产物核验与完整消费验证；HAR/OHPM 沿用已发布的 `1.1.2`、iOS Git Pod 沿用 `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。发布、公开消费与宿主设备验收分别判断，历史标签和设备证据保持原范围。
 
 OHOS 单 Ability 接入：`GycLiveView.setProp("pictureInPictureHostManaged", true)` 支持宿主在单 Ability 内管理直播与首页展示，不强制把整个应用退后台，默认不改变旧窗口策略。字段合同与验收边界见[功能与平台差异](docs/功能与平台差异.md)；历史冻结 RC 不包含此字段；本页渠道版本的交付范围以对应 Release 为准。
 
-Maven、HAR 与 Pod 独立版本化：下一 Maven 正式版为 `1.1.3`（待发布，既有公开版为 `1.1.2`），HAR 与 Pod 仍为 `1.1.2` 和 `native-1.0.2`。Pod 的 Core/Renderer 共用同一 Git Tag，默认 Core 不变；Renderer 允许宿主选择 `>= 2.29.1, < 3.0`。旧制品、标签和校验值保持不变。
+Maven、HAR 与 Pod 独立版本化：Maven 正式版为 `1.1.3`，HAR/OHPM 沿用已发布的 `1.1.2`，Pod 沿用 `native-1.0.2`；本次 Maven 不重新发布这些原生渠道，各渠道消费独立验收。Pod 的 Core/Renderer 共用同一 Git Tag，默认 Core 不变；Renderer 允许宿主选择 `>= 2.29.1, < 3.0`。旧制品、标签和校验值保持不变。
 
 2026-10-23 真机发现 Maven `0.3.0-rc.2` 的公共 View 在 `createEvent()` 中提前注册事件，进入直播时触发 `PagerNotFoundException`。当前候选将注册移至挂载后，并用真实 Kuikly 的事件初始化过程补回归；Android/iOS 同样应升级此公共修复。此后本地又修订鸿蒙 HAR 的历史媒体绑定和成员消息，并新增系统 PiP 候选；这些修订纳入 rc.4，是否已可远程消费以该版本 Release 收据为准，旧 HAR 不包含修复。原生 Pod 保持不变。源码、CI、公开消费及真机复验分别记录。
 
@@ -153,7 +153,7 @@ Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，�
 
 ## 安装
 
-Maven 正式版本 `1.1.3` 待发布，现有视频 SDK 使用以下两产品坐标，须在公开发布并通过精确消费后使用；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
+Maven 正式版本 `1.1.3` 已发布，现有视频 SDK 使用以下两产品坐标，完整公开消费状态见页首；不再依赖根 `live-sdk`。只使用中立协议或原生会话时依赖 `live-core` 同版本：
 
 ```kotlin
 commonMain.dependencies {
@@ -191,7 +191,7 @@ dependencyResolutionManagement {
 
 Kuikly group 固定从腾讯 Maven 读取 metadata 和实际产物，避免其他镜像先返回 metadata、随后 AAR 缺失时 Gradle 无法切源。此规则只匹配 `com.tencent.kuikly-open`，保留其他 SDK 的仓库选择；本轮响应与边界见 [rc.5 验收记录](docs/0.2.1-rc.5远程发布验收.md)。
 
-下一正式版本 `1.1.3`（待发布）的 Kuikly 坐标继续包含 `io.github.gycrosskit.livesdk.kuikly.LiveVideo` Composable。已发布同名Native DSL在 `io.github.gycrosskit.livesdk` 包。在 KMP 的 `commonMain.dependencies` 声明 Kuikly 依赖，同一应用全部模块固定同版本。当前 OHOS 宿主使用 Kotlin/Compose compiler `2.2.21-1.0.0`，`pluginManagement` 也配置上述受限 Eazytec 仓库；表情协议只需 `live-core`；完整观看使用 `live-kuikly`，三端原生接线须分别安装配套 Pod/HAR：
+正式版本 `1.1.3` 的 Kuikly 坐标继续包含 `io.github.gycrosskit.livesdk.kuikly.LiveVideo` Composable。已发布同名Native DSL在 `io.github.gycrosskit.livesdk` 包。在 KMP 的 `commonMain.dependencies` 声明 Kuikly 依赖，同一应用全部模块固定同版本。当前 OHOS 宿主使用 Kotlin/Compose compiler `2.2.21-1.0.0`，`pluginManagement` 也配置上述受限 Eazytec 仓库；表情协议只需 `live-core`；完整观看使用 `live-kuikly`，三端原生接线须分别安装配套 Pod/HAR：
 
 ```kotlin
 // Kuikly Native DSL
