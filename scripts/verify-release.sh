@@ -30,16 +30,12 @@ with tarfile.open(sys.argv[1]) as archive:
     archive.extractall(root)
 PYTHON
 native_targets=ios_arm64,ios_x64,ios_simulator_arm64,ohos_arm64
-python3 scripts/check-maven.py "$output/maven" com.github.gycrosskit.live-sdk "$VERSION" live-core,live-kuikly "$native_targets" live-core,live-core-android,live-core-iosarm64,live-core-iosx64,live-core-iossimulatorarm64,live-core-ohosarm64,live-kuikly,live-kuikly-android,live-kuikly-iosarm64,live-kuikly-iosx64,live-kuikly-iossimulatorarm64,live-kuikly-ohosarm64
+modules="$(python3 scripts/maven-publications.py "$VERSION" --modules)"
+publications="$(python3 scripts/maven-publications.py "$VERSION")"
+python3 scripts/check-maven.py "$output/maven" com.github.gycrosskit.live-sdk "$VERSION" "$modules" "$native_targets" "$publications"
 # 消费方只使用 JitPack；归档校验不会安装到 MavenLocal 或替代远程解析。
 
-# 预期 inventory 来自通过冻结 SHA 的归档，不从 JitPack 自报 inventory 反推。
-publications="$(python3 - "$output/maven" <<'PYTHON'
-import sys
-from pathlib import Path
-print(','.join(sorted(path.parent.parent.name for path in Path(sys.argv[1]).rglob('*.module'))))
-PYTHON
-)"
+# 完整预期来自版本合同；上面已核对归档的真实集合，不能由公网自报反推。
 tag_refs="$(git ls-remote --tags https://github.com/gycrosskit/live-sdk.git "refs/tags/$VERSION" "refs/tags/$VERSION^{}")"
 commit="$(printf '%s\n' "$tag_refs" | awk '$2 ~ /\^\{\}$/ {peeled=$1} {plain=$1} END {print peeled ? peeled : plain}')"
 python3 scripts/check-public-maven.py --repo live-sdk --version "$VERSION" --commit "$commit" --expected-publications "$publications" --output-dir "${CI_DIAGNOSTICS_DIR:-ci-diagnostics}/public"

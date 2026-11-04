@@ -2,10 +2,11 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.compose.compiler) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
 }
 
 group = providers.environmentVariable("GROUP").orElse("com.github.gycrosskit.live-sdk").get()
-version = providers.environmentVariable("VERSION").orElse("1.1.2").get()
+version = providers.environmentVariable("VERSION").orElse("1.1.3").get()
 
 
 allprojects {
