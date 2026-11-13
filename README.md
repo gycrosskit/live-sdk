@@ -161,7 +161,7 @@ commonMain.dependencies {
 }
 ```
 
-iOS 配套独立 Git Pod tag `native-0.2.1-rc.15` / Pod `0.2.1-rc.15`，详见 [RC 迁移说明](docs/RC迁移说明.md)。下方 `0.2.1-rc.13` 的固定坐标、证明与 Swift 接线均保留为历史。
+iOS 配套独立 Git Pod tag [`native-1.0.2`](https://github.com/gycrosskit/live-sdk/tree/native-1.0.2) / Pod `1.0.2`，默认 `Core`、Kuikly 另接 `Renderer`；当前安装与宿主薄 adapter 见[接入指南](docs/接入指南.md#ios-framework-导出)。下方 `0.2.1-rc.13` 的固定坐标、证明与 Swift 接线均保留为历史。
 
 在 `settings.gradle.kts` 添加依赖仓库：
 
@@ -198,7 +198,7 @@ Kuikly group 固定从腾讯 Maven 读取 metadata 和实际产物，避免其�
 implementation("com.github.gycrosskit.live-sdk:live-kuikly:1.1.3")
 ```
 
-Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应用保留 `IosLiveSdkBridge` 的薄协议映射。原生 Pod `GycLiveNative` 承接 SDK 实现，独立于 `Shared.framework`，厂商版本固定为 AtomicXCore `4.3.9`、RTCRoomEngine/Professional `4.3.9` 和 IM `9.1.7818`；Kuikly 另外加入当前 Maven 标签 `0.2.1-rc.13` 的 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/0.2.1-rc.13/live-kuikly/ios/GycLiveView.swift) 与 `OpenKuiklyIOSRender`。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
+Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应用保留 `IosLiveSdkBridge` 的薄协议映射。原生 Pod `GycLiveNative` 承接 SDK 实现，独立于 `Shared.framework`，厂商版本固定为 AtomicXCore `4.3.9`、RTCRoomEngine/Professional `4.3.9` 和 IM `9.1.7818`；Kuikly 使用 `native-1.0.2` 的 `GycLiveNative/Renderer`，并按 Framework 导出模块映射薄 adapter；模块名为 `LiveKuikly` 时使用 Maven 标签 `1.1.3` 的 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/1.1.3/live-kuikly/ios/GycLiveView.swift)。Renderer 的 `OpenKuiklyIOSRender` 版本由宿主统一选择。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
 
 ## iOS 原生接入
 
