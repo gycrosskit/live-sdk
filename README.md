@@ -4,11 +4,9 @@ Maven 正式版本 [1.1.3](https://github.com/gycrosskit/live-sdk/releases/tag/1
 
 Kuikly 由宿主统一选择版本；组件构建基线、允许范围及消费验证边界见[功能与平台差异](docs/功能与平台差异.md#kuikly-版本与宿主选择)。
 
-> 当前渠道版本：Maven `1.1.3` 已正式发布，已通过公开产物核验与完整消费验证；HAR/OHPM 沿用已发布的 `1.1.2`、iOS Git Pod 沿用 `native-1.0.2`。累计消息去重与 Renderer 范围修订见下文；Kuikly 构建基线仍为 2.29.1，版本由宿主统一选择。发布、公开消费与宿主设备验收分别判断，历史标签和设备证据保持原范围。
-
 OHOS 单 Ability 接入：`GycLiveView.setProp("pictureInPictureHostManaged", true)` 支持宿主在单 Ability 内管理直播与首页展示，不强制把整个应用退后台，默认不改变旧窗口策略。字段合同与验收边界见[功能与平台差异](docs/功能与平台差异.md)；历史冻结 RC 不包含此字段；本页渠道版本的交付范围以对应 Release 为准。
 
-Maven、HAR 与 Pod 独立版本化：Maven 正式版为 `1.1.3`，HAR/OHPM 沿用已发布的 `1.1.2`，Pod 沿用 `native-1.0.2`；本次 Maven 不重新发布这些原生渠道，各渠道消费独立验收。Pod 的 Core/Renderer 共用同一 Git Tag，默认 Core 不变；Renderer 允许宿主选择 `>= 2.29.1, < 3.0`。旧制品、标签和校验值保持不变。
+统一版本候选为 `1.1.3`：Maven 已发布，HAR/OHPM 与 iOS Git Pod `native-1.1.3` 待补发。此次只同步原生渠道版本与消费配置，保留既有原生实现、厂商 SDK 以及 Core/Renderer 入口；Renderer 仍由宿主选择 `>= 2.29.1, < 3.0`。候选需分别完成构建和精确公开消费后再安装；旧标签、归档及校验值保持不变。
 
 2026-10-23 真机发现 Maven `0.3.0-rc.2` 的公共 View 在 `createEvent()` 中提前注册事件，进入直播时触发 `PagerNotFoundException`。当前候选将注册移至挂载后，并用真实 Kuikly 的事件初始化过程补回归；Android/iOS 同样应升级此公共修复。此后本地又修订鸿蒙 HAR 的历史媒体绑定和成员消息，并新增系统 PiP 候选；这些修订纳入 rc.4，是否已可远程消费以该版本 Release 收据为准，旧 HAR 不包含修复。原生 Pod 保持不变。源码、CI、公开消费及真机复验分别记录。
 
@@ -16,7 +14,7 @@ Maven、HAR 与 Pod 独立版本化：Maven 正式版为 `1.1.3`，HAR/OHPM 沿�
 
 2026-10-22 鸿蒙观看 RC（历史发布范围）：新增 `live-kuikly` OHOS 变体和 `ohos/live-native` 原生接线，复用公共观看/预览状态机、消息快照与点赞合并；当时不含连麦、PK、关注和系统 PiP。ohpm `0.3.0-rc.3` 已上架，2026-10-23 [Registry 精确安装与独立 ArkTS 编译](https://github.com/gycrosskit/live-sdk/actions/runs/39791998450/job/120184736960)通过；JitPack 与 Registry 的公开消费状态以 [RC Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.3.0-rc.2) 收据为准，不能证明后续本地修订。当前修复包的完整观看音画、成员消息及分项验收见[功能与平台差异](docs/功能与平台差异.md)；当前鸿蒙已切换为 AtomicPlayer 统一观看方案，组件与宿主验收另列，历史问题见[腾讯反馈材料](docs/腾讯鸿蒙AtomicPlayer问题反馈.md)。接线见[鸿蒙 README](ohos/live-native/README.md)。
 
-下列带日期的发布/验收段落属于历史，不能作为 `1.1.0` 的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp历史准备记录)。
+下列带日期的发布/验收段落属于历史，不作为当前候选的验证证明。当前能力见[功能与平台差异](docs/功能与平台差异.md)，本地候选与远程消费的边界见[开发与验证](docs/开发与验证.md#030-rc1移除-cmp历史准备记录)。
 
 > 2026-10-08 已发布预发行：Maven 0.2.1-rc.13 / Git Pod 0.2.1-rc.13。冻结归档与严格公开产物检查已通过；[精确版本 Release](https://github.com/gycrosskit/live-sdk/releases/tag/0.2.1-rc.13)、[远程消费 CI](https://github.com/gycrosskit/live-sdk/actions/runs/37771441035)分别记录产物和 Android/Native 结果。真实设备、云账号与宿主业务尚未验收。
 
@@ -145,7 +143,7 @@ classDiagram
 | 根 `live-sdk` | Gradle 聚合工程 | 不发布 Maven 产品；统一两个子模块的 group/version 与 POM 许可 |
 | `live-core` | Android、iOS、OHOS | 公共观看/预览状态机、快照与互动；OHOS 经 `LiveAudiencePlatform` 接入原生 HAR，编译证据按固定 SHA 记录，未做设备验收 |
 | `live-kuikly` | Android、iOS、OHOS RC | Kuikly Native DSL、KuiklyCompose 与薄原生视频 View，无第二套 CMP UI |
-| `GycLiveNative` | iOS | 独立 Swift CocoaPod，AtomicX 账号/视频/互动/IM/RoomEngine 系统 PiP；Pod `1.0.2` / tag `native-1.0.2`；默认 Core、可选 Renderer；旧发布与真机分项结果不代表当前候选验收 |
+| `GycLiveNative` | iOS | 独立 Swift CocoaPod，AtomicX 账号/视频/互动/IM/RoomEngine 系统 PiP；Pod `1.1.3` / tag `native-1.1.3`；默认 Core、可选 Renderer；旧发布与真机分项结果不代表当前候选验收 |
 
 Android 最低 API 24。iOS Native 链接的已验证部署基线为 iOS 15，应用同时遵循所选腾讯 SDK 的部署要求。已验证工具链为 Kotlin `2.2.21-1.0.0`、AGP `8.10.1`、当前源码 Kuikly `2.29.1-2.0.21-ohos` / Render `2.29.1`。
 
@@ -161,7 +159,7 @@ commonMain.dependencies {
 }
 ```
 
-iOS 配套独立 Git Pod tag `native-0.2.1-rc.15` / Pod `0.2.1-rc.15`，详见 [RC 迁移说明](docs/RC迁移说明.md)。下方 `0.2.1-rc.13` 的固定坐标、证明与 Swift 接线均保留为历史。
+iOS 候选配套独立 Git Pod tag [`native-1.1.3`](https://github.com/gycrosskit/live-sdk/tree/native-1.1.3) / Pod `1.1.3`，默认 `Core`、Kuikly 另接 `Renderer`；当前安装与宿主薄 adapter 见[接入指南](docs/接入指南.md#ios-framework-导出)。下方 `0.2.1-rc.13` 的固定坐标、证明与 Swift 接线均保留为历史。
 
 在 `settings.gradle.kts` 添加依赖仓库：
 
@@ -198,7 +196,7 @@ Kuikly group 固定从腾讯 Maven 读取 metadata 和实际产物，避免其�
 implementation("com.github.gycrosskit.live-sdk:live-kuikly:1.1.3")
 ```
 
-Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应用保留 `IosLiveSdkBridge` 的薄协议映射。原生 Pod `GycLiveNative` 承接 SDK 实现，独立于 `Shared.framework`，厂商版本固定为 AtomicXCore `4.3.9`、RTCRoomEngine/Professional `4.3.9` 和 IM `9.1.7818`；Kuikly 另外加入当前 Maven 标签 `0.2.1-rc.13` 的 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/0.2.1-rc.13/live-kuikly/ios/GycLiveView.swift) 与 `OpenKuiklyIOSRender`。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
+Android 传递依赖 `atomicx-core:4.3.3.29` 和 `imsdk-plus:9.1.7818`。iOS 应用保留 `IosLiveSdkBridge` 的薄协议映射。原生 Pod `GycLiveNative` 承接 SDK 实现，独立于 `Shared.framework`，厂商版本固定为 AtomicXCore `4.3.9`、RTCRoomEngine/Professional `4.3.9` 和 IM `9.1.7818`；Kuikly 使用 `native-1.1.3` 的 `GycLiveNative/Renderer`，并按 Framework 导出模块映射薄 adapter；模块名为 `LiveKuikly` 时使用 Maven 标签 `1.1.3` 的 [GycLiveView.swift](https://github.com/gycrosskit/live-sdk/blob/1.1.3/live-kuikly/ios/GycLiveView.swift)。Renderer 的 `OpenKuiklyIOSRender` 版本由宿主统一选择。KLIB 不能代替原厂 SDK 或 Swift 接线，详见 [接入指南](docs/接入指南.md)。
 
 ## iOS 原生接入
 
