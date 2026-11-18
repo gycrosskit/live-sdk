@@ -4,14 +4,14 @@ import base64
 import hashlib
 import json
 from pathlib import Path
+import re
 import sys
 from urllib.request import urlopen
 from urllib.parse import urlsplit
 
 
-def verify(root, consumer, version):
-    expected = dict(line.split() for line in (root / 'release-har-checksums.txt').read_text().splitlines()
-                    if line.strip() and not line.startswith('#'))[version]
+def verify(root, consumer, version, expected):
+    assert re.fullmatch(r'[a-f0-9]{64}', expected), 'Expected lowercase SHA-256 from the frozen HAR receipt'
     with urlopen('https://ohpm.openharmony.cn/ohpm/@gycrosskit%2Flive-native', timeout=30) as response:
         metadata = json.load(response)['versions'][version]
     assert metadata['name'] == '@gycrosskit/live-native' and metadata['version'] == version
@@ -39,4 +39,4 @@ def verify(root, consumer, version):
 
 
 if __name__ == '__main__':
-    verify(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3])
+    verify(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4])
