@@ -3,8 +3,6 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${VERSION:?Pass an immutable released Maven version}"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]] || { echo "Invalid release version" >&2; exit 1; }
-checksum="$(awk -v version="$VERSION" '$1 == version {print $2}' release-checksums.txt)"
-[[ "$checksum" =~ ^[a-f0-9]{64}$ ]] || { echo "Missing frozen archive checksum for $VERSION" >&2; exit 1; }
 output="$(mktemp -d)"
 preserve_evidence() {
   status=$?
@@ -15,20 +13,13 @@ preserve_evidence() {
   exit "$status"
 }
 trap preserve_evidence EXIT
-archive="$output/live-sdk-maven.tar.gz"
-curl --fail --location --retry 3 --connect-timeout 30 --max-time 300 -o "$archive" "https://github.com/gycrosskit/live-sdk/releases/download/$VERSION/live-sdk-maven.tar.gz"
-printf '%s  %s\n' "$checksum" "$archive" | shasum -a 256 --check
-python3 - "$archive" "$output/maven" <<'PYTHON'
-import sys, tarfile
-from pathlib import Path
-root = Path(sys.argv[2]); root.mkdir()
-with tarfile.open(sys.argv[1]) as archive:
-    for entry in archive.getmembers():
-        target = (root / entry.name).resolve()
-        if (target != root.resolve() and root.resolve() not in target.parents) or not (entry.isfile() or entry.isdir()):
-            raise ValueError(f"Unsafe archive member: {entry.name}")
-    archive.extractall(root)
-PYTHON
+# 从不可变版本 Tag 取得提交和 tree，沿用 JitPack 的回执与归档校验。
+repo_root="$PWD"
+git init -q "$output/tag"
+git -C "$output/tag" fetch -q --no-tags --depth=1 https://github.com/gycrosskit/live-sdk.git "refs/tags/$VERSION"
+git -C "$output/tag" checkout -q --detach FETCH_HEAD
+commit="$(git -C "$output/tag" rev-parse --verify HEAD)"
+(cd "$output/tag" && bash "$repo_root/scripts/jitpack-install-prebuilt.sh" live-sdk "$output/maven")
 native_targets=ios_arm64,ios_x64,ios_simulator_arm64,ohos_arm64
 modules="$(python3 scripts/maven-publications.py "$VERSION" --modules)"
 publications="$(python3 scripts/maven-publications.py "$VERSION")"
@@ -36,6 +27,4 @@ python3 scripts/check-maven.py "$output/maven" com.github.gycrosskit.live-sdk "$
 # 消费方只使用 JitPack；归档校验不会安装到 MavenLocal 或替代远程解析。
 
 # 完整预期来自版本合同；上面已核对归档的真实集合，不能由公网自报反推。
-tag_refs="$(git ls-remote --tags https://github.com/gycrosskit/live-sdk.git "refs/tags/$VERSION" "refs/tags/$VERSION^{}")"
-commit="$(printf '%s\n' "$tag_refs" | awk '$2 ~ /\^\{\}$/ {peeled=$1} {plain=$1} END {print peeled ? peeled : plain}')"
 python3 scripts/check-public-maven.py --repo live-sdk --version "$VERSION" --commit "$commit" --expected-publications "$publications" --output-dir "${CI_DIAGNOSTICS_DIR:-ci-diagnostics}/public"

@@ -16,6 +16,12 @@ spec.loader.exec_module(module)
 
 
 class RegistryProofTest(unittest.TestCase):
+    def test_missing_release_digest_rejects_before_network(self):
+        with patch.object(module, 'urlopen') as download:
+            with self.assertRaises(AssertionError):
+                module.verify(ROOT, ROOT, '0.3.0-rc.2', '')
+            download.assert_not_called()
+
     def test_exact_registry_bytes_and_lock_required(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -29,7 +35,6 @@ class RegistryProofTest(unittest.TestCase):
             url = 'https://ohpm.openharmony.cn/ohpm/@gycrosskit/live-native/-/live-native-' + version + '.har'
             metadata = {'name': '@gycrosskit/live-native', 'version': version,
                         'dist': {'tarball': url, 'integrity': integrity}}
-            (root / 'release-har-checksums.txt').write_text(version + ' ' + digest + '\n')
             (package / 'oh-package.json5').write_text(json.dumps(metadata))
             lock_path = consumer / 'consumer/oh-package-lock.json5'
             for invalid in (None, 'bytes', 'lock', 'origin'):
@@ -45,9 +50,9 @@ class RegistryProofTest(unittest.TestCase):
                     with patch.object(module, 'urlopen', side_effect=replies):
                         if invalid:
                             with self.assertRaises(AssertionError):
-                                module.verify(root, consumer, version)
+                                module.verify(root, consumer, version, digest)
                         else:
-                            module.verify(root, consumer, version)
+                            module.verify(root, consumer, version, digest)
                             proof = json.loads((root / 'ci-diagnostics/ohpm-consumer-proof.json').read_text())
                             self.assertEqual(proof['sha256'], digest)
 

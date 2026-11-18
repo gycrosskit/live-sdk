@@ -1,12 +1,14 @@
 # GY CrossKit Live SDK
 
+新版 Maven 发布由 Jenkins 生成同版本归档、`source-receipt.json` 和 `SHA256SUMS`。JitPack 核对标签来源、归档尺寸和摘要后安装同一份制品。历史发布按原版本 Tag 复验。
+
 Maven 正式版本 [1.1.3](https://github.com/gycrosskit/live-sdk/releases/tag/1.1.3) 已发布：独立 `live-room-core` 提供 SDK 中立的配置快照与弹层队列，仅依赖 serialization JSON，保持既有包名/语义；不引入腾讯 SDK，不改变既有原生渠道。接入和验证合同见[直播房间配置与弹层](docs/直播房间配置与弹层.md)。
 
 Kuikly 由宿主统一选择版本；组件构建基线、允许范围及消费验证边界见[功能与平台差异](docs/功能与平台差异.md#kuikly-版本与宿主选择)。
 
 OHOS 单 Ability 接入：`GycLiveView.setProp("pictureInPictureHostManaged", true)` 支持宿主在单 Ability 内管理直播与首页展示，不强制把整个应用退后台，默认不改变旧窗口策略。字段合同与验收边界见[功能与平台差异](docs/功能与平台差异.md)；历史冻结 RC 不包含此字段；本页渠道版本的交付范围以对应 Release 为准。
 
-统一版本候选为 `1.1.3`：Maven 已发布，HAR/OHPM 与 iOS Git Pod `native-1.1.3` 待补发。此次只同步原生渠道版本与消费配置，保留既有原生实现、厂商 SDK 以及 Core/Renderer 入口；Renderer 仍由宿主选择 `>= 2.29.1, < 3.0`。候选需分别完成构建和精确公开消费后再安装；旧标签、归档及校验值保持不变。
+统一版本候选为 `1.1.3`：Maven 已发布，私有 OHPM 与 iOS Git Pod `native-1.1.3` 待补发。此次只同步原生渠道版本与消费配置，保留既有原生实现、厂商 SDK 以及 Core/Renderer 入口；Renderer 仍由宿主选择 `>= 2.29.1, < 3.0`。候选需分别完成构建和精确公开消费后再安装；旧标签、归档及校验值保持不变。
 
 2026-10-23 真机发现 Maven `0.3.0-rc.2` 的公共 View 在 `createEvent()` 中提前注册事件，进入直播时触发 `PagerNotFoundException`。当前候选将注册移至挂载后，并用真实 Kuikly 的事件初始化过程补回归；Android/iOS 同样应升级此公共修复。此后本地又修订鸿蒙 HAR 的历史媒体绑定和成员消息，并新增系统 PiP 候选；这些修订纳入 rc.4，是否已可远程消费以该版本 Release 收据为准，旧 HAR 不包含修复。原生 Pod 保持不变。源码、CI、公开消费及真机复验分别记录。
 
