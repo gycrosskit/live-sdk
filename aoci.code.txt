@@ -1,0 +1,307 @@
+#AOCI-CODE-VOLUME: 1
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/===
+.gitattributes[FC4T]: F:固定文本LF检出以稳定跨平台AOCI字节指纹 | R:- | A:- | S:-
+.gitignore[FC4T]: F:隔离构建、原厂调研包与机器专属Codex配置 | R:- | A:- | S:Git忽略不等于AOCI Scope排除，厂商HAR不进入公开产物
+AGENTS.md[SW8S]: F:约束直播评审、会话与账号归属及AOCI认知维护 | R:code:README.md | A:- | S:prepared与ownsRuntime分开，release不可提前放行共享Store；PiP受理不当作实际浮窗
+CHANGELOG.md[SV5T]: F:记录直播组件公开能力与独立原生渠道候选变化 | R:code:README.md | A:- | S:版本候选不表示已发布或远程消费通过，旧标签不可覆盖
+GycLiveNative.podspec[FV8T]: F:声明iOS15静态直播Pod的默认腾讯Core与可选Renderer产品 | R:code:ios/Sources/GycLiveNative/GycLiveClient.swift,code:ios/Sources/GycLiveRenderer/GycLiveRendererView.swift | A:GycLiveNative | S:Core固定AtomicX/RoomEngine4.3.9与IM9.1.7818；Renderer不带Core，Git来源使用native版本标签
+LICENSE[SG3M]: F:声明Apache2.0许可、再分发义务与免责条款 | R:- | A:- | S:-
+README.md[SI8M]: F:概览直播三端原生与Kuikly、独立房间配置产物及安装和验收边界 | R:code:docs/接入指南.md,code:docs/功能与平台差异.md,code:docs/直播房间配置与弹层.md | A:- | S:宿主持有业务身份和UserSig，组件只维护一套SDK会话/快照；文件地图由AOCI维护，历史RC、渠道和设备证据分别解释
+build.gradle.kts[FV6T]: F:统一Maven group、1.1.3默认版本和Apache POM声明 | R:code:settings.gradle.kts | A:- | S:根工程仅聚合，不补根产品兼容空壳
+consumer-rules.pro[FV6T]: F:精确忽略未使用TUICore Push类型及Parcelize二进制注解缺失 | R:code:live-core/build.gradle.kts | A:- | S:不忽略Gson或整个包，其他R8缺失类仍阻断
+gradle.properties[FV3T]: F:配置Gradle内存与AndroidX及非传递资源常量 | R:- | A:- | S:-
+gradlew[EV4S]: F:解析Unix Java环境及跨系统路径并启动Gradle Wrapper | R:code:gradle/wrapper/gradle-wrapper.properties | A:- | S:-
+gradlew.bat[EV4T]: F:解析Windows Java环境并启动Gradle Wrapper与传递退出码 | R:code:gradle/wrapper/gradle-wrapper.properties | A:- | S:-
+jitpack-metadata.py[OV7T]: F:在冻结前裁剪classifier和空资源变体并刷新现有摘要 | R:code:scripts/archive-prebuilt.sh | A:normalize | S:验证全部资源与跳转后才写；含任何真实文件即拒绝；冻结安装不重改字节
+jitpack.yml[FV5T]: F:指定JDK21并调用冻结直播Maven归档安装入口 | R:code:scripts/jitpack-install-prebuilt.sh | A:- | S:-
+settings.gradle.kts[FV7T]: F:注册core/Kuikly/room-core并限定腾讯Kuikly与Kotlin fork解析源 | R:code:build.gradle.kts | A:- | S:Kuikly独占腾讯maven-tencent读取metadata和产物，Eazytec只读fork版本避免缺classifier；根不发布产品
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/docs/===
+0.2.1-rc.5远程发布验收.md[SQ6T]: F:保存rc.5线程与回调修复、冻结产物和独立远程消费回执 | R:code:docs/开发与验证.md | A:- | S:SHA256/512 sidecar的404仅记渠道缺失；同进程SDK/设备未验，历史结果不覆盖后继版本
+M19验证记录.md[SQ6T]: F:保留早期共享身份、发布元数据修复和rc.2至rc.6渠道验收记录 | R:code:docs/共享腾讯身份.md | A:- | S:JitPack状态ok不等于全部文件可用；旧标签与缺失项保留，不以本地消费代替远程
+RC迁移说明.md[SV6T]: F:说明移除旧CMP与新增OHOS观看的历史RC迁移边界 | R:code:README.md | A:- | S:旧CMP调用不能只换版本升级；新版本与原生渠道按各自冻结收据验收
+共享腾讯身份.md[SI9T]: F:规定Live与客服共享IM的own/borrow身份、SDKAppId与串行清理合同 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAccountOwnership.kt | A:- | S:真实IM和facade共同核身份，异步资料不参与认证；借用不注销；宿主共用executionMutex但各自Tasks，不持锁等待旧任务
+功能与平台差异.md[SI8S]: F:维护三端观看、账号、互动、PiP及AtomicPlayer方案的能力和验收矩阵 | R:code:docs/接入指南.md,code:ohos/live-native/README.md | A:- | S:仅鸿蒙已统一AtomicPlayer，Android/iOS仍LiveCoreView；源码、请求accepted、实际系统状态和设备证据不可互推
+完整源码审查.md[SQ6S]: F:保存历史全生产源码审查、PiP及Android布局/快照修复与渠道证据 | R:code:docs/功能与平台差异.md | A:- | S:当前文件导航由AOCI维护；旧CMP/鸿蒙排除结论有固定日期，历史远程版本不代算新候选
+开发与验证.md[SV8M]: F:定义生产编译、定向回归、真实原生链接与独立分发消费入口 | R:code:scripts/build.sh,code:scripts/verify.sh | A:- | S:日常compile不串测试/消费者；测试不能缓存跳过；本地path/staging、公开下载和设备业务分别留证，Jenkins按准确源码与recipe核验
+接入指南.md[SI8M]: F:定义宿主账号门禁、Kuikly节点、iOS薄桥与释放和PiP接线 | R:code:docs/共享腾讯身份.md,code:GycLiveNative.podspec | A:- | S:Main同步停止与可挂起await不可互换；进房成功后才业务操作；不同KMP Framework类型不能强转；离房真实结算后才下一会话
+直播房间配置与弹层.md[SI8T]: F:规定SDK中立live-room-core的配置归属、队列语义和独立消费合同 | R:code:live-room-core/build.gradle.kts,code:scripts/maven-publications.py | A:- | S:保留包名且配置不扩能力/权限；room/revision拒旧快照；当前清单19项，历史须用原Tag脚本，不修改冻结字节
+腾讯鸿蒙AtomicPlayer问题反馈.md[SI7T]: F:保留脱敏AtomicPlayer黑屏复现、TRTC对照及建房参数定位与回归条件 | R:code:docs/功能与平台差异.md | A:- | S:全进程首帧不能证明指定播放器成功；公开材料不含UserSig/真实房间与签名，临时TRTC绕行不当正式方案
+腾讯鸿蒙直播SDK调研.md[SI6S]: F:保存5.1.0协议缺口调查和5.2.2新增直播API的历史证据 | R:code:docs/功能与平台差异.md | A:- | S:不得用旧包缺口外推新版本，也不能由liveId猜TRTC房间/URL/权限；业务成员与媒体进房需分别验证
+验证记录.md[SQ6T]: F:保存早期源码、真实SDK链接、Git Pod与Maven消费验收历史 | R:code:docs/开发与验证.md | A:- | S:旧OHOS排除及CMP结果按日期解释，编译/替身/发布不表示设备音画或账号业务通过
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/gradle/===
+libs.versions.toml[FV7T]: F:集中固定Kotlin fork、协程、序列化及Android AtomicX/IM工具链 | R:code:live-core/build.gradle.kts | A:- | S:Android dispatcher用官方协程1.10.2，Native/core用fork1.10.2-1.0.0；厂商SDK跨端版本不强求同名
+native-toolchain.properties[FV6T]: F:记录Kotlin Native工具链版本、目标集合与revision缓存身份 | R:code:gradle/libs.versions.toml | A:- | S:复用缓存不能只看Kotlin版本而忽略revision
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/gradle/wrapper/===
+gradle-wrapper.properties[FV5T]: F:固定官方Gradle8.11.1分发与Wrapper缓存位置 | R:code:gradlew | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ios/Sources/GycLiveNative/===
+AtomicXAudienceInteractionSession.swift[IM8M]: F:持有单场Swift弹幕、点赞及观众Store并转换中立互动事件 | R:code:ios/Sources/GycLiveNative/GycLiveClient.swift | A:bind,reset,sendBarrage,sendLike | S:Main绑定代次隔离同房重连；累计弹幕综合身份取新增；reset撤订阅，命令完成仍交原调用者
+AtomicXPreviewSession.swift[II8T]: F:管理Main唯一静音预览View与状态回调 | R:code:ios/Sources/GycLiveNative/GycLiveClient.swift | A:makeView,release,stop | S:不join/leave完整房；旧View释放和迟回调必须同时匹配对象与liveID，不停新预览
+GycLiveClient+Account.swift[II9S]: F:实现Swift腾讯账号准备、资料更新及own/borrow受限注销 | R:code:ios/Sources/GycLiveNative/LiveAccountOwnership.swift | A:isLoggedInAs,login,logout,updateProfile | S:认证核实际IM/双SDK状态，不等待异步资料；login串号与AppId二次校验；注销失败仍拥有匹配身份时保留清理资格
+GycLiveClient+LiveIm.swift[IM8T]: F:为当前白名单群注册独占Swift IM监听并交付原始UTF8及账号终态 | R:code:ios/Sources/GycLiveNative/GycLiveContracts.swift | A:connectLiveIm,disconnectLiveIm,currentUserId | S:Listener身份隔离重连；被踢按实际用户核对；终态先撤监听再通知，业务payload由宿主解析
+GycLiveClient+PictureInPicture.swift[IH8S]: F:将当前观看实例的系统PiP请求路由至RoomEngine实验接口 | R:code:ios/Sources/GycLiveNative/GycLiveClient.swift | A:enterPictureInPicture,enableBackgroundPictureInPicture,disableBackgroundPictureInPicture | S:请求需已挂窗，serial与generation拒绝旧响应；准备成功不发布actual=true；宽竖画布分别1280x720/720x1280
+GycLiveClient.swift[II9M]: F:作为Swift原生门面管理进程唯一账号、完整观看、预览及互动和关注适配 | R:code:ios/Sources/GycLiveNative/AtomicXAudienceInteractionSession.swift,code:ios/Sources/GycLiveNative/AtomicXPreviewSession.swift | A:GycLiveClient.shared,makeAudienceView,releaseAudienceView | S:所有SDK访问Main；先撤本地订阅与PiP后真实leave回执；UIKit宿主必须等待释放结算，KMP队列在core，不生成UserSig
+GycLiveContracts.swift[LI8S]: F:声明不含腾讯类型的Swift操作、播放、预览、IM及日志公开协议 | R:code:ios/Sources/GycLiveNative/GycLiveClient.swift | A:GycLiveOperationCallback,GycAudiencePlayerObserver,GycLiveImObserver,GycLivePreviewObserver,GycLiveLogLevel | S:时间戳为Unix秒，sequence不可单独去重；远端点赞事件不是本地成功ACK；SDK原始错误由宿主选择文案
+LiveAccountOwnership.swift[DI9T]: F:纯策略判定Swift腾讯身份复用、初始化、重置或拒绝及真实注销权限 | R:code:ios/Sources/GycLiveNative/GycLiveClient+Account.swift | A:liveAccountPreparationAction,liveOwnsActualIdentity | S:prepared不等于owner；实际用户与已知AppId均匹配才拥有，foreign或借用冲突拒绝接管
+LiveMainThread.swift[RW7T]: F:为SDK回调提供MainActor异步派发及轻量同步查询桥 | R:code:ios/Sources/GycLiveNative/GycLiveClient.swift | A:run,syncOnMainActor | S:同步桥只能轻量创建View或读状态，不承载阻塞网络文件任务
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ios/Sources/GycLiveRenderer/===
+GycLiveRendererView.swift[II9S]: F:提供与KMP导出模块无关的iOS Renderer节点、typed回调和controller生命周期 | R:code:live-kuikly/ios/GycLiveView.swift | A:GycLiveRendererController,GycLiveRendererView,setLiveEvent | S:当前房间事件最多16条；换房/移除撤回旧缓存与generation；factory同步移除后返回controller须释放；无factory不能假成功
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/===
+build.gradle.kts[FV7T]: F:发布无UI的三端直播core并配置Android厂商及Gson运行时依赖 | R:code:gradle/libs.versions.toml | A:- | S:OHOS只由HAR桥接SDK/View；Gson补厂商POM缺漏不暴露公共API，Android最低24与Java11
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/androidMain/===
+AndroidManifest.xml[FH4T]: F:声明Android原生观看查询网络状态权限 | R:code:live-core/build.gradle.kts | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/===
+AndroidLiveImSource.kt[IM9T]: F:串行注册Android群/账号监听并过滤旧绑定与异群原始消息 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveImObserver.kt | A:AndroidLiveImSource,connect,disconnect,close | S:终态先撤权再回调；注册部分失败回收，移除失败保留handle可重试；不初始化或登录SDK
+AndroidLiveNativeSession.kt[EI8T]: F:向原生宿主公开固定房间观看与静音预览会话和共同快照命令 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt,code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt | A:AndroidLiveAudienceSession,AndroidLivePreviewSession | S:仅Main操作，不执行账号登录；release终态不可复用，PiP返回只表示受理
+AndroidLiveSdkRuntime.kt[RI8T]: F:提供Android账号可播放StateFlow门禁及全局预览停止入口 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt | A:updateSessionReady,stopActivePreview,stopActivePreviewAndAwait | S:ready不是进房成功；Main同步停止后台会拒绝，Renderer协程用await等待detach完成
+AtomicAudienceView.kt[II9L]: F:将Android AtomicX观看、互动Store、PiP和中立快照接入共用会话状态机 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt,code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt | A:AtomicAudienceView,nativeView,snapshots,release | S:回调先Main，再由session接纳成功后绑定Store；退出先断互动流但令牌等真实leave或超时；PiPactual读取Activity而非accepted
+AtomicLikeController.kt[IM8T]: F:适配LikeStore并复用公共批处理合并点赞与效果事件 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveLikeBatcher.kt | A:bind,like,release | S:SDK成功按提交时房间/账号上报包括离房尾批；跨房异常重绑丢旧批次，不以动效当业务ACK
+AtomicLivePreview.kt[II8T]: F:以LiveCoreView实现Android静音预览并成对释放原生子View | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt | A:AtomicLiveCorePreviewPlayback,start,stopAndDetach | S:stopPreview本身不撤Store监听，必须同步detach防后台列表抢完整观看渲染目标
+AtomicMainThread.kt[RW7T]: F:统一Android SDK回调的Main调度和同步线程断言 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicXSession.kt | A:run,post,checkMainThread | S:post始终排队避免SDK同步重入，run在Main立即执行
+AtomicRoomInfo.kt[II8S]: F:将Android IM批量关注及粉丝回执收敛为Main中立单主播结果 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveHostFollowController.kt | A:AndroidLiveHostFollowGateway | S:多条只取精确userId，单条可兼容无序结果；单项resultCode也必须成功
+AtomicXSession.kt[II9S]: F:在Android Main准备腾讯身份、同步资料并按所有权注销 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAccountOwnership.kt | A:AtomicXSession,isLoggedInAs,login,logout,updateProfile | S:凭据调用线程同步校验；真实IM与AtomicX状态共同认证，不等资料；代次/AppId拒旧成功，借用foreign只清本组件，失败保留有效owner重试
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/androidMain/res/values-en/===
+strings.xml[FL4T]: F:提供Android观看失败、超时及互动提示英文资源 | R:code:live-core/src/androidMain/res/values/strings.xml | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/androidMain/res/values/===
+strings.xml[FL4T]: F:提供Android观看失败、超时及互动默认中文资源 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/androidUnitTest/kotlin/io/github/gycrosskit/livesdk/===
+AndroidLiveImSourceTest.kt[TI8T]: F:验证IM异群/旧绑定/终态去重与部分注册、失败撤回重试 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveImSource.kt | A:AndroidLiveImSourceTest | S:真实生产监听配注册替身，撤回失败后旧回调仍必须失效
+AtomicXSessionValidationTest.kt[TI7T]: F:用后台调用与Main排空验证无效账号凭据立即同步失败 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicXSession.kt | A:AtomicXSessionValidationTest | S:失败不得留下Main任务或调用SDK，Robolectric不证明云认证
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/===
+AtomicAudienceContracts.kt[LI9S]: F:定义SDK中立观看事件、用户/主播/消息和唯一内容快照及预览状态 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt | A:AtomicAudienceListener,LiveAudienceMessageSnapshot,LiveAudienceContentSnapshot,LivePreviewState | S:只有joinSucceeded代表进房；sequence会复用不可单独去重；成员消息保留语义由宿主本地化，PiPactual不是accepted
+AtomicAudienceRuntime.kt[RO7T]: F:注册三端宿主日志和短提示出口供共用会话消费 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt | A:AtomicAudienceRuntime,AtomicAudienceRuntimeRegistry,AtomicAudienceLogLevel | S:未安装实现时忽略输出，不直接向Release系统日志写业务信息
+AtomicAudienceSession.kt[DW9M]: F:共用状态机串行进离房、排队超时、关播和释放终态 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSessionCoordinator.kt | A:AtomicAudienceSession,joined,joinFailed,release | S:join在途释放等回执或20秒期限后清理；leave结算或8秒后才放token；迟成功不复活快照，失败也清SDK，结束类错误按LiveJoinFailure分类
+AtomicAudienceSessionCoordinator.kt[RW9S]: F:以对象token串行共享Store的完整观看队列和最新预览等待 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt | A:AtomicAudienceSessionCoordinator,acquire,release,acquirePreview,cancelPreview | S:等待15秒各自超时；只有当前owner释放才启动下一场，旧token不得停新房，完整观看优先于最新预览
+AtomicLivePreviewController.kt[DW9M]: F:管理Main静音预览激活、页面可见、共享会话等待和迟回调失效 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSessionCoordinator.kt | A:AtomicLivePreviewController,AtomicLivePreviewPlayback,AtomicLivePreviewRuntime,AtomicAudienceLivePreviewStartGate | S:active与STARTED同时满足才播；停止撤申请并同步detach，generation拒旧回调；release终态，Main同步停止与后台await不能互等阻塞
+LiveAccountOwnership.kt[DI9T]: F:判定腾讯身份复用、初始化、重置和拒绝及实际runtime所有权 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicXSession.kt | A:liveAccountPreparationAction,liveOwnsActualIdentity | S:prepared不授注销权；实际用户与已知SDKAppId均一致才是owner，借用不同身份/AppId不得接管
+LiveAudiencePlatform.kt[LI8T]: F:定义ArkTS等原生边界的观看命令及中立事件适配合同 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveBridgeAudienceSession.kt | A:LiveAudiencePlatform,LiveAudiencePlatformObserver | S:操作回调Main串行；leave须真实完成且隔离旧请求，SDK列表去重/有界快照规则由公共层维护
+LiveAudienceSnapshotStore.kt[DD9S]: F:以唯一StateFlow累加跨端不可变观看快照与有界消息窗口 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceContracts.kt | A:LiveAudienceSnapshotStore,appendBarrageSnapshot,appendMemberMessage | S:UI最多200条；SDK累计列表另存综合身份防成员挤出后重放；负序号成员保留语义，人数不小于列表，copy保留其他字段
+LiveBridgeAudienceSession.kt[II9S]: F:将OHOS平台观看接到共用会话、关注、快照与点赞批处理 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudiencePlatform.kt,code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt | A:LiveBridgeAudienceSession | S:只有当前joined接收互动；释放先冲成功尾批再撤资格；SDK成功上报原房间/账号，PiP请求由原生节点负责不伪造actual
+LiveEmojiProtocol.kt[DM7T]: F:提供62项旧客户端兼容表情目录及原文可逆编码解码 | R:- | A:LiveEmojiValue,LiveEmojiProtocol.items,encode,decode | S:组合字符最长优先，未知token/表情保留；不代表厂商标准全集，不附图片或编辑UI
+LiveHostFollowController.kt[DW8M]: F:共用关注查询/切换及粉丝刷新的代次与超时状态机 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt | A:LiveHostFollowGateway,LiveFollowResult,LiveHostFollowController | S:owner/follow/fans分别隔离乱序；关注10秒无回执保留已知目标供重试，粉丝失败保旧值，释放撤全部旧回调
+LiveImObserver.kt[LM8T]: F:定义中立原始IM事件与同房重连对象身份绑定门禁 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveImSource.kt | A:LiveImObserver,LiveImBindingGate | S:Android观察者自行调度UI；终态CAS先撤权一次，不解析业务JSON或维护SDK登录身份
+LiveJoinFailure.kt[DI7T]: F:将腾讯100004房间不存在错误归类为直播结束语义 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt | A:LiveJoinFailure.isEndedLive | S:只接受明确错误码，不将网络或权限失败当关播
+LiveLikeBatcher.kt[DM8T]: F:以单调时钟六秒窗口合并本地点赞并恢复失败批次 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicLikeController.kt | A:like,release | S:首次立即发；仅未释放会话可恢复重试，离房尾批尽力发送但不再重试，平台只实现SDK发送
+LiveLikeReporter.kt[LM8T]: F:将SDK确认成功的点赞批次交宿主业务上报 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveLikeBatcher.kt | A:LiveLikeReporter,report,LiveLikeReporter.None | S:归属是提交时腾讯房间/账号，count正数，不以UI效果当成功回执
+LiveNativeContracts.kt[LI8T]: F:声明原生观看命令与声明式最新事件回调适配合同 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceContracts.kt | A:LivePlaybackCallbacks,LivePlaybackCallbackListener,LiveAudienceCommands | S:listener逐次取最新callback；命令Main串行，不跨房复用；release等真实结算，accepted不更新PiPactual
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/commonTest/kotlin/io/github/gycrosskit/livesdk/===
+AtomicAudienceSessionTest.kt[TW9M]: F:验证进房在途释放、关播超时、迟成功及离房一次结算 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt | A:AtomicAudienceSessionTest | S:实际状态机配SDK/门禁替身；只有被接纳成功先更新host再通知，退出后旧成功仍清理不复活
+AtomicLivePreviewControllerTest.kt[TW8S]: F:验证预览active/STARTED门禁、等待完整会话与同步detach及迟回调隔离 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt | A:AtomicLivePreviewControllerTest | S:独立Main调度器证明await停止前仍挂起，不代表真实Looper/UIKit或媒体播放
+LiveAccountOwnershipTest.kt[TI8T]: F:验证own/borrow/foreign及SDKAppId注销权限和IM绑定终态 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAccountOwnership.kt,code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveImObserver.kt | A:LiveAccountOwnershipTest | S:纯策略不代替真实SDK登录；reset后需重新核当前身份
+LiveAudienceSnapshotStoreTest.kt[TD8S]: F:验证共享StateFlow、累计弹幕综合去重、200条窗口及不可变快照 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt | A:LiveAudienceSnapshotStoreTest | S:成员挤出旧弹幕后重复SDK列表不得重放；分隔符不碰撞，人数不小于列表，交错更新保其他字段
+LiveBridgeAudienceSessionTest.kt[TI9M]: F:验证OHOS公共桥真实离房门禁、迟事件、成员/PiP及成功点赞归属 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveBridgeAudienceSession.kt | A:LiveBridgeAudienceSessionTest | S:平台替身不证明SDK；包括释放尾批在账号变化后仍归原身份，SDK失败不报告成功，100004保共享结束分类
+LiveEmojiProtocolTest.kt[TM6T]: F:锁定62项表情兼容顺序、组合字符优先、未知原文与往返幂等 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveEmojiProtocol.kt | A:LiveEmojiProtocolTest | S:-
+LiveHostFollowControllerTest.kt[TW8M]: F:验证关注目标、owner循环、粉丝乱序及超时重试和释放隔离 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveHostFollowController.kt | A:LiveHostFollowControllerTest | S:超时后重试同一目标，旧成功不能覆盖新在途请求；当前用户不发自身关注查询
+LiveJoinFailureTest.kt[TI6T]: F:锁定100004结束分类并拒将网络和权限错误归为结束 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveJoinFailure.kt | A:LiveJoinFailureTest | S:-
+LiveLikeBatcherTest.kt[TM7T]: F:验证首批立即发送、连点合并、异常恢复与释放后重试终止 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveLikeBatcher.kt | A:LiveLikeBatcherTest | S:受控SDK发送回执，不等于真实点赞或业务HTTP成功
+LivePlaybackCallbackListenerTest.kt[TM6T]: F:验证所有观看事件逐次读取替换后的最新回调集合 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveNativeContracts.kt | A:LivePlaybackCallbackListenerTest | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/===
+IosAtomicLiveViews.kt[II9L]: F:将Swift原生View和互动桥接到共用观看、预览、快照与关注状态机 | R:code:live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveSdkBridge.kt,code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt | A:IosAtomicLivePreviewPlayback,IosAtomicAudienceView,mount,release | S:拿到token才创建SDK View；只有joined且持nativeView可互动/冲尾批；迟弹幕成功转失败，点赞成功仍报原身份；真实leave后再放队列
+IosLiveNativeSession.kt[EI8T]: F:向iOS原生宿主公开固定房间观看与预览实例及同一快照命令 | R:code:live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosAtomicLiveViews.kt | A:IosLiveAudienceSession,IosLivePreviewSession | S:创建前必须安装宿主bridge，仅Main操作，不执行登录；release终态不可复用
+IosLiveSdkBridge.kt[LI9M]: F:声明宿主KMP到Swift原生SDK的账号、View、互动和IM唯一桥接协议 | R:code:ios/Sources/GycLiveNative/GycLiveContracts.swift | A:IosLiveSdkBridge,IosAudiencePlayerObserver,IosLivePreviewObserver,IosLiveImObserver | S:不暴露厂商二进制类型，原生回调Main；releaseAudienceView回执真实离房；命令成功与系统PiP可见性、账号注销权限分开
+IosLiveSdkRuntime.kt[RI8T]: F:安装唯一Swift桥并发布iOS账号门禁与可等待预览停止 | R:code:live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveSdkBridge.kt | A:IosLiveSdkRuntime,install,updateSessionReady,stopActivePreviewAndAwait | S:Main同步停止包含Swift兜底，后台必须await；ready不表示进房，桥状态与账号状态独立
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/iosTest/kotlin/io/github/gycrosskit/livesdk/===
+IosAudienceCommandOwnershipTest.kt[TI9T]: F:验证iOS排队/释放实例不能向新房写命令或迟到成功 | R:code:live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosAtomicLiveViews.kt | A:IosAudienceCommandOwnershipTest | S:实际公共会话配记录型Swift桥；A尾批必须仍持token时发，B等真实leave，旧弹幕回执不得报成功
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/===
+build.gradle.kts[FV7T]: F:发布三端Kuikly raw/Compose入口与core公开依赖及验证Framework | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/kuikly/LiveVideo.kt | A:- | S:Native测试需真实Render C符号；liveVerification只增加静态Framework生产导出，不伪造平台链接
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/ios/===
+GycLiveView.swift[II8T]: F:为默认LiveKuikly导出模块提供原生注册类和Renderer薄adapter | R:code:ios/Sources/GycLiveRenderer/GycLiveRendererView.swift,code:live-kuikly/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosKuiklyLiveController.kt | A:GycLiveView,likeReporter | S:reporter在configure前注入；其他Shared模块须应用映射本身类型，不能跨Framework强转
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/src/androidMain/kotlin/io/github/gycrosskit/livesdk/===
+GycLiveView.kt[II9M]: F:将Android Renderer房间属性、生命周期和命令接到同一core观看/预览 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveNativeSession.kt | A:GycLiveView,setProp,call,onDestroy | S:scope先于同步STARTED回调；完整子树attach后才启动最新room；CSS属性委托SDK；detach可重挂，显式release须新room，destroy终态
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/src/androidUnitTest/kotlin/io/github/gycrosskit/livesdk/===
+KuiklyLiveLayoutTest.kt[TU7T]: F:以真实Render FRAME验证零尺寸视频节点布局与CSS透传 | R:code:live-kuikly/src/androidMain/kotlin/io/github/gycrosskit/livesdk/GycLiveView.kt | A:KuiklyLiveLayoutTest | S:Rect右下值代表宽高，不能用宿主MATCH_PARENT掩盖初始0x0；Robolectric不验媒体画面
+KuiklyLiveLifecycleTest.kt[TW9M]: F:验证真实Android节点attach门禁、同步生命周期、快照与重挂释放 | R:code:live-kuikly/src/androidMain/kotlin/io/github/gycrosskit/livesdk/GycLiveView.kt | A:KuiklyLiveLifecycleTest,ShadowLiveAudienceSession,ShadowLivePreviewSession | S:仅厂商会话shadow；真实View/Lifecycle/StateFlow保留，已STARTED首快照不能缺失，旧流和待启动任务detach后失效
+KuiklyLivePictureInPictureTest.kt[TH7T]: F:验证未挂载/释放或非法布尔PiP请求均完成拒绝回执 | R:code:live-kuikly/src/androidMain/kotlin/io/github/gycrosskit/livesdk/GycLiveView.kt | A:KuiklyLivePictureInPictureTest | S:不运行实际系统浮窗，不能把测试accepted=false当设备PiP验收
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/===
+KuiklyLiveEventDecoding.kt[IM8T]: F:将snapshot信封解为中立模型并分派稳定播放事件 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceContracts.kt | A:toLiveAudienceSnapshot,dispatchLivePlaybackEvent | S:非对象容器/数组项跳过；成员kind和原始数据保留，未知事件false，playbackError不冒充关播，用户回调异常向上传递
+KuiklyLiveNativeEvents.kt[IM8T]: F:统一原生观看事件JSON与原子room配置的严格解析 | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/KuiklyLiveView.kt | A:kuiklyLiveCallbacks,liveEventJson,KuiklyLiveRoom.parse | S:liveId须非空字符串，preview/active只接受真实Boolean，active默认true
+KuiklyLiveView.kt[EI9S]: F:提供公共视频DSL、互动命令和快照JSON及OHOS原生事件接线 | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/KuiklyNativeLiveController.kt | A:KuiklyLiveView,KuiklyLiveAttr,KuiklyLiveEvent,LiveVideo | S:createEvent只构造，pagerId注入挂载后才注册native事件；移除先撤资格后release；OHOS reporter挂载前注入，Android/iOS由工厂提供
+KuiklyNativeLiveController.kt[II9M]: F:在Main复用公共观看/预览并经Renderer传输OHOS SDK命令事件 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveBridgeAudienceSession.kt | A:KuiklyNativeLiveController,event,release | S:SDK事件校generation；旧join/leave仍结算公共token，页面销毁不丢回执；internal scheduler升级要核对线程/取消，不另建业务状态机
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/kuikly/===
+LiveVideo.kt[EU8T]: F:以KuiklyCompose管理同一raw节点、动态room、最新事件与句柄生命周期 | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/KuiklyLiveView.kt | A:LiveVideo | S:保留六参数入口；相等room不重发避免重开explicitRelease，先撤事件再release；reporter随节点冻结，extras不能覆盖保留字段
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/src/commonTest/kotlin/io/github/gycrosskit/livesdk/===
+KuiklyLiveEventDecodingTest.kt[TM8S]: F:验证全部快照往返、错误容器、事件分派与播放错误隔离 | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/KuiklyLiveEventDecoding.kt | A:KuiklyLiveEventDecodingTest | S:未知成员kind回TEXT保原文，callback异常不吞不重试，不把技术错误转房间终态
+KuiklyLiveEventInitializationTest.kt[TW8T]: F:验证真实Kuikly事件工厂等待pager注入且初始化不注册事件 | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/KuiklyLiveView.kt | A:KuiklyLiveEventInitializationTest | S:防createEvent提前访问Pager导致进房崩溃，不是设备播放测试
+KuiklyLiveProtocolTest.kt[TM6T]: F:锁定原子room解析和快照消息/主播JSON基本合同 | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/KuiklyLiveNativeEvents.kt | A:KuiklyLiveProtocolTest | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/src/iosMain/kotlin/io/github/gycrosskit/livesdk/===
+IosKuiklyLiveController.kt[II9S]: F:将Swift节点room/可见性与命令映射到现有iOS原生会话和快照 | R:code:live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveNativeSession.kt | A:IosKuiklyLiveController,configure,command,release | S:页面release只停当前房，hide/show不自动重启，重新room可恢复；节点release终态；严格PiP布尔，迟弹幕按generation拒成功
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/src/iosTest/kotlin/io/github/gycrosskit/livesdk/===
+IosKuiklyLiveLifecycleTest.kt[TW7T]: F:验证iOS页面释放需新room恢复而节点销毁永久拒绝 | R:code:live-kuikly/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosKuiklyLiveController.kt | A:IosKuiklyLiveLifecycleTest | S:以缺原生bridge观察尝试，不调用SDK或证明音画
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/src/ohosArm64Main/kotlin/io/github/gycrosskit/livesdk/===
+LiveSdkModule.kt[II9S]: F:为OHOS每Renderer转发真实账号完成、IM/PiP订阅及恢复请求 | R:code:ohos/live-native/src/main/ets/GycLiveModule.ets | A:LiveSdkModule,login,logout,observeIm,observePictureInPicture,dispose | S:销毁只清本页callback不注销账号；取消先本地失效后撤native监听，真实login/logout不能提前ACK；回执失败不含UserSig
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-room-core/===
+build.gradle.kts[FV7T]: F:发布SDK中立房间配置与弹层的Android/JVM/iOS/OHOS产物 | R:code:live-room-core/src/commonMain/kotlin/com/dgtang/live/room/LiveRoomConfiguration.kt | A:- | S:仅api序列化JSON，保留com.dgtang.live.room包名，不依赖腾讯或UI runtime；Android/JVM为Java11
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-room-core/src/commonMain/kotlin/com/dgtang/live/room/===
+LiveOverlay.kt[DW8S]: F:纯reducer按优先级、业务key和单调过期时间调度可恢复弹层 | R:code:live-room-core/src/commonTest/kotlin/com/dgtang/live/room/LiveOverlayTest.kt | A:LiveOverlayItem,LiveOverlayState,LiveOverlayReducer | S:同key替换；高优先级抢占仅保存可恢复项；同级取最早，替结果不重排已完成表单，终态清队列，业务有效性由宿主负责
+LiveRoomConfiguration.kt[DC9S]: F:解析及解析注册插件展示配置并隔离房间版本快照 | R:code:live-room-core/src/commonTest/kotlin/com/dgtang/live/room/LiveRoomConfigurationTest.kt | A:LiveRoomConfiguration,LivePluginDefinition,resolveLivePlugins,parseLiveRoomConfiguration,LiveRoomConfigurationState,liveText | S:配置不能新增能力/权限；坏项局部默认、合法空列表隐藏入口；图片限http/https；每次进房新owner拒旧房/非递增revision，不持久化活动配置
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-room-core/src/commonTest/kotlin/com/dgtang/live/room/===
+LiveOverlayTest.kt[TW7T]: F:锁定过期队列不恢复、重复key替换及移除后同级到达顺序 | R:code:live-room-core/src/commonMain/kotlin/com/dgtang/live/room/LiveOverlay.kt | A:LiveOverlayTest | S:-
+LiveRoomConfigurationTest.kt[TC8T]: F:验证坏配置回退、注册能力边界和房间版本隔离及语言回退 | R:code:live-room-core/src/commonMain/kotlin/com/dgtang/live/room/LiveRoomConfiguration.kt | A:LiveRoomConfigurationTest | S:坏entry不能撤销明确disabled；空列表只隐藏入口，不关业务能力；HTTP图片仍支持
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ohos/AppScope/===
+app.json5[FV3T]: F:声明OHOS直播工程应用身份与资源外的基础版本 | R:code:ohos/build-profile.json5 | A:- | S:HAR公开身份以模块oh-package为准
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ohos/===
+build-profile.json5[FV6T]: F:登记直播HAR默认产品及目标API22和兼容API12 | R:code:ohos/live-native/build-profile.json5 | A:- | S:目标与兼容版本不同，声明不代表设备验收
+hvigorfile.ts[EV3T]: F:为直播OHOS根工程启用官方appTasks | R:code:ohos/build-profile.json5 | A:- | S:-
+oh-package.json5[FV3T]: F:声明OHOS直播根工程模型与描述 | R:code:ohos/hvigor/hvigor-config.json5 | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ohos/hvigor/===
+hvigor-config.json5[FV4T]: F:固定OHOS构建模型26与执行/日志配置入口 | R:code:ohos/hvigorfile.ts | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ohos/live-native/===
+CHANGELOG.md[SV5T]: F:记录认证之外直播HAR的原生渠道候选与AtomicPlayer迁移历史 | R:code:ohos/live-native/README.md | A:- | S:历史RC与当前1.1.3候选分开，不覆盖已发布字节或借旧设备证据
+Index.ets[EI7T]: F:导出OHOS直播client/View/Module及ArkUI创建入口 | R:code:ohos/live-native/src/main/ets/GycLiveClient.ets,code:ohos/live-native/src/main/ets/GycLiveView.ets | A:GycLiveClient,GycLiveView,createGycLiveView,KuiklyRenderBaseView,GycLiveModule | S:不导出内部NativeLiveSession为宿主业务状态机
+LICENSE[SG3M]: F:随直播HAR分发Apache2.0许可与免责条款 | R:code:LICENSE | A:- | S:-
+README.md[SI9T]: F:定义OHOS账号、AtomicPlayer、同会话PiP与Kuikly接线及验收边界 | R:code:ohos/live-native/src/main/ets/GycLiveClient.ets,code:ohos/live-native/src/main/ets/GycLiveView.ets | A:- | S:5.2.2两处内部接缝升级需复核；Promise真实结算不能被公共超时越过，离房失败blocked；开播feedback需服务端正确建房，观众不补建
+build-profile.json5[FV3T]: F:声明直播HAR的stageMode与默认Harmony目标 | R:code:ohos/build-profile.json5 | A:- | S:-
+hvigorfile.ts[EV3T]: F:为原生直播模块启用官方harTasks | R:code:ohos/live-native/build-profile.json5 | A:- | S:-
+oh-package.json5[FV8T]: F:声明直播HAR1.1.3入口与精确腾讯和Renderer依赖 | R:code:ohos/live-native/Index.ets | A:- | S:AtomicX5.2.2/IM9.1.7818/LiteAV13.5.9128/Renderer2.29.1均固定，文档范围不授权静默升级
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ohos/live-native/src/main/ets/===
+GycLiveClient.ets[II9L]: F:串行OHOS真实SDK身份和唯一AtomicPlayer会话、互动数据源及清理 | R:code:ohos/live-native/src/main/ets/GycLiveView.ets | A:GycLiveClient,NativeLiveSession,login,logout,enter,leave | S:prepared与owns分离，真实IM/AppId核对；完整joinChannel预览只拉流；SDKPromise未结算不越过；先PiP后EngineBridge可等待leave，精确幂等错误外失败blocked；累计消息源独立去重
+GycLiveModule.ets[II9S]: F:为每Renderer提供隐私门控账号操作与原始IM和PiP订阅transport | R:code:live-kuikly/src/ohosArm64Main/kotlin/io/github/gycrosskit/livesdk/LiveSdkModule.kt | A:GycLiveModule,call,onDestroy | S:登录只认privacyGranted===true，真实完成才ACK；固定拒绝原因脱敏日志；群白名单与订阅独占，destroy清本页不logout进程身份
+GycLiveView.ets[II9M]: F:持有OHOS视频节点、SDK代次传输和同Surface系统PiP生命周期 | R:code:ohos/live-native/src/main/ets/GycLiveClient.ets,code:ohos/live-native/src/main/ets/LiveComponent.ets | A:GycLiveView,call,restorePictureInPicture,playerViewParameters,onDestroy | S:STARTED/STOPPED才actual；ABOUT_TO_STOP回前台不重复stop；hostManaged保单Ability首页；PiP先收尾后leave，失败保资源结算；32待命令/20秒限额，generation拒旧回执
+LiveComponent.ets[IU8T]: F:在ArkUI节点订阅Renderer并挂载同一AtomicLiveViewImpl与PiP Surface | R:code:ohos/live-native/src/main/ets/GycLiveView.ets | A:createGycLiveView | S:State订阅直传Observed实例，按session generation更换节点；内部mixSurfaceController固定SDK版本核验，不创建第二播放器
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ohos/live-native/src/main/===
+module.json5[FV3T]: F:声明原生直播为默认设备及平板HAR | R:code:ohos/live-native/build-profile.json5 | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/ohos/tests/===
+live.test.cjs[TI9L]: F:转译生产OHOS client/View执行身份、数据源、真实结算与PiP竞态回归 | R:code:ohos/live-native/src/main/ets/GycLiveClient.ets,code:ohos/live-native/src/main/ets/GycLiveView.ets | A:fixture,joinedView | S:SDK/ArkUI/系统PiP边界受控；覆盖迟join/leave、精确幂等错误、失败blocked、同Surface和ABOUT_TO_STOP恢复，不证明真机音画
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/scripts/===
+archive-prebuilt.sh[OV8T]: F:生产三产品Maven staging、正规化校验后冻结无xattrs归档及SHA | R:code:scripts/maven-publications.py,code:scripts/check-maven.py,code:jitpack-metadata.py | A:- | S:显式VERSION，不上传Tag；本脚本独占build/maven先清旧版本，冻结后安装不得改写字节
+build.sh[EV8T]: F:按平台编译生产KMP/Swift并分派Maven或HAR打包 | R:code:scripts/archive-prebuilt.sh,code:GycLiveNative.podspec | A:- | S:日常compile不运行测试/消费者；iOS读取真实Pod build-settings typecheck薄桥，Harmony包含HAR；沿用调用者缓存和受信工具链
+check-maven.py[OV8S]: F:校验完整Maven出版物、POM许可、变体/内部依赖与字节摘要sidecar | R:code:scripts/archive-prebuilt.sh | A:check_sidecars,resolve_artifact,check_jvm_bytecode | S:SNAPSHOT取当前时间戳；同文件各声明独立核验；可选检查JAR/AAR字节码上限，不以存在文件代可消费
+check-public-maven.py[OV8M]: F:核对公开JitPack精确Tag/SHA清单及全部POM、Module和变体实际字节 | R:code:scripts/verify-release.sh | A:audit,ready_state,validate_state,validate_component,check_sidecars | S:只等待明确未就绪；身份/摘要错立即失败；高阶sidecar404单列未验证，不读凭据；首次精确POM可触发渠道构建
+ci-java.security[FV4T]: F:设置CI正DNS缓存一小时且禁止负缓存 | R:code:scripts/ci-repositories.gradle | A:- | S:不调整TLS证书信任或业务网络策略
+ci-repositories.gradle[FV7T]: F:配置源码编译缓存、真实测试执行及有限DNS预解析和仓库范围 | R:code:scripts/build.sh | A:- | S:测试禁缓存/uptodate；预解析三次失败仍交真实解析；移除Aliyun仅影响该CI入口，Eazytec只匹配fork版本
+jitpack-install-prebuilt.sh[OV9T]: F:核对Release来源收据、归档尺寸摘要与安全边界后安装冻结字节 | R:code:tests/test_jitpack_install.py | A:- | S:绑定当前HEAD SHA/tree与独立producer，拒重复JSON/额外checksum、链接/逃逸/重复成员和过量解包；不重编不正规化
+maven-publications.py[FV7T]: F:输出当前三模块十九项Maven publication精确集合 | R:code:scripts/archive-prebuilt.sh,code:verification/publication/test_inventory.py | A:modules,publications | S:version只校验格式不选择旧版本布局，历史Tag重验必须用其当时脚本
+verify-ios-native.sh[TV8T]: F:将薄Swift节点与实际KMP和Renderer Framework进行typecheck与iphoneos最终链接 | R:code:verification/ios/Main.swift,code:live-kuikly/ios/GycLiveView.swift | A:- | S:显式传真实iphoneos Framework目录，严格未定义符号；不以伪造Render符号绕过ABI
+verify-live-native-ios.sh[TV8T]: F:生成纯UIKit消费者并用真实Core Pod编译和链接全部原生公开API | R:code:verification/native-ios/Main.swift,code:verification/native-ios/Podfile | A:- | S:同时检查入口与debug.dylib无KMP/Kuikly依赖，path或远程来源由Podfile合同决定，链接不执行SDK业务
+verify-live-renderer-ios.sh[TV8T]: F:构造Renderer-only消费者运行真实Simulator XCTest并编译device Framework | R:code:verification/renderer-ios/RendererTests.swift,code:verification/renderer-ios/test_contract.py | A:- | S:核锁拒Core/腾讯依赖；优先消费CI指定Simulator，不自行管理调度，厂商会话是controller替身
+verify-release.sh[OV8T]: F:从不可变Tag核对冻结来源和归档及精确公开JitPack出版物 | R:code:scripts/jitpack-install-prebuilt.sh,code:scripts/check-public-maven.py,code:scripts/maven-publications.py | A:- | S:预期清单来自当前版本合同并先验归档，不从公网自报推断；不安装MavenLocal替代远程解析，失败保诊断
+verify.sh[TV7T]: F:编排KMP行为和平台构建、staging消费、R8及独立无SDK房间消费者 | R:code:verification/consumer/build.gradle.kts,code:verification/room-consumer/build.gradle.kts | A:- | S:广范围维护入口非普通修改默认命令；房间无SDK合同不能由Live SDK消费者代验，结果不证明设备
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/tests/===
+test_jitpack_install.py[TV8S]: F:执行生产安装校验段验证来源、尺寸摘要和安全解包拒绝路径 | R:code:scripts/jitpack-install-prebuilt.sh | A:JitPackInstallTest | S:不联网不跑SDK；包含现存目标软链、无效UTF8和重复JSON，失败不安装
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/ci/===
+test_cache_contract.py[TQ5T]: F:锁定CI仅缓存源码编译且测试禁缓存和uptodate的声明 | R:code:scripts/ci-repositories.gradle | A:- | S:文本断言不证明行为用例实际执行
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/consumer/===
+build.gradle.kts[TV8S]: F:构建Live公开或源码消费者并验证单SDK、无第二CMP UI和真实AAR契约 | R:code:verification/consumer/settings.gradle.kts | A:verifyNoCmpUi,verifySingleSdk | S:先拒未解析依赖；源码模式核ProjectComponent身份，远程核精确两产品/版本，保Gson传递；Release R8与Debug分开
+gradle.properties[FV3T]: F:配置独立消费者AndroidX、Native禁用目标处理与内存预算 | R:code:verification/consumer/build.gradle.kts | A:- | S:-
+settings.gradle.kts[TV7T]: F:按显式模式选择源码替换、本地staging或独占JitPack消费源 | R:code:verification/consumer/build.gradle.kts | A:- | S:verifyLocalSource与remoteOnly互斥，不以includeBuild或本地解析宣称公开消费
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/consumer/src/androidMain/===
+AndroidManifest.xml[TV3T]: F:声明独立消费者网络权限与非导出测试Activity | R:code:verification/consumer/src/kuiklyAndroidMain/kotlin/io/github/gycrosskit/liveconsumer/MainActivity.kt | A:- | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/consumer/src/androidMain/kotlin/io/github/gycrosskit/liveconsumer/===
+LiveImConsumer.kt[TI5T]: F:从消费产物编译Android IM连接、解绑和关闭公开签名 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveImSource.kt | A:consumeLiveIm | S:编译探针不自行注册真实业务群
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/consumer/src/emojiConsumerMain/kotlin/io/github/gycrosskit/liveconsumer/===
+LiveEmojiConsumer.kt[TM5T]: F:从消费产物编译表情目录及encode/decode公共API | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveEmojiProtocol.kt | A:consumeEmojiProtocol | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/consumer/src/kuiklyAndroidMain/kotlin/io/github/gycrosskit/liveconsumer/===
+MainActivity.kt[TI4T]: F:以独立Android Activity挂载公开GycLiveView进行消费编译 | R:code:verification/consumer/build.gradle.kts | A:MainActivity | S:不提供真实账号或发起直播认证
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/consumer/src/kuiklyComposeMain/kotlin/===
+ComposeApiConsumer.kt[TI6T]: F:独立消费编译LiveVideo六参数与注入重载及中立事件解码API | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/kuikly/LiveVideo.kt | A:LiveApi,InjectedLiveVideo,ConsumeLiveEvent | S:API编译不执行真实Renderer或SDK
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/consumer/src/kuiklyMain/kotlin/io/github/gycrosskit/liveconsumer/===
+Consume.kt[TI5T]: F:编译验证raw视频DSL、原子room与PiP请求/实际状态公开API | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/KuiklyLiveView.kt | A:consume | S:固定示例房间inactive，不证明业务观看
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/ios/===
+Main.swift[TI6T]: F:为真实KMP/Renderer最终链接消费默认GycLiveView与reporter公开类型 | R:code:scripts/verify-ios-native.sh | A:Consumer | S:compile-only预览active=false，不执行腾讯业务
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/kuikly-compose/===
+LiveView.kt[TI5T]: F:记录Compose视频节点room提交、reporter和释放的Renderer边界替身 | R:code:verification/kuikly-compose/Main.kt | A:KuiklyLiveView | S:Compose状态/Effect与JSON真实，原生会话与Renderer未执行
+Main.kt[TW8S]: F:用真实Compose runtime驱动生产LiveVideo七个动态更新和释放场景 | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/kuikly/LiveVideo.kt | A:main | S:覆盖等值room不重发、保留字段、节点冻结reporter及迟事件失效；节点边界替身，不验真实SDK或播放
+MakeNode.kt[TI5T]: F:以真实Compose SideEffect模拟节点首次初始化与后续更新桥 | R:code:verification/kuikly-compose/Main.kt | A:MakeKuiklyComposeNode | S:只替换跨Renderer节点边界，不作为真实Kuikly运行时
+Modifier.kt[TI3T]: F:为Compose专项夹具提供最小Modifier类型 | R:code:verification/kuikly-compose/MakeNode.kt | A:Modifier | S:-
+verify.py[TQ8T]: F:固定真实编译器/runtime和Kuikly JSON编译生产Composable及独立API探针后运行 | R:code:verification/kuikly-compose/Main.kt | A:artifact | S:依赖缺项失败，runtime固定摘要；节点替身不代媒体验收，编译/公开API/行为分别保日志
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/native-ios/===
+Main.swift[TI7T]: F:以纯UIKit消费者实现所有原生回调并链接实际Pod全部公开API | R:code:scripts/verify-live-native-ios.sh | A:NativeCallbacks,NativeConsumerApp | S:默认不创建账号或请求房间，只有显式exercise参数才调用示例，不证明设备业务
+Podfile[TV7T]: F:为原生Core消费者选择本地源码或不可变native Git标签并固定iOS15 | R:code:scripts/verify-live-native-ios.sh | A:- | S:LIVE_NATIVE_TAG严格native版本格式；tag安装不冒充源码path消费，默认静态Framework不含Renderer
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/ownership/===
+AccountHost.swift[TI5T]: F:给生产Swift账号extension提供最小client状态与Main执行宿主 | R:code:verification/ownership/verify-callbacks.sh | A:GycLiveClient | S:只替换View清理及调度边界，不复制账号状态机
+MocksAtomicX.swift[TI5T]: F:以可控登录/注销completion和独立资料状态替代Swift AtomicX边界 | R:code:verification/ownership/callbacks/main.swift | A:LoginStore,LoginState,UserProfile | S:资料不会自动等价于认证，回调由测试控制迟到顺序
+MocksImSDK.swift[TI4T]: F:提供独立真实用户和IM登录状态的Swift测试边界 | R:code:verification/ownership/callbacks/main.swift | A:V2TIMManager,LoginStatus | S:不调用实际腾讯网络
+fixture-dependencies.gradle[TV4T]: F:只解析独立账号夹具编译器依赖而不编译Android SDK模块 | R:code:verification/ownership/verify-android.py | A:resolveOwnershipFixtureDependencies | S:-
+main.swift[TI6T]: F:验证Swift身份纯策略的自有、借用、foreign与重置再核对 | R:code:ios/Sources/GycLiveNative/LiveAccountOwnership.swift | A:- | S:纯策略断言不替代生产回调或SDK验收
+verify-android.py[TQ7T]: F:用已解析编译器依赖直接编译生产Android账号路径及夹具并输出XML | R:code:verification/ownership/android/Main.kt | A:jar | S:依赖缺失明确失败，不替换生产状态机，不跑真实Android SDK
+verify-callbacks.sh[TQ7T]: F:编译Swift SDK边界替身及生产Account extension运行真实回调合同 | R:code:verification/ownership/callbacks/main.swift | A:- | S:仅平台IO替身，不证明实际厂商ABI/业务请求
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/ownership/android/===
+CompletionHandler.kt[TI3T]: F:提供生产Android账号编译使用的厂商完成回调最小接口 | R:code:verification/ownership/android/LoginStore.kt | A:CompletionHandler | S:-
+Context.kt[TH3T]: F:提供生产账号夹具编译所需Context最小替身 | R:code:verification/ownership/android/Main.kt | A:Context | S:-
+ImSdk.kt[TI5T]: F:提供与AtomicX资料独立的IM实际用户及登录中状态替身 | R:code:verification/ownership/android/Main.kt | A:V2TIMManager | S:不代表真实IM/Looper或云端验收
+LoginStore.kt[TI5T]: F:以可控登录注销队列和独立资料记录替代Android厂商IO | R:code:verification/ownership/android/Main.kt | A:LoginStore,LoginState,UserProfile | S:setSelfInfo不填loginUserInfo，刻意保留资料迟到/失败窗口
+Looper.kt[TW5T]: F:在账号夹具中辨识Main线程并拒绝意外后台派发 | R:code:verification/ownership/android/Main.kt | A:Looper,Handler | S:post直接失败，真实Android线程由Robolectric另验
+Main.kt[TI9S]: F:直接驱动生产Android账号实现执行十八个身份及异步资料回调合同 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicXSession.kt | A:main | S:覆盖A/B/A、own/borrow/foreign/AppId、双状态及旧回调；输出真实用例XML，不以策略或mock代真实SDK
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/ownership/callbacks/===
+main.swift[TI9S]: F:驱动生产Swift账号extension验证资料无关认证、注销权限与迟回调 | R:code:ios/Sources/GycLiveNative/GycLiveClient+Account.swift | A:- | S:受控SDK边界覆盖A/B/A、AppId变化、失败恢复及双登录状态，不能证明实际厂商ABI或网络业务
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/picture-in-picture/===
+MocksRoomEngine.swift[TI4T]: F:保存PiP实验请求和延迟回执的RoomEngine边界替身 | R:code:verification/picture-in-picture/main.swift | A:TUIRoomEngine | S:-
+MocksUIKit.swift[TH3T]: F:提供可挂窗UIView的Swift PiP测试最小UIKit类型 | R:code:verification/picture-in-picture/main.swift | A:UIView | S:-
+main.swift[TH8T]: F:驱动生产Swift PiP扩展验证挂窗门禁、准备与actual分离及代次清理 | R:code:ios/Sources/GycLiveNative/GycLiveClient+PictureInPicture.swift | A:- | S:受控RoomEngine/UI边界不代表系统浮窗，旧generation失败不能覆盖当前准备状态
+verify.sh[TQ6T]: F:将生产Main调度和Swift PiP扩展链接替身执行专项断言 | R:code:verification/picture-in-picture/main.swift | A:- | S:不链接实际厂商SDK，不声称设备PiP验收
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/publication/===
+test_inventory.py[TV6T]: F:验证当前房间产物清单包含JVM与完整Native目标并拒绝无效版本 | R:code:scripts/maven-publications.py | A:PublicationInventoryTest | S:已移除失效的旧版12项断言；当前脚本不按版本切旧布局，历史合同须在原不可变Tag验证
+test_maven_check.py[TV7T]: F:对真实Maven检查器验证完整产物和缺平台/许可/目标变体拒绝 | R:code:scripts/check-maven.py | A:MavenCheckContracts | S:临时文件同步摘要隔离错误类型，不编译真实SDK或运行远程消费
+test_metadata.py[TV7T]: F:用真实ZIP/module验证classifier裁剪、原子拒绝和摘要刷新 | R:code:jitpack-metadata.py | A:PublicationContracts | S:零字节真实资源也不得丢弃，坏资源目标须写前拒绝，保留未知自定义sources变体
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/===
+real-render-tests.init.gradle[TV7T]: F:为独立iOS协议测试链接指定真实arm64 Simulator Render | R:code:live-kuikly/build.gradle.kts | A:- | S:目录无实际Framework即失败，不以device库或伪C符号替代
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/renderer-ios/===
+Podfile[TV7T]: F:选择Renderer-only源码或native标签并固定真实Render Git2.29.1 | R:code:scripts/verify-live-renderer-ios.sh | A:- | S:不带Core/腾讯/KMP；只提升低于iOS15的部署目标，不降低更高目标
+RendererTests.swift[TI8S]: F:以真实UIKit/CSS验证typed Block、有界缓存、重入换房及销毁生命周期 | R:code:ios/Sources/GycLiveRenderer/GycLiveRendererView.swift | A:RendererTests | S:controller替身，不跑腾讯；factory同步销毁返回资源须释放，回放中换房立即停止，deinit撤观察者
+test_contract.py[TV8M]: F:核对Core/Renderer依赖锁、远程native标签来源与安装Swift字节和轻量边界 | R:code:GycLiveNative.podspec,code:scripts/verify-live-renderer-ios.sh | A:verify_remote_source,verify_tag_refs,verify_installed_swift,verify_lock,verify_core_lock | S:tag锁无commit合法，另核peeled远端SHA与冻结checkout/全部Swift；path不作远程证明，静态检查不代Swift行为
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/room-consumer/===
+build.gradle.kts[TV8T]: F:独立消费房间配置产物并验证三端目标及无腾讯/UI runtime依赖 | R:code:verification/room-consumer/settings.gradle.kts | A:verifyNoTencentSdk | S:完整图先拒未解析；只接受同版room-core/root Android，不从Live消费者代验SDK隔离
+gradle.properties[FV3T]: F:配置独立房间消费者AndroidX、Native目标处理和内存预算 | R:code:verification/room-consumer/build.gradle.kts | A:- | S:-
+settings.gradle.kts[TV7T]: F:为房间消费者配置公开JitPack或显式候选仓库及工具链解析 | R:code:verification/room-consumer/build.gradle.kts | A:- | S:remoteOnly强制公开源，无源码includeBuild或MavenLocal替代
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/room-consumer/src/commonMain/kotlin/===
+RoomProbe.kt[TI5T]: F:从发布依赖编译配置解析、房间owner与弹层入队公开API | R:code:verification/room-consumer/build.gradle.kts | A:roomConfigurationProbe,roomStateProbe,enqueueProbe | S:-
+
+===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/verification/room-consumer/src/commonTest/kotlin/===
+RoomConsumerTest.kt[TC7T]: F:对消费产物验证队列过期、旧房/旧revision拒绝和空配置行为 | R:code:verification/room-consumer/src/commonMain/kotlin/RoomProbe.kt | A:RoomConsumerTest | S:默认公开依赖，显式候选模式需分别标记，不证明宿主UI业务

@@ -62,81 +62,9 @@ flowchart TB
     H --> E["LiveEmojiProtocol<br/>commonMain / Android / iOS / OHOS"]
 ```
 
-下面是 `AtomicAudienceSession` 的完整观看流程。会话排队、join 与 leave 分别有 15 / 20 / 8 秒期限；退出后仍须等离房结算再放行下一场，避免共享 Store 被旧房间回调误伤。
+完整观看共用 `AtomicAudienceSession`、Coordinator 和唯一 StateFlow 快照。排队 / join / leave 分别有 15 / 20 / 8 秒期限；释放后仍等离房结算，旧回调不能更新新房间。列表静音预览需 active、页面 STARTED 与平台账号门禁同时满足，完整观看前同步停止并 detach；注销前宿主先关门禁，再停预览与清账号。
 
-```mermaid
-sequenceDiagram
-    participant H as 原生 View
-    participant S as Session
-    participant G as Coordinator
-    participant P as 预览
-    participant X as AtomicX SDK
-    H->>S: 创建完整观看会话
-    S->>G: acquire(token, liveId)
-    G-->>S: 轮到本会话：startJoin
-    S->>P: Main 同步 stopActivePreview
-    S->>X: joinLive
-    X-->>S: joined 或 joinFailed
-    S-->>H: joined 后 joinSucceeded
-    H->>S: release()
-    opt join 尚在途
-        Note over S,X: 等 join 回调或超时<br/>随后清理
-    end
-    S->>X: leaveLive / 原生资源清理
-    X-->>S: 离房成功或失败回调
-    Note over S,G: 离房回调、异常或 8 秒超时<br/>结算令牌
-    S->>G: release(token)<br/>取消会话 scope
-    alt 还有排队会话
-        G-->>S: 下一排队 Session 的 start 回调
-    else 无等待会话
-        G-->>P: 最新等待预览的 start 回调
-    end
-```
-
-类型图聚焦 Android 完整观看链路（内部状态机和快照累加器同样被 iOS KMP 平台层复用）。列表预览另由 `AtomicLivePreviewController` 管理，只有 active、页面 STARTED 和平台账号门禁满足时播放；失活或释放取消等待预览并用 generation 拒绝迟回调。注销前宿主先关闭账号门禁、停止预览，再清理账号。
-
-```mermaid
-classDiagram
-    class AndroidLiveAudienceSession {
-        +view
-        +snapshots
-        +release()
-    }
-    class AtomicAudienceView {
-        +snapshot
-        +snapshots
-        +release()
-    }
-    class AtomicAudienceSession {
-        <<internal>>
-        +joined()
-        +joinFailed(code, message)
-        +release()
-    }
-    class AtomicAudienceSessionGate {
-        <<interface>>
-        +acquire(token, liveId, onTimeout, start)
-        +release(token)
-    }
-    class AtomicAudienceSessionCoordinator {
-        <<internal>>
-        +acquirePreview(token, start)
-        +cancelPreview(token)
-    }
-    class LiveAudienceSnapshotStore {
-        <<internal>>
-        +snapshots
-        +snapshot()
-        +appendMessages(incoming)
-    }
-    AndroidLiveAudienceSession *-- AtomicAudienceView
-    AtomicAudienceView *-- AtomicAudienceSession
-    AtomicAudienceView *-- LiveAudienceSnapshotStore
-    AtomicAudienceSession --> AtomicAudienceSessionGate
-    AtomicAudienceSessionGate <|.. AtomicAudienceSessionCoordinator
-```
-
-源码入口：[Android 原生会话](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveNativeSession.kt)、[AtomicAudienceView](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt)、[共用会话状态机](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt)、[会话排队与预览门禁](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSessionCoordinator.kt)、[预览生命周期](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt)、[唯一快照](live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt)、[Android 账号门禁](live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveSdkRuntime.kt)、[iOS 桥安装](live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosLiveSdkRuntime.kt)。OHOS 源码候选经独立 HAR 与 Kuikly 桥接复用 core；编译、和合康 Kuikly 真机分项验收及未验收范围见[功能与平台差异](docs/功能与平台差异.md)，不代表旧 Registry 或通用原生宿主通过；Kuikly PiP 请求与状态同步同样复用平台会话，`accepted` 仅表示平台受理。
+文件职责及三端桥接关系查阅 AOCI 索引；平台差异与设备证据见[功能与平台差异](docs/功能与平台差异.md)。PiP 的 `accepted` 仅表示请求受理，实际状态由系统或宿主回报。
 
 ## 平台与模块
 
