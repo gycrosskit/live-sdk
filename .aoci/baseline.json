@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-11-19T08:49:25Z",
-  "updated_at": "2026-11-21T03:35:21Z",
+  "updated_at": "2026-11-21T03:54:04Z",
   "files": {
     ".gitattributes": {
       "role": "index",
@@ -47,9 +47,9 @@
     },
     "aoci.code.txt": {
       "role": "index",
-      "sha256": "7a95faba39b13be4d634383ab7494771a60593f6ea0b7aa45b81c3c251111c34",
-      "size": 61198,
-      "normalized_sha256": "7a95faba39b13be4d634383ab7494771a60593f6ea0b7aa45b81c3c251111c34"
+      "sha256": "6e0becd747eaa2dab585cd38ee069b9b025784c43e3259c4c2e489c91cb07ad9",
+      "size": 61324,
+      "normalized_sha256": "6e0becd747eaa2dab585cd38ee069b9b025784c43e3259c4c2e489c91cb07ad9"
     },
     "aoci.meta.txt": {
       "role": "index",
@@ -538,9 +538,9 @@
     },
     "live-kuikly/build.gradle.kts": {
       "role": "index",
-      "sha256": "3850ca51a69b30db58e1072eca6eb5deff6cb51beeee116505094543b1bdd7d0",
-      "size": 2268,
-      "normalized_sha256": "3850ca51a69b30db58e1072eca6eb5deff6cb51beeee116505094543b1bdd7d0"
+      "sha256": "ea5d6f0313fb3374c26c8a15a1e352747ee130960dc51ccf5a0db66df3909906",
+      "size": 2373,
+      "normalized_sha256": "ea5d6f0313fb3374c26c8a15a1e352747ee130960dc51ccf5a0db66df3909906"
     },
     "live-kuikly/ios/GycLiveView.swift": {
       "role": "index",
@@ -784,9 +784,9 @@
     },
     "scripts/build.sh": {
       "role": "index",
-      "sha256": "7c5fd76ba50c41b43d876063623531234cebd2c6e0074f9b2d7e026356679582",
-      "size": 4885,
-      "normalized_sha256": "7c5fd76ba50c41b43d876063623531234cebd2c6e0074f9b2d7e026356679582"
+      "sha256": "63095db736cc8c1c68e84e45ad5d963b00508f97f4f7be6b7828bccce57019dc",
+      "size": 4917,
+      "normalized_sha256": "63095db736cc8c1c68e84e45ad5d963b00508f97f4f7be6b7828bccce57019dc"
     },
     "scripts/check-maven.py": {
       "role": "index",

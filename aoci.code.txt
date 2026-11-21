@@ -119,7 +119,7 @@ IosLiveSdkRuntime.kt[RI8T]: F:安装唯一Swift桥并发布iOS账号门禁与可
 IosAudienceCommandOwnershipTest.kt[TI9T]: F:验证iOS排队/释放实例不能向新房写命令或迟到成功 | R:code:live-core/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosAtomicLiveViews.kt | A:IosAudienceCommandOwnershipTest | S:实际公共会话配记录型Swift桥；A尾批必须仍持token时发，B等真实leave，旧弹幕回执不得报成功
 
 ===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/===
-build.gradle.kts[FV7T]: F:发布三端Kuikly raw/Compose入口与core公开依赖及验证Framework | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/kuikly/LiveVideo.kt | A:- | S:Native测试需真实Render C符号；liveVerification只增加静态Framework生产导出，不伪造平台链接
+build.gradle.kts[FV7T]: F:发布三端 Kuikly raw/Compose 入口及 core 公开依赖，配置 iOS 验证 framework | R:code:live-kuikly/src/commonMain/kotlin/io/github/gycrosskit/livesdk/kuikly/LiveVideo.kt,code:scripts/build.sh | A:- | S:Native 测试需真实 Render C 符号；liveVerification 仅在 iOS 注册静态 framework，OHOS 仍按既有 KLIB 产物发布。
 
 ===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-kuikly/ios/===
 GycLiveView.swift[II8T]: F:为默认LiveKuikly导出模块提供原生注册类和Renderer薄adapter | R:code:ios/Sources/GycLiveRenderer/GycLiveRendererView.swift,code:live-kuikly/src/iosMain/kotlin/io/github/gycrosskit/livesdk/IosKuiklyLiveController.kt | A:GycLiveView,likeReporter | S:reporter在configure前注入；其他Shared模块须应用映射本身类型，不能跨Framework强转
@@ -200,7 +200,7 @@ live.test.cjs[TI9L]: F:转译生产OHOS client/View执行身份、数据源、�
 
 ===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/scripts/===
 archive-prebuilt.sh[OV8T]: F:生产三产品Maven staging、正规化校验后冻结无xattrs归档及SHA | R:code:scripts/maven-publications.py,code:scripts/check-maven.py,code:jitpack-metadata.py | A:- | S:显式VERSION，不上传Tag；本脚本独占build/maven先清旧版本，冻结后安装不得改写字节
-build.sh[EV8T]: F:按平台编译生产KMP/Swift并分派Maven或HAR打包 | R:code:scripts/archive-prebuilt.sh,code:GycLiveNative.podspec | A:- | S:日常compile不运行测试/消费者；iOS读取真实Pod build-settings typecheck薄桥，Harmony包含HAR；沿用调用者缓存和受信工具链
+build.sh[EV8T]: F:按平台编译生产 KMP/Swift 并分派 Maven 或 HAR 打包 | R:code:scripts/archive-prebuilt.sh,code:GycLiveNative.podspec,code:live-kuikly/build.gradle.kts | A:- | S:日常 compile 不运行测试或消费者。iOS 验证用 Pods 工程的构建和设置读取固定最低 15.0，随后用真实 Swift 设置检查薄桥；Harmony 编译含 HAR。
 check-maven.py[OV8S]: F:校验完整Maven出版物、POM许可、变体/内部依赖与字节摘要sidecar | R:code:scripts/archive-prebuilt.sh | A:check_sidecars,resolve_artifact,check_jvm_bytecode | S:SNAPSHOT取当前时间戳；同文件各声明独立核验；可选检查JAR/AAR字节码上限，不以存在文件代可消费
 check-public-maven.py[OV8M]: F:核对公开JitPack精确Tag/SHA清单及全部POM、Module和变体实际字节 | R:code:scripts/verify-release.sh | A:audit,ready_state,validate_state,validate_component,check_sidecars | S:只等待明确未就绪；身份/摘要错立即失败；高阶sidecar404单列未验证，不读凭据；首次精确POM可触发渠道构建
 ci-java.security[FV4T]: F:设置CI正DNS缓存一小时且禁止负缓存 | R:code:scripts/ci-repositories.gradle | A:- | S:不调整TLS证书信任或业务网络策略
