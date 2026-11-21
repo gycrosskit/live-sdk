@@ -22,6 +22,7 @@ kotlin {
     }
     if (providers.gradleProperty("liveVerification").isPresent) {
         targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
+            if (konanTarget.family != org.jetbrains.kotlin.konan.target.Family.IOS) return@configureEach
             binaries.framework {
                 baseName = "LiveKuikly"
                 isStatic = true

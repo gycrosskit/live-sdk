@@ -39,7 +39,7 @@ end
 POD
       (cd "$native_output" && pod install)
       native_xcode=(xcodebuild -project "$native_output/Pods/Pods.xcodeproj" -scheme "$native_pod"
-        -configuration Debug -sdk iphoneos -destination 'generic/platform=iOS'
+        -configuration Debug -sdk iphoneos -destination 'generic/platform=iOS' IPHONEOS_DEPLOYMENT_TARGET=15.0
         -derivedDataPath "$native_output/DerivedData" CONFIGURATION_BUILD_DIR="$native_output/Products" CODE_SIGNING_ALLOWED=NO)
       "${native_xcode[@]}" build
       "${native_xcode[@]}" -showBuildSettings -json > "$native_output/build-settings.json"
