@@ -47,13 +47,14 @@ class AndroidLiveImSourceTest {
         sdk.failAccount = false; source.connect(setOf("room"), Observer()); source.disconnect(); source.close()
         assertTrue(sdk.groups.isEmpty() && sdk.accounts.isEmpty())
     }
-    @Test fun failedRemovalKeepsRetryHandleWhileOldCallbacksStayInvalid() {
+    @Test fun terminalRemovalFailureStillDeliversOnceAndRetainsRetryHandle() {
         val sdk = Sdk(); val source = AndroidLiveImSource(sdk); val observer = Observer()
         source.connect(setOf("room"), observer)
         val group = sdk.groups.single(); val account = sdk.accounts.single()
         sdk.failRemoveGroup = true
-        assertFails { account.onKickedOffline() }
-        account.onKickedOffline(); group.onReceiveRESTCustomData("room", "late".encodeToByteArray())
+        account.onKickedOffline()
+        account.onKickedOffline(); account.onUserSigExpired()
+        group.onReceiveRESTCustomData("room", "late".encodeToByteArray())
         assertEquals(listOf("offline"), observer.events)
         assertTrue(sdk.accounts.isEmpty()); assertEquals(1, sdk.groups.size)
         assertFails { source.close() }
