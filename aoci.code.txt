@@ -59,7 +59,7 @@ build.gradle.kts[FV7T]: F:发布无UI的三端直播core并配置Android厂商�
 AndroidManifest.xml[FH4T]: F:声明Android原生观看查询网络状态权限 | R:code:live-core/build.gradle.kts | A:- | S:-
 
 ===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/===
-AndroidLiveImSource.kt[IM9T]: F:串行注册Android群/账号监听并过滤旧绑定与异群原始消息 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveImObserver.kt | A:AndroidLiveImSource,connect,disconnect,close | S:终态先撤权再回调；注册部分失败回收，移除失败保留handle可重试；不初始化或登录SDK
+AndroidLiveImSource.kt[IM9T]: F:串行注册Android群/账号监听并过滤旧绑定与异群原始消息 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveImObserver.kt | A:AndroidLiveImSource,connect,disconnect,close | S:终态先撤权再解绑并通知一次；SDK终态入口截住解绑Exception，失败handle留待重试，主动清理仍可报告失败；不初始化或登录SDK
 AndroidLiveNativeSession.kt[EI8T]: F:向原生宿主公开固定房间观看与静音预览会话和共同快照命令 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt,code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt | A:AndroidLiveAudienceSession,AndroidLivePreviewSession | S:仅Main操作，不执行账号登录；release终态不可复用，PiP返回只表示受理
 AndroidLiveSdkRuntime.kt[RI8T]: F:提供Android账号可播放StateFlow门禁及全局预览停止入口 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicLivePreviewController.kt | A:updateSessionReady,stopActivePreview,stopActivePreviewAndAwait | S:ready不是进房成功；Main同步停止后台会拒绝，Renderer协程用await等待detach完成
 AtomicAudienceView.kt[II9L]: F:将Android AtomicX观看、互动Store、PiP和中立快照接入共用会话状态机 | R:code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceSession.kt,code:live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/LiveAudienceSnapshotStore.kt | A:AtomicAudienceView,nativeView,snapshots,release | S:回调先Main，再由session接纳成功后绑定Store；退出先断互动流但令牌等真实leave或超时；PiPactual读取Activity而非accepted
@@ -76,7 +76,7 @@ strings.xml[FL4T]: F:提供Android观看失败、超时及互动提示英文资�
 strings.xml[FL4T]: F:提供Android观看失败、超时及互动默认中文资源 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicAudienceView.kt | A:- | S:-
 
 ===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/androidUnitTest/kotlin/io/github/gycrosskit/livesdk/===
-AndroidLiveImSourceTest.kt[TI8T]: F:验证IM异群/旧绑定/终态去重与部分注册、失败撤回重试 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveImSource.kt | A:AndroidLiveImSourceTest | S:真实生产监听配注册替身，撤回失败后旧回调仍必须失效
+AndroidLiveImSourceTest.kt[TI8T]: F:验证IM异群/旧绑定/终态去重与部分注册、失败撤回重试 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveImSource.kt | A:AndroidLiveImSourceTest | S:真实生产监听配注册替身；解绑失败时SDK终态正常返回且只通知一次，旧回调仍失效，保留失败handle供主动关闭重试
 AtomicXSessionValidationTest.kt[TI7T]: F:用后台调用与Main排空验证无效账号凭据立即同步失败 | R:code:live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AtomicXSession.kt | A:AtomicXSessionValidationTest | S:失败不得留下Main任务或调用SDK，Robolectric不证明云认证
 
 ===/Users/guoyang/.codex/worktrees/aoci-live-sdk/live-sdk/live-core/src/commonMain/kotlin/io/github/gycrosskit/livesdk/===

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-11-19T08:49:25Z",
-  "updated_at": "2026-11-19T09:30:23Z",
+  "updated_at": "2026-11-21T03:35:21Z",
   "files": {
     ".gitattributes": {
       "role": "index",
@@ -47,9 +47,9 @@
     },
     "aoci.code.txt": {
       "role": "index",
-      "sha256": "dd6e1bea7a4dd59c3bc270c988ecb32fa640d884f58781d4eeb2ab7388742992",
-      "size": 61069,
-      "normalized_sha256": "dd6e1bea7a4dd59c3bc270c988ecb32fa640d884f58781d4eeb2ab7388742992"
+      "sha256": "7a95faba39b13be4d634383ab7494771a60593f6ea0b7aa45b81c3c251111c34",
+      "size": 61198,
+      "normalized_sha256": "7a95faba39b13be4d634383ab7494771a60593f6ea0b7aa45b81c3c251111c34"
     },
     "aoci.meta.txt": {
       "role": "index",
@@ -274,9 +274,9 @@
     },
     "live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveImSource.kt": {
       "role": "index",
-      "sha256": "0c97d2a19b4f393927c07f784d45f19e76236ef308f1f19fada4170aedca3433",
-      "size": 5053,
-      "normalized_sha256": "0c97d2a19b4f393927c07f784d45f19e76236ef308f1f19fada4170aedca3433"
+      "sha256": "61a7d50222a7ac3f85c6de1a03ae0799e816ca63c24fe025fe8fcd0ff1c389ef",
+      "size": 5204,
+      "normalized_sha256": "61a7d50222a7ac3f85c6de1a03ae0799e816ca63c24fe025fe8fcd0ff1c389ef"
     },
     "live-core/src/androidMain/kotlin/io/github/gycrosskit/livesdk/AndroidLiveNativeSession.kt": {
       "role": "index",
@@ -340,9 +340,9 @@
     },
     "live-core/src/androidUnitTest/kotlin/io/github/gycrosskit/livesdk/AndroidLiveImSourceTest.kt": {
       "role": "index",
-      "sha256": "8b5df2bc6b741cb0897d7623e9bd4ed97d298d88cefead2a765e03159c1d11fb",
-      "size": 4192,
-      "normalized_sha256": "8b5df2bc6b741cb0897d7623e9bd4ed97d298d88cefead2a765e03159c1d11fb"
+      "sha256": "3b1c22efedd84e1b198cb512678386a0d7896ce39480bd7b5964102f0377f426",
+      "size": 4214,
+      "normalized_sha256": "3b1c22efedd84e1b198cb512678386a0d7896ce39480bd7b5964102f0377f426"
     },
     "live-core/src/androidUnitTest/kotlin/io/github/gycrosskit/livesdk/AtomicXSessionValidationTest.kt": {
       "role": "index",

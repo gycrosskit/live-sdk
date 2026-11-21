@@ -58,7 +58,13 @@ class AndroidLiveImSource internal constructor(private val sdk: LiveImRegistrati
     private fun terminal(binding: LiveImBindingGate.Binding, event: (LiveImObserver) -> Unit) = synchronized(lock) {
         val observer = gate.takeTerminal(binding) ?: return@synchronized
         // 先撤回当前监听，再交业务回调；观察者即使重连也不会被旧终态清掉。
-        try { detach() } finally { event(observer) }
+        try {
+            detach()
+        } catch (_: Exception) {
+            // 这里由 SDK 调用，解绑失败留待主动清理重试。
+        } finally {
+            event(observer)
+        }
     }
     private fun detach() {
         gate.disconnect()
